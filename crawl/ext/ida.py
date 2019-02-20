@@ -1,4 +1,4 @@
-from Click import echo,secho
+from click import echo,secho
 from crawl import conf
 try:
     from idc import parse_decls
