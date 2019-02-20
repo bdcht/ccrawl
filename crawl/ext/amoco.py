@@ -1,4 +1,4 @@
-from Click import echo,secho
+from click import echo,secho
 from crawl import conf
 from crawl.formatters.amoco import *
 try:
