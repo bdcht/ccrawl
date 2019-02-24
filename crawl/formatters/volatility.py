@@ -17,6 +17,8 @@ def ctype_to_volatility(t):
     b = t.lbase
     if b not in struct_letters:
         res = b.replace('?_','').replace(' ','_')
+        if res.startswith('struct_') or res.startswith('union_'):
+            res = "['{}']".format(res)
     else:
         t.lconst = False # const keyword not supported by volatility
         res = "['{}']".format(t.show_base())
@@ -48,7 +50,7 @@ def cTypedef_volatility(obj,db,recursive):
 def cEnum_volatility(obj,db,recursive):
     obj.unfold(db)
     n = obj.identifier.replace(' ','_')
-    return u"{0} = ['Enumeration', '{0}', dict=(choices={1})]".format(n,obj)
+    return u"{0} = ['Enumeration', dict(choices={1})]".format(n,obj)
 
 def cStruct_volatility(obj,db,recursive):
     obj.unfold(db)
