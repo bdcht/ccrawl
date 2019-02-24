@@ -29,8 +29,6 @@ def ctype_to_volatility(t):
             # prototypes are ignored...
             res = "['void']"
     return res
-    #elif obj._is_enum:
-    #    return "['Enumeration', {0}, dict(choices={1})]]".format(n,obj)
 
 def cTypedef_volatility(obj,db,recursive):
     obj.unfold(db)
