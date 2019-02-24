@@ -7,96 +7,71 @@ from ctypes import sizeof
 # volatility VTypes formatters:
 #------------------------------------------------------------------------------
 
-def id_volatility(t):
-    pass
-
-def cTypedef_volatility(obj,db,recursive):
-    obj.unfold(db)
-    Types = {}
-    build(obj,Types)
-    size = sizeof(Types[obj.identifier])
-    S = ['{}: [%d, '.format(obj.identifier,size) ]
-    return u'{} {},'.format(pre,'\n'.join(S))
-
 def cMacro_volatility(obj,db,recursive):
     return u'{} = {}'.format(obj.identifier,obj)
 
-def cFunc_C(obj,db,recursive):
-    fptr = c_type(obj)
-    return fptr.show(obj.identifier)+';'
+def cFunc_volatility(obj,db,recursive):
+    pass
 
-def cEnum_C(obj,db,recursive):
-    S = []
-    for k,v in sorted(obj.items(),key=lambda t:t[1]):
-        S.append('  {} = {:d}'.format(k,v))
-    S = ',\n'.join(S)
-    return u"%s {\n%s\n};"%(obj.identifier,S)
-
-def cStruct_C(obj,db,recursive):
-    #prepare query if recursion is needed:
-    if isinstance(recursive,set):
-        Q = True
-        recursive.update(struct_letters)
+def ctype_to_volatility(t):
+    b = t.lbase
+    if b not in struct_letters:
+        res = b.replace('?_','').replace(' ','_')
     else:
-        Q = None
-    #declare structure:
-    name = obj.identifier
-    tn = 'union ' if obj._is_union else 'struct '
-    #if anonymous, remove anonymous name:
-    if '?_' in name:
-        name = tn
-    #R holds recursive definition strings needed for obj
-    R = []
-    #S holds obj title and fields declaration strings
-    S = [u'%s {'%name]
-    #iterate through all fields:
-    for i in obj:
-        #get type, name, comment:
-        if obj._is_struct:
-            t,n,c = i
-        elif obj._is_union:
-            n,tc = i,obj[i]
-            t,c  = tc
-        #decompose C-type t into specific parts:
-        r = c_type(t)
-        #get "element base" part of type t:
-        e = r.lbase
-        #query field element raw base type if needed:
-        if Q and (r.lbase not in recursive):
-            # check if querying the current struct type...
-            if r.lbase == obj.identifier:
-                #insert pre-declaration of struct
-                R.insert(0,'%s;'%r.lbase)
-                recursive.add(r.lbase)
-            else:
-                #prepare query
-                q = (where('id')==r.lbase)
-                #deal with anonymous type:
-                if '?_' in r.lbase:
-                    q &= (where('src')==obj.identifier)
-                if db.contains(q):
-                    #retreive the field type:
-                    x = obj.from_db(db.get(q)).show(db,recursive,form='C')
-                    if not '?_' in r.lbase:
-                        #if not anonymous, insert it directly in R
-                        R.insert(0,x)
-                        recursive.add(r.lbase)
-                    else:
-                        # anonymous struct/union: we need to transfer
-                        # any predefs into R
-                        x = x.split('\n\n')
-                        r.lbase = x.pop().replace('\n','\n  ').strip(';')
-                        if len(x):
-                            xr = x[0].split('\n')
-                            for xrl in xr:
-                                if xrl and xrl not in R: R.insert(0,xrl)
-                else:
-                    secho('identifier %s not found'%r.lbase,fg='red')
-        #finally add field type and name to the structure lines:
-        S.append(u'  {};'.format(r.show(n)))
-    #join R and S:
-    if len(R)>0: R.append('\n')
-    S.append('};')
-    return '\n'.join(R)+'\n'.join(S)
+        t.lconst = False # const keyword not supported by volatility
+        res = "['{}']".format(t.show_base())
+    for p in t.pstack:
+        if isinstance(p,arr):
+            res = "['array', %d, %s]"%(p.a,res)
+        elif isinstance(p,ptr):
+            res = "['pointer', %s]"%res
+        else:
+            # prototypes are ignored...
+            res = "['void']"
+    return res
+    #elif obj._is_enum:
+    #    return "['Enumeration', {0}, dict(choices={1})]]".format(n,obj)
 
-cUnion_C = cStruct_C
+def cTypedef_volatility(obj,db,recursive):
+    obj.unfold(db)
+    t = c_type(obj)
+    S = [u"{} = {}".format(obj.identifier,ctype_to_volatility(t))]
+    R = []
+    if isinstance(recursive,set):
+        for t in obj.subtypes:
+            if not t.identifier in recursive:
+                recursive.add(t.identifier)
+                R.append(t.show(db,recursive,form='volatility'))
+        if len(R)>0: R.append('')
+    return u'\n'.join(R+S)
+
+def cEnum_volatility(obj,db,recursive):
+    obj.unfold(db)
+    n = obj.identifier.replace(' ','_')
+    return u"{0} = ['Enumeration', '{0}', dict=(choices={1})]".format(n,obj)
+
+def cStruct_volatility(obj,db,recursive):
+    obj.unfold(db)
+    n = obj.identifier.replace('?_','').replace(' ','_')
+    t = build(obj)
+    S = [u"{0} = [ {1}, {{".format(n,sizeof(t))]
+    for i,f in enumerate(obj):
+        if obj._is_struct:
+            ft,fn,fc = f
+        elif obj._is_union:
+            fn,tc = f,obj[f]
+            ft,fc = tc
+        r = c_type(ft)
+        off = getattr(t,fn).offset
+        S.append(u"  '{0}': [{2}, {1}],".format(fn,ctype_to_volatility(r),off))
+    S.append("}]")
+    R = []
+    if isinstance(recursive,set):
+        for t in obj.subtypes:
+            if not t.identifier in recursive:
+                recursive.add(t.identifier)
+                R.append(t.show(db,recursive,form='volatility'))
+        if len(R)>0: R.append('')
+    return u'\n'.join(R+S)
+
+cUnion_volatility = cStruct_volatility
