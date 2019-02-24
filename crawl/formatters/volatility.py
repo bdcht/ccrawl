@@ -1,5 +1,3 @@
-from tinydb import Query, where
-from click import secho
 from crawl.utils import *
 from crawl.ext.ctypes_ import build
 from ctypes import sizeof
