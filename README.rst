@@ -1,35 +1,29 @@
-=====
-Crawl
-=====
+======
+cCrawl
+======
 
-.. image:: http://readthedocs.org/projects/crawl/badge/?version=latest
-    :target: http://crawl.readthedocs.io/en/latest/?badge=latest
+.. image:: http://readthedocs.org/projects/ccrawl/badge/?version=latest
+    :target: http://ccrawl.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
 +-----------+--------------------------------------------------+
 | Status:   | Under Development                                |
 +-----------+--------------------------------------------------+
-| Location: | https://github.com/bdcht/crawl                   |
+| Location: | https://github.com/bdcht/ccrawl                  |
 +-----------+--------------------------------------------------+
 | Version:  | 0.9                                              |
 +-----------+--------------------------------------------------+
-|  Doc:     | http://crawl.readthedocs.io/en/latest/index.html |
+|  Doc:     | http://ccrawl.readthedocs.io/en/latest/index.html|
 +-----------+--------------------------------------------------+
 
 Description
 ===========
 
 User documentation and API can be found at
-`http://crawl.readthedocs.io/en/latest/index.html`
+`http://ccrawl.readthedocs.io/en/latest/index.html`
 
 Todo
 ====
-
-Licence
-=======
-
-Please see `LICENSE`_.
-
 
 Changelog
 =========
