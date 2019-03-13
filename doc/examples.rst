@@ -1,22 +1,22 @@
 Examples
 ========
 
-(Dans un 2eme terminal, ouvrir le fichier crawl/tests/samples/header.h)
+(Dans un 2eme terminal, ouvrir le fichier ccrawl/tests/samples/header.h)
 Remarque: le parcours des fichiers sources est "aléatoire", l'ordre des résultats peut donc varier...
 
-On commence par les exemples dans crawl/tests::
+On commence par les exemples dans ccrawl/tests::
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test1.db collect ~/crawl/tests/samples
-  [ 50%] /home/user/crawl/tests/samples/header.h                                                [ 23]
-  [100%] /home/user/crawl/tests/samples/xxx/yyy/somewhere.h                                     [  9]
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db collect ~/ccrawl/tests/samples
+  [ 50%] /home/user/ccrawl/tests/samples/header.h                                                [ 23]
+  [100%] /home/user/ccrawl/tests/samples/xxx/yyy/somewhere.h                                     [  9]
   ---------------------------------------------------------------------------------------------------
   saving database...                                                                            [ 32]
 
-crawl a collecté tous les fichiers "*.h" du repertoire samples/.
+ccrawl a collecté tous les fichiers "*.h" du repertoire samples/.
 
 On cherche tous les objects dont le nom contient "MY"::
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test1.db match "MY"
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db match "MY"
   found cMacro identifer "MYSTRING"
   found cMacro identifer "MYEXPR"
   found cMacro identifer "MYMACRO"
@@ -24,7 +24,7 @@ On cherche tous les objects dont le nom contient "MY"::
 
 On cherche tous les objects de classe 'cTypedef' (typedef)::
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test1.db find -a "cls=cTypedef"
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db find -a "cls=cTypedef"
   found cTypedef identifer "foo1"
   found cTypedef identifer "__u8"
   found cTypedef identifer "myunion"
@@ -42,29 +42,29 @@ On cherche tous les objects de classe 'cTypedef' (typedef)::
 On cherche tous les prototypes de fonction retournant un type myunion et dont le 2eme argument
 est de type mystruct::
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test1.db find prototype 0:myunion 2:mystruct
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db find prototype 0:myunion 2:mystruct
   myunion myFunc(p_unspelled, mystruct);
 
 On cherche une constante dont la valeur est 0x10::
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test1.db find constant 0x10
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db find constant 0x10
   MYCONST
 
 On imprime le type "foo2" en C et en ctypes::
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test1.db show -r foo2
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show -r foo2
   typedef void *(*(*foo2[2])(int, void **))[3];
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test1.db show -f ctypes -r foo2
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show -f ctypes -r foo2
   foo2 = CFUNCTYPE(POINTER(c_void_p*3), c_int, c_void_p)*2
 
 
 On imprime le type "p_unspelled" (sans et avec recurssion) en C:
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test1.db show p_unspelled
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show p_unspelled
   typedef struct unspelled *p_unspelled;
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test1.db show -r p_unspelled
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show -r p_unspelled
   enum X {
     X_0 = 0,
     X_1 = 1,
@@ -107,7 +107,7 @@ On imprime le type "p_unspelled" (sans et avec recurssion) en C:
 
 On imprime le type "struct _mystruct" (sans recurssion) au format ctypes::
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test1.db show -f ctypes 'struct _mystruct'
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show -f ctypes 'struct _mystruct'
   struct__mystruct = type('struct__mystruct',(Structure,),{})
 
   struct__mystruct._fields_ = [("I", myinteger),
@@ -120,7 +120,7 @@ On imprime le type "struct _mystruct" (sans recurssion) au format ctypes::
 
 On cherche les structures ayant un type de longueur 8 à l'offset 88 (octets)::
 
-  (sstic) user@machine:/tmp % crawl -l test1.db find struct "88:+8"
+  (venv) user@machine:/tmp % ccrawl -l test1.db find struct "88:+8"
   struct _mystruct {
     myinteger I;
     int tab[12];
@@ -138,9 +138,9 @@ On cherche les structures ayant un type de longueur 8 à l'offset 88 (octets)::
 ps: certaines structures ne peuvent pas (encore) être construite car il manque la definition
 des types __u16 et 'struct ts_config' dans la base.
 
-On utilise crawl maintenant sur un cas "réaliste"::
+On utilise ccrawl maintenant sur un cas "réaliste"::
 
-  (sstic) user@machine:/tmp % time crawl -l test2.db collect /usr/include/openssl
+  (venv) user@machine:/tmp % time ccrawl -l test2.db collect /usr/include/openssl
   [  1%] /usr/include/openssl/crypto.h                                               [3400]
   [  9%] /usr/include/openssl/rc2.h                                                   [ 15]
   [ 11%] /usr/include/openssl/modes.h                                                 [ 45]
@@ -181,10 +181,10 @@ On utilise crawl maintenant sur un cas "réaliste"::
   [100%] /usr/include/openssl/asn1t.h                                                [5185]
   ----------------------------------------------------------------------------------------
   saving database...                                                                [17065]
-  crawl -c crawlrc -l test2.db collect /usr/include/openssl  44,55s user 0,48s system
+  ccrawl -c ccrawlrc -l test2.db collect /usr/include/openssl  44,55s user 0,48s system
   99% cpu 45,435 total
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test2.db find -a cls=cStruct
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db find -a cls=cStruct
   found cStruct identifer "struct ?_02144907"
   found cStruct identifer "struct ASN1_AUX_st"
   found cStruct identifer "struct err_state_st"
@@ -200,7 +200,7 @@ On utilise crawl maintenant sur un cas "réaliste"::
 
 Quels éléments utilisent le type "AUTHORITY_KEYID" ? ::
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test2.db match 'AUTHORITY_KEYID'
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db match 'AUTHORITY_KEYID'
   found cMacro identifer "X509V3_F_V2I_AUTHORITY_KEYID"
   found cStruct identifer "struct X509_crl_st" with matching value
   found cFunc identifer "X509_check_akid" with matching value
@@ -214,7 +214,7 @@ Quels éléments utilisent le type "AUTHORITY_KEYID" ? ::
 
 Interessons-nous à la structure 'struct x509_st' ::
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test2.db show 'struct x509_st'
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db show 'struct x509_st'
   struct x509_st {
     X509_CINF *cert_info;
     X509_ALGOR *sig_alg;
@@ -251,7 +251,7 @@ Pour finir, on va montrer le mode interactif, et chercher
 toutes les fonctions retournant un 'int' et dont le 1er argument est un
 pointeur sur EC_KEY* ::
 
-  (sstic) user@machine:/tmp % crawl -c crawlrc -l test2.db
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db
 
                            _
     ___ _ __ __ ___      _| |

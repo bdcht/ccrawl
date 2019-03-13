@@ -1,10 +1,10 @@
 Usage
 =====
 
-We now provide a description of the crawl command-line tool which defines several sub-commands.
-Of course, the crawl package can be used as well as a traditional package within Python scripts.
+We now provide a description of the ccrawl command-line tool which defines several sub-commands.
+Of course, the ccrawl package can be used as well as a traditional package within Python scripts.
 
-Crawl's initial command consist in building a local database from C (header) files.
+ccrawl's initial command consist in building a local database from C (header) files.
 The libclang [8] library is used to extract the following features ::
 
  - definitions of macros (#define)
@@ -15,10 +15,10 @@ The libclang [8] library is used to extract the following features ::
 Since files are only parsed and not compiled by libclang, the set of included files can be
 imcomplete and syntax errors only lead to ignored definitions. Of course, many queries do
 require ultimately that all subtypes of a structure have been collected but this is not enforced
-by crawl at parsing time. Crawl will also try to extract comments associated to these features
+by ccrawl at parsing time. ccrawl will also try to extract comments associated to these features
 when possible.
 
-The local database is a TinyDB JSON Storage file. For performance and scaling reasons, crawl
+The local database is a TinyDB JSON Storage file. For performance and scaling reasons, ccrawl
 supports also the use of remote MongoDB or CouchDB databases allowing massive indexing of
 the samples build locally.
 
@@ -28,16 +28,16 @@ Commands
 
 These global options which apply to all commands are::
 
-    $ crawl [-v, --verbose]                increase output verbosity
-            [-q, --quiet]                  remove all outputs
-            [-c, --configfile <file>]      optional configuration file
-            [-l, --local <file>]           local database file
-            [-b, --db <url>]               remote database url
-            [-g, --tag <name>]             tag used to filter documents of the database
-            [<command> [options] [args]]
+    $ ccrawl [-v, --verbose]                increase output verbosity
+             [-q, --quiet]                  remove all outputs
+             [-c, --configfile <file>]      optional configuration file
+             [-l, --local <file>]           local database file
+             [-b, --db <url>]               remote database url
+             [-g, --tag <name>]             tag used to filter documents of the database
+             [<command> [options] [args]]
 
 All default parameters are possibly overwritten by a configuration file which defaults to
-$HOME/.crawlrc unless provided by the -c option. The format of the configuration file is
+$HOME/.ccrawlrc unless provided by the -c option. The format of the configuration file is
 based on the 'traitlets' python package.
 Parameters allow to set the default python interpreter, the mandatory pathname of the
 libclang library required by the libclang python wrapper, the default local database path
@@ -74,7 +74,7 @@ Collect
 
 The 'collect' command locally extracts definitions from the provided sources <src>::
 
-    $ crawl [global options] collect [options] <src>
+    $ ccrawl [global options] collect [options] <src>
 
       options: [-a, --all]        by default, only header files with '*.h' extension are
                                   considered, this option forces extraction from all provided 
@@ -98,7 +98,7 @@ Match
 
 The 'match' command performs a regular expression search within database 'id' and 'val' keys::
 
-    $ crawl [global options] match <rex>
+    $ ccrawl [global options] match <rex>
 
                <rex>              python (re) regular expression matched against local database
                                   documents keys 'id' and 'val'. Documents are filtered with
@@ -109,7 +109,7 @@ Find
 
 The 'find' command performs advanced queries within the local database::
 
-    $ crawl [global options] find [-a, --ands <str>]
+    $ ccrawl [global options] find [-a, --ands <str>]
                                   [-o, --ors  <str>]
                                   [<find_command> [options] [args]]
 
@@ -146,7 +146,7 @@ Show
 
 The 'show' command allows to recursively output a requested definition in selected formats::
 
-    $ crawl [global options] show [options] <identifier>
+    $ ccrawl [global options] show [options] <identifier>
 
       options: [-r, --recursive]     recursively include all required definitions in the output
                                      such that type <identifier> is fully defined.
