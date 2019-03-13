@@ -1,14 +1,14 @@
-.. crawl documentation master file
+.. ccrawl documentation master file
 
-=====
-Crawl
-=====
+======
+ccrawl
+======
 -----------------------------------
-REquests in the world of structures
+Search Engine for C data structures
 -----------------------------------
 
 
-Crawl allows to extract, collect and search features related to C data structures (and macros).
+ccrawl allows to extract, collect and search features related to C data structures (and macros).
 
 Motivation
 ==========
@@ -27,13 +27,13 @@ importing this kind of information from windows PDB [4] files exist, this time c
 identification is still largely performed manually by the user.
 This is specially true in the case of embedded systems.
 
-Crawl aims at providing a kind of search engine related to data structures ideally automating
+ccrawl aims at providing a kind of search engine related to data structures ideally automating
 the identification of data types as well as constants/macros identifiers. Basically the idea
 is to allow queries like "find known structures that have a pointer to char at offset 8 and an
 unsigned integer at offset 56 and total size of 96 bytes ?"  or "find every macro that define
 value 0x1234 ?" or even "find the mask of values from enum X that correspond to 0xabcd ?"
 
-Finally, once collected in its database(s), crawl allows to output queried structures in
+Finally, once collected in its database(s), ccrawl allows to output queried structures in
 various dedicated formats: C of course, but also ctypes [5], VTypes (used by Volatility [6]),
 kaitaistruct [7], protobuf [8] or amoco [9]. The minimal subset of types required to fully
 define a given structure can also be outputed as well.
