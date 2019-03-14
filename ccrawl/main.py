@@ -2,20 +2,20 @@ import os
 import re
 import time
 import click
-from crawl import conf
-from crawl.formatters import formats
-from crawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL
-from crawl.parser import FUNCTION_DECL, MACRO_DEF
-from crawl.parser import parse,ccore,c_type
-from crawl.db import Proxy,Query,where
+from ccrawl import conf
+from ccrawl.formatters import formats
+from ccrawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL
+from ccrawl.parser import FUNCTION_DECL, MACRO_DEF
+from ccrawl.parser import parse,ccore,c_type
+from ccrawl.db import Proxy,Query,where
 
-# crawl commands utilities:
+# ccrawl commands utilities:
 #------------------------------------------------------------------------------
 
 def spawn_console(ctx):
     """ Crawl console for interactive mode.
     The console is based on IPython if found, or uses CPython otherwise.
-    When interactive, crawl is configured in non strict collect mode.
+    When interactive, ccrawl is configured in non strict collect mode.
     """
     c = conf.config
     if not ctx.obj['db']:

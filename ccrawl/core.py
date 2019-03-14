@@ -1,5 +1,5 @@
-from crawl import formatters
-from crawl.utils import *
+from ccrawl import formatters
+from ccrawl.utils import *
 
 class ccore(object):
     """ Generic class dedicated to a collected object

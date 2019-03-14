@@ -1,5 +1,5 @@
-from crawl.utils import *
-from crawl.ext.ctypes_ import build
+from ccrawl.utils import *
+from ccrawl.ext.ctypes_ import build
 from ctypes import sizeof
 
 # volatility VTypes formatters:

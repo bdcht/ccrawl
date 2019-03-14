@@ -5,14 +5,14 @@ from clang.cindex import CursorKind,TranslationUnit,Index
 import tempfile
 import hashlib
 from collections import OrderedDict
-from crawl import conf
-from crawl.core import *
+from ccrawl import conf
+from ccrawl.core import *
 
 g_indent = 0
 
 CHandlers = {}
 
-# crawl classes for clang parser:
+# ccrawl classes for clang parser:
 #------------------------------------------------------------------------------
 
 def declareHandler(kind):
@@ -25,7 +25,7 @@ def declareHandler(kind):
         return f
     return decorate
 
-# cursor types that will be parsed to instanciate crawl
+# cursor types that will be parsed to instanciate ccrawl
 # objects:
 TYPEDEF_DECL  = CursorKind.TYPEDEF_DECL
 STRUCT_DECL   = CursorKind.STRUCT_DECL
@@ -135,7 +135,7 @@ def get_uniq_typename(t):
     h = hashlib.sha256(s.encode('ascii')).hexdigest()[:8]
     return '%s ?_%s'%(kind,h)
 
-# crawl 'parse' function(s), wrapper of clang index.parse;
+# ccrawl 'parse' function(s), wrapper of clang index.parse;
 #------------------------------------------------------------------------------
 
 def parse(filename,
@@ -162,9 +162,9 @@ def parse(filename,
         # in non strict mode, we allow types to be undefined by catching
         # the missing type from diagnostics and defining a fake type instead
         # rather than letting clang use its default int type directly.
-        fd,tmpf = tempfile.mkstemp(prefix='crawl-')
+        fd,tmpf = tempfile.mkstemp(prefix='ccrawl-')
         os.close(fd)
-        fd,depf = tempfile.mkstemp(prefix='crawl-')
+        fd,depf = tempfile.mkstemp(prefix='ccrawl-')
         os.close(fd)
         _args += ['-M', '-MG', '-MF%s'%depf,'-include%s'%tmpf]
     if conf.DEBUG: echo('\nfilename: %s, args: %s'%(filename,_args))
@@ -273,7 +273,7 @@ def parse_string(s,args=None,options=0):
     """ Crawl wrapper to parse an input string rather than file.
     """
     # create a tmp filename (file can be removed immediately)
-    tmph = tempfile.mkstemp(prefix='crawl-',suffix='.h')[1]
+    tmph = tempfile.mkstemp(prefix='ccrawl-',suffix='.h')[1]
     os.remove(tmph)
     return parse(tmph,args,[(tmph,s)],options)
 

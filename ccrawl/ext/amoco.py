@@ -1,6 +1,6 @@
 from click import echo,secho
-from crawl import conf
-from crawl.formatters.amoco import *
+from ccrawl import conf
+from ccrawl.formatters.amoco import *
 try:
     from amoco.system.structs import *
 except ImportError:

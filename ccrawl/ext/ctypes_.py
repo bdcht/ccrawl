@@ -1,7 +1,7 @@
 from click import echo,secho
-from crawl import conf
-from crawl.formatters.ctypes_ import toCTypes
-from crawl.utils import c_type,fargs
+from ccrawl import conf
+from ccrawl.formatters.ctypes_ import toCTypes
+from ccrawl.utils import c_type,fargs
 import ctypes
 
 def mk_ctypes(t,Types):

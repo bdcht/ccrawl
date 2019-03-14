@@ -1,5 +1,5 @@
 from click import echo,secho
-from crawl import conf
+from ccrawl import conf
 try:
     from idc import parse_decls
 except ImportError:

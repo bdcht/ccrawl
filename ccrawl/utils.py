@@ -1,7 +1,7 @@
 import pyparsing as pp
 import re
 
-# crawl low-level utilities:
+# ccrawl low-level utilities:
 #------------------------------------------------------------------------------
 
 struct_letters = {

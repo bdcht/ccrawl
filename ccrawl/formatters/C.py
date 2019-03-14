@@ -1,6 +1,6 @@
 from tinydb import Query, where
 from click import secho
-from crawl.utils import *
+from ccrawl.utils import *
 
 # C formatters:
 #------------------------------------------------------------------------------

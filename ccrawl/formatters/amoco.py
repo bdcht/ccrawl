@@ -1,6 +1,6 @@
 #from amoco.system import structs
-from crawl.utils import *
-from crawl import conf
+from ccrawl.utils import *
+from ccrawl import conf
 from click import secho
 from tinydb import Query, where
 

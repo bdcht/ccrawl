@@ -13,7 +13,7 @@ if os.name == 'posix':
 else:
     clang_library_file = 'libclang-6.0.dll'
 
-# crawl globals:
+# ccrawl globals:
 #------------------------------------------------------------------------------
 
 config  = None
@@ -23,14 +23,14 @@ DEBUG   = False
 QUIET   = False
 BANNER  = \
 """
-                         _
-  ___ _ __ __ ___      _| |
- / __| '__/ _` \ \ /\ / / |
-| (__| | | (_| |\ V  V /| |
- \___|_|  \__,_| \_/\_/ |_| v%s
+                             _ 
+  ___ ___ _ __ __ ___      _| |
+ / __/ __| '__/ _` \ \ /\ / / |
+| (_| (__| | | (_| |\ V  V /| |
+ \___\___|_|  \__,_| \_/\_/ |_| v%s
 """%__version__
 
-# crawl configuration:
+# ccrawl configuration:
 #------------------------------------------------------------------------------
 
 class Terminal(Configurable):
@@ -56,7 +56,7 @@ class Terminal(Configurable):
 
 class Database(Configurable):
     "configurable parameters related to the database"
-    local  = Unicode('crawl.db',config=True)
+    local  = Unicode('ccrawl.db',config=True)
     url    = Unicode('',config=True)
     user   = Unicode('',config=True)
     verify = Bool(True,config=True)
@@ -78,7 +78,7 @@ class Formats(Configurable):
 class Config(object):
 
     def __init__(self,f=None):
-        if f is None: f='.crawlrc'
+        if f is None: f='.ccrawlrc'
         self.f = f
         cl = PyFileConfigLoader(filename=f,path=('.',os.getenv('HOME')))
         try:
