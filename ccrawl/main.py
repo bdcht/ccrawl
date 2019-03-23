@@ -401,9 +401,34 @@ def show(ctx,form,recursive,identifier):
 #------------------------------------------------------------------------------
 
 @cli.command()
+@click.argument('identifier',nargs=1,type=click.STRING)
 @click.pass_context
-def info(ctx):
+def info(ctx,identifier):
     db = ctx.obj['db']
+    Q = where('id')==identifier
+    if db.contains(Q):
+        for l in db.search(Q):
+            x = ccore.from_db(l)
+            click.echo ("identifier: {}".format(identifier))
+            click.secho("class     : {}".format(l['cls']),fg='cyan')
+            click.echo ("source    : {}".format(l['src']))
+            click.secho("tag       : {}".format(l['tag']),fg='magenta')
+            if x._is_struct:
+                try:
+                    t = x.build(db)
+                except:
+                    click.secho("can't build %s..skipping."%x.identifier,fg='red')
+                    click.echo('')
+                    continue
+                F = []
+                for i,f in enumerate(t._fields_):
+                    field = getattr(t,f[0])
+                    F.append((field.offset,field.size,c_type(x[i][0]).show()))
+                xsize = F[-1][0]+F[-1][1]
+                click.secho("size      : {}".format(xsize),fg='yellow')
+                click.secho("offsets   : {}".format([(f[0],f[1]) for f in F]),fg='yellow')
+    else:
+        click.secho("identifier '%s' not found"%identifier,fg='red')
 
 # store command:
 #------------------------------------------------------------------------------
@@ -419,8 +444,60 @@ def store(ctx):
 @cli.command()
 @click.pass_context
 def fetch(ctx):
-    if ctx.obj['db'] is None:
-        if conf.VERBOSE: click.echo('No database. See collect command.')
-        return None
     db = ctx.obj['db']
 
+# tags command:
+#------------------------------------------------------------------------------
+
+@cli.command()
+@click.pass_context
+def tags(ctx):
+    db = ctx.obj['db']
+    T = set()
+    for l in db.search():
+        if 'tag' in l: T.add(l['tag'])
+    for t in T:
+        click.echo("%s"%t)
+
+# sources command:
+#------------------------------------------------------------------------------
+
+@cli.command()
+@click.pass_context
+def sources(ctx):
+    db = ctx.obj['db']
+    T = set()
+    for l in db.search():
+        T.add(l['src'])
+    for t in T:
+        if '?_' in t: continue
+        if t.startswith('struct '): continue
+        if t.startswith('union '): continue
+        click.echo("%s"%t)
+
+# stats command:
+#------------------------------------------------------------------------------
+
+@cli.command()
+@click.pass_context
+def stats(ctx):
+    db = ctx.obj['db']
+    click.echo('database: ')
+    click.echo('       .local: %s'%str(db.ldb))
+    click.echo('       .url  : %s'%str(db.rdb))
+    click.echo('documents:')
+    F = db.search(where('cls')=='cFunc')
+    click.echo('       .cFunc   : %d'%len(F))
+    S = db.search(where('cls')=='cStruct')
+    click.echo('       .cStruct : %d'%len(S))
+    U = db.search(where('cls')=='cUnion')
+    click.echo('       .cUnion  : %d'%len(U))
+    E = db.search(where('cls')=='cEnum')
+    click.echo('       .cEnum   : %d'%len(E))
+    T = db.search(where('cls')=='cTypedef')
+    click.echo('       .cTypedef: %d'%len(T))
+    M = db.search(where('cls')=='cMacro')
+    click.echo('       .cMacro  : %d'%len(M))
+    click.echo('structures:')
+    l,s = max(((len(s['val']),s['id']) for s in S))
+    click.echo("  max fields: %d (in '%s')"%(l,s))
