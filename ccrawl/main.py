@@ -93,7 +93,7 @@ def cli(ctx,verbose,quiet,db,local,configfile,tag):
         if c.Database.url and ctx.obj['db'].rdb:
             click.echo('remote database is: %s'%c.Database.url)
         elif c.Database.url:
-            click.secho('remote database (%s) not connected'%c.Database.url,'red')
+            click.secho('remote database (%s) not connected'%c.Database.url,fg='red')
         else:
             click.echo('no remote database')
     if ctx.invoked_subcommand is None:
@@ -123,7 +123,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
     definitions are tagged with the global option TAG string or with a timestamp.
 
     The extraction is performed using libclang parser which can receive
-    specific parameters through the --Xclang option.
+    specific parameters through the --clang option.
     By default, only header files are parsed (the --all option allows to
     collect from all input files) and all implemented collectors are used.
 
@@ -211,11 +211,14 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
 @click.argument('rex',nargs=1,type=click.STRING)
 @click.pass_context
 def match(ctx,rex):
-    cx = re.compile(rex)
-    look = (lambda v: cx.search(str(v)))
     db = ctx.obj['db']
-    Q = (where('id').search(rex)) | (where('val').test(look))
-    L = db.search(Q)
+    if db.rdb:
+        L = db.rdb.match(rex)
+    else:
+        cx = re.compile(rex)
+        look = (lambda v: cx.search(str(v)))
+        Q = (where('id').search(rex)) | (where('val').test(look))
+        L = db.search(Q)
     for l in L:
         click.echo('found ',nl=False)
         click.secho('%s '%l['cls'],nl=False,fg='cyan')
@@ -413,7 +416,7 @@ def info(ctx,identifier):
             click.secho("class     : {}".format(l['cls']),fg='cyan')
             click.echo ("source    : {}".format(l['src']))
             click.secho("tag       : {}".format(l['tag']),fg='magenta')
-            if x._is_struct:
+            if x._is_struct or x._is_union:
                 try:
                     t = x.build(db)
                 except:
@@ -427,6 +430,7 @@ def info(ctx,identifier):
                 xsize = F[-1][0]+F[-1][1]
                 click.secho("size      : {}".format(xsize),fg='yellow')
                 click.secho("offsets   : {}".format([(f[0],f[1]) for f in F]),fg='yellow')
+
     else:
         click.secho("identifier '%s' not found"%identifier,fg='red')
 
@@ -434,9 +438,29 @@ def info(ctx,identifier):
 #------------------------------------------------------------------------------
 
 @cli.command()
+@click.option('-u','--update',is_flag=False,
+              help='update local base with all subtypes')
 @click.pass_context
-def store(ctx):
+def store(ctx,update):
     db = ctx.obj['db']
+    rdb = db.rdb
+    db.rdb = None
+    Done = []
+    for l in db.search(db.tag):
+        x = ccore.from_db(l)
+        l['use'] = [t.identifier for t in x.unfold(db).subtypes]
+        if conf.DEBUG:
+            click.echo('prepare store %s'%l)
+        if update is True:
+            db.ldb.update(l)
+        Done.append(l)
+    if rdb:
+        if conf.DEBUG:
+            click.echo('remote db insert multiple ...')
+        rdb.insert_multiple(Done)
+        if not update:
+            db.ldb.remove(doc_ids=[l.doc_id for l in Done])
+    db.rdb = rdb
 
 # fetch command:
 #------------------------------------------------------------------------------

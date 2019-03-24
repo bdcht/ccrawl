@@ -22,8 +22,12 @@ class Proxy(object):
             auth = None
             if config.user:
                 auth = (config.user,click.prompt('password',hide_input=True))
+            if config.url.startswith('http'):
+                dbclass = CouchDB
+            elif config.url.startswith('mongodb'):
+                dbclass = MongoDB
             try:
-                self.rdb = CouchDB(config.url,auth=auth,verify=config.verify)
+                self.rdb = dbclass(config.url,auth=auth,verify=config.verify)
             except:
                 self.rdb = None
 
@@ -34,28 +38,28 @@ class Proxy(object):
         self.ldb.insert_multiple(docs)
 
     def contains(self,q=None,**kargs):
-        if self.rdb:
-            return self.rdb.contains(q,**kargs)
-        if q is None: q = Query()
+        if q is None: q = self.tag
         for k in kargs:
             q &= (where(k)==kargs[k])
-        return self.ldb.contains(self.tag & q)
+        if self.rdb:
+            return self.rdb.contains(q.hashval,**kargs)
+        return self.ldb.contains(q)
 
     def search(self,q=None,**kargs):
-        if self.rdb:
-            return self.rdb.search(q,**kargs)
-        if q is None: q = Query()
+        if q is None: q = self.tag
         for k in kargs:
             q &= (where(k)==kargs[k])
-        return self.ldb.search(self.tag & q)
+        if self.rdb:
+            return list(self.rdb.search(q.hashval,**kargs))
+        return self.ldb.search(q)
 
     def get(self,q=None,**kargs):
-        if self.rdb:
-            return self.rdb.get(q,**kargs)
-        if q is None: q = Query()
+        if q is None: q = self.tag
         for k in kargs:
             q &= (where(k)==kargs[k])
-        return self.ldb.get(self.tag & q)
+        if self.rdb:
+            return self.rdb.get(q.hashval,**kargs)
+        return self.ldb.get(q)
 
     def close(self):
         self.ldb.close()
@@ -71,3 +75,51 @@ class CouchDB(object):
         r = self.session.get(self.url,verify=self.verify)
         r.raise_for_status()
 
+#------------------------------------------------------------------------------
+
+class MongoDB(object):
+    def __init__(self,url,auth=None,verify=True):
+        from pymongo import MongoClient
+        self.url = url
+        self.client = MongoClient(url)
+        self.db = self.client['ccrawl']
+
+    def __repr__(self):
+        return u'<MongoDB [%s]>'%self.url
+
+    def _where(self,q):
+        res = dict()
+        op = q[0]
+        if op=='exists':
+            res[q[1][0]] = {'$exists':True}
+        elif op=='==':
+            l,r = q[1][0],q[2]
+            res[l] = r
+        elif op=='matches':
+            l,r = q[1][0],q[2]
+            res[l] = {'$regex': r}
+        elif op=='search':
+            l,r = q[1][0],q[2]
+            res[l] = {'$regex': r}
+        elif op=='and':
+            for x in q[1]:
+                res.update(self._where(x))
+        elif op=='or':
+            res['$or'] = [self._where(x) for x in q[1]]
+        return res
+
+    def insert_multiple(self,docs):
+        col = self.db['nodes']
+        return col.insert_many(docs)
+
+    def contains(self,q,**kargs):
+        col = self.db['nodes']
+        return col.find(self._where(q)).limit(1)
+
+    def search(self,q,**kargs):
+        col = self.db['nodes']
+        return col.find(self._where(q))
+
+    def get(self,q,**kargs):
+        col = self.db['nodes']
+        return col.find_one(self._where(q))
