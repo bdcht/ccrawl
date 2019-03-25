@@ -194,19 +194,25 @@ def parse(filename,
     ok = False
     reparse = 0
     while not ok:
+        # normally we don't loop unless we have errors in diagnostics
         ok = True
         trycplusplus = False
+        # so lets check errors:
         for err in tu.diagnostics:
             if err.severity==3:
                 if conf.VERBOSE: secho(err.format(),fg='yellow')
-                if 'unknown type name' in err.spelling:
+                # if its a missing typename, we add it and ask for reparse:
+                if 'unknown type name' in err.spelling or \
+                   'has incomplete' in err.spelling:
                     tn = re.findall("'(.*)'",err.spelling)
                     if conf.config.Collect.strict: return None
                     add_fake_type(tmpf,tn[0])
                     ok = False
+                # otherwise we will check if input is C++
                 elif ("expected ';'" in err.spelling) or\
                      ("'namespace'" in err.spelling):
                     trycplusplus = True
+                    ok = True
                     break
             elif err.severity==4:
                 # this should not happen anymore thanks to -M -MG opts...
@@ -227,9 +233,10 @@ def parse(filename,
                     if conf.VERBOSE:
                         secho('clang index.parse error (c++)',fg='red')
             else:
+                # seems like a C++ file...lets skip it
                 if not conf.QUIET:
                     secho('[c++]'.rjust(8),fg='yellow')
-                return []
+                tu = None
         if not ok:
             try:
                 tu.reparse(unsaved_files,options)
@@ -238,15 +245,18 @@ def parse(filename,
                     secho('[err]'.rjust(8),fg='red')
                     if conf.VERBOSE:
                         secho('clang reparse error, file ignored',fg='red')
-                return []
+                tu = None
             else:
                 reparse += 1
                 if reparse==3:
+                    if conf.VERBOSE: secho('parsed x3 limit!',fg='red')
                     ok = True
     # cleanup tempfiles
     if not conf.config.Collect.strict:
         for f in (tmpf,depf):
+            if conf.DEBUG: secho('removing tmp file %s'%f,fg='magenta')
             if os.path.exists(f): os.remove(f)
+    if tu is None: return []
     # walk down all AST to get all cursors:
     pool = [c for c in tu.cursor.get_children()]
     # fill defs with collected cursors:
@@ -278,7 +288,11 @@ def parse_string(s,args=None,options=0):
     return parse(tmph,args,[(tmph,s)],options)
 
 def add_fake_type(f,t):
+    if t in ('void',): return
     with open(f,'a') as i:
-        i.write('typedef int %s;\n'%t)
+        if 'struct ' in t: i.write('%s {int dummy};'%t)
+        elif 'union ' in t: i.write('%s {int dummy};'%t)
+        elif 'enum ' in t: i.write('%s {dummy=0};'%t)
+        else: i.write('typedef int %s;\n'%t)
         i.flush()
         if conf.VERBOSE: secho("fake type '%s' added"%t,fg='green')
