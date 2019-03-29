@@ -16,6 +16,7 @@ struct_letters = {
     'double'     : 'd',
     'ssize_t'    : 'n',
     'size_t'     : 'N',
+    'wchar_t'    : 'L',
 }
 
 # C type declaration parser:
@@ -95,7 +96,7 @@ class c_type(object):
         if stripok: s=s[1:-1]
         return s
     def show(self,name=''):
-        return '%s %s'%(self.show_base(),self.show_ptr(name))
+        return ('%s %s'%(self.show_base(),self.show_ptr(name))).strip()
 
 class ptr(object):
     def __init__(self,p,c):
