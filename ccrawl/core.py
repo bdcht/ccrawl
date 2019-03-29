@@ -12,12 +12,15 @@ class ccore(object):
     _is_func    = False
     formatter   = None
 
+    _cache_     = {}
+
     def show(self,db=None,r=None,form=None):
         if (not self.formatter) or form:
             self.set_formatter(form)
         return self.formatter(db,r)
 
     def unfold(self,db,limit=None):
+        self.subtypes = []
         return self
 
     def build(self,db=None):
@@ -33,10 +36,16 @@ class ccore(object):
         return t
 
     def add_subtype(self,db,elt,limit=None):
-        data = db.get(id=elt)
-        if data:
-            x = ccore.from_db(data)
-            self.subtypes.append(x.unfold(db,limit))
+        x = ccore._cache_.get(elt,None)
+        if x is None:
+            data = db.get(id=elt)
+            if data:
+                x = ccore.from_db(data)
+                ccore._cache_[elt] = x
+            else:
+                self.subtypes.append(None)
+                return
+        self.subtypes.append(x.unfold(db,limit))
 
     @classmethod
     def set_formatter(cls,form):
@@ -72,13 +81,14 @@ class ccore(object):
         identifier = data['id']
         val = ccore.getcls(data['cls'])(data['val'])
         val.identifier = identifier
-        val.subtypes = []
+        val.subtypes = None
         return val
 
 class cTypedef(str,ccore):
     _is_typedef = True
-    def unfold(self,db,limit=None):
-        if not self.subtypes:
+    def unfold(self,db,limit=None,ctx=None):
+        if self.subtypes is None:
+            self.subtypes = []
             ctype = c_type(self)
             if limit!=None:
                 if limit<=0 and ctype.is_ptr:
@@ -92,7 +102,8 @@ class cTypedef(str,ccore):
 class cStruct(list,ccore):
     _is_struct = True
     def unfold(self,db,limit=None):
-        if not self.subtypes:
+        if self.subtypes is None:
+            self.subtypes = []
             T = list(struct_letters.keys())
             T.append(self.identifier)
             for (t,n,c) in self:
@@ -110,7 +121,8 @@ class cStruct(list,ccore):
 class cUnion(dict,ccore):
     _is_union = True
     def unfold(self,db,limit=None):
-        if not self.subtypes:
+        if self.subtypes is None:
+            self.subtypes = []
             T = list(struct_letters.keys())
             T.append(self.identifier)
             for n,tc in self.items():
@@ -141,15 +153,17 @@ class cFunc(str,ccore):
     def argtypes(self):
         t = c_type(self)
         return t.pstack[-1].args
-    def unfold(self,db):
-        T = list(struct_letters.keys())
-        rett = self.restype()
-        args = self.argtypes()
-        args.insert(0,rett)
-        for t in args:
-            elt = c_type(t).lbase
-            if (elt not in T):
-                T.append(elt)
-                self.add_subtype(db,elt)
+    def unfold(self,db,limit=None):
+        if self.subtypes is None:
+            self.subtypes = []
+            T = list(struct_letters.keys())
+            rett = self.restype()
+            args = self.argtypes()
+            args.insert(0,rett)
+            for t in args:
+                elt = c_type(t).lbase
+                if (elt not in T):
+                    T.append(elt)
+                    self.add_subtype(db,elt)
         return self
 

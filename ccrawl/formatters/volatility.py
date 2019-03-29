@@ -36,7 +36,8 @@ def cTypedef_volatility(obj,db,recursive):
     S = [u"{} = {}".format(obj.identifier,ctype_to_volatility(t))]
     R = []
     if isinstance(recursive,set):
-        for t in obj.subtypes:
+        for t in (obj.subtypes or []):
+            if t is None: continue
             if not t.identifier in recursive:
                 recursive.add(t.identifier)
                 R.append(t.show(db,recursive,form='volatility'))
@@ -65,7 +66,8 @@ def cStruct_volatility(obj,db,recursive):
     S.append("}]")
     R = []
     if isinstance(recursive,set):
-        for t in obj.subtypes:
+        for t in (obj.subtypes or []):
+            if t is None: continue
             if not t.identifier in recursive:
                 recursive.add(t.identifier)
                 R.append(t.show(db,recursive,form='volatility'))

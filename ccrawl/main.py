@@ -448,16 +448,20 @@ def store(ctx,update):
     Done = []
     for l in db.search(db.tag):
         x = ccore.from_db(l)
-        l['use'] = [t.identifier for t in x.unfold(db).subtypes]
-        if conf.DEBUG:
-            click.echo('prepare store %s'%l)
+        if conf.VERBOSE:
+            click.echo("unfolding '%s'..."%x.identifier,nl=False)
+        l['use'] = [t.identifier for t in filter(None,x.unfold(db).subtypes)]
+        if conf.VERBOSE:
+            click.echo('done')
         if update is True:
             db.ldb.update(l)
         Done.append(l)
     if rdb:
-        if conf.DEBUG:
-            click.echo('remote db insert multiple ...')
+        if conf.VERBOSE:
+            click.echo('remote db insert multiple ...',nl=False)
         rdb.insert_multiple(Done)
+        if conf.VERBOSE:
+            click.echo('done')
         if not update:
             db.ldb.remove(doc_ids=[l.doc_id for l in Done])
     db.rdb = rdb

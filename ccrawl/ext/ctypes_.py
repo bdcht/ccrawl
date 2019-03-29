@@ -38,7 +38,8 @@ def formatproto(res,proto,Types):
     return ctypes.CFUNCTYPE(*params)
 
 def build(obj,Types={}):
-    for subtype in obj.subtypes:
+    for subtype in (obj.subtypes or []):
+        if subtype is None: continue
         build(subtype,Types)
     if obj._is_typedef:
         t = c_type(obj)
