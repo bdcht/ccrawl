@@ -114,11 +114,11 @@ class MongoDB(object):
 
     def contains(self,q,**kargs):
         col = self.db['nodes']
-        return col.find(self._where(q)).limit(1)
+        return len(list(col.find(self._where(q)).limit(1)))>0
 
     def search(self,q,**kargs):
         col = self.db['nodes']
-        return col.find(self._where(q))
+        return list(col.find(self._where(q)))
 
     def get(self,q,**kargs):
         col = self.db['nodes']
