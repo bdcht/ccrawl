@@ -52,6 +52,8 @@ def cTypedef_amoco(obj,db,recursive):
             x = obj.from_db(db.get(Q))
             pre = x.show(db,recursive,form='amoco')
             pre += '\n\n'
+        else:
+            secho("identifier {} not found".format(t.lbase),fg="red")
     rn,n = fieldformat(t)
     return u"{}TypeDefine('{}','{}')".format(pre,obj.identifier, rn or n)
 

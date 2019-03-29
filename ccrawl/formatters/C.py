@@ -13,6 +13,8 @@ def cTypedef_C(obj,db,recursive):
         if db.contains(Q):
             x = obj.from_db(db.get(Q))
             pre = x.show(db,recursive,form='C')+'\n'
+        else:
+            secho('identifier %s not found'%t.lbase,fg='red')
     if recursive and '?_' in t.lbase:
         pre = pre.split('\n\n')
         t.lbase = pre.pop().strip()

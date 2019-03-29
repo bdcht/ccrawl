@@ -65,6 +65,8 @@ def cTypedef_ctypes(obj,db,recursive):
             x = obj.from_db(db.get(Q))
             pre = x.show(db,recursive,form='ctypes')
             pre += '\n\n'
+        else:
+            secho("identifier %s not found"%t.lbase,fg='red')
     return u'{}{} = {}'.format(pre, obj.identifier, id_ctypes(t))
 
 def cMacro_ctypes(obj,db,recursive):
@@ -89,6 +91,8 @@ def cFunc_ctypes(obj,db,recursive):
                     x = obj.from_db(db.get(Q))
                     pre = x.show(db,recursive,form='ctypes')
                     pre += '\n\n'
+                else:
+                    secho("identifier %s not found"%t.lbase,fg='red')
     params = [id_ctypes(c_type(x)) for x in args]
     res = id_ctypes(c_type(res))
     if res=='c_void': res='None'
