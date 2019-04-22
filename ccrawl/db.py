@@ -1,4 +1,3 @@
-import requests
 import ctypes
 from ccrawl.parser import ccore
 from tinydb.storages import JSONStorage,MemoryStorage
@@ -68,6 +67,7 @@ class Proxy(object):
 
 class CouchDB(object):
     def __init__(self,url,auth=None,verify=True):
+        import requests
         self.url = url
         self.verify = verify
         self.session = requests.Session()
