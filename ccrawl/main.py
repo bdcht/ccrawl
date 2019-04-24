@@ -276,6 +276,7 @@ def prototype(ctx,proto):
     db = ctx.obj['db']
     Q  = ctx.obj.get('find',Query())
     L = db.search(Q,cls='cFunc')
+    R = []
     with click.progressbar(L) as pL:
         for l in pL:
             x = ccore.from_db(l)
@@ -284,8 +285,9 @@ def prototype(ctx,proto):
             if max(reqs)>=len(P): continue
             if not all(((t==P[i]) for (i,t) in reqs.items())):
                 continue
-            click.echo()
-            click.echo(x.show(db,form='C'))
+            R.append(x.show(db,form='C'))
+    if R:
+        click.echo('\n'.join(R))
 
 @find.command()
 @click.option('-m','--mask',is_flag=True)
@@ -347,6 +349,7 @@ def struct(ctx,conds):
     db = ctx.obj['db']
     Q  = ctx.obj['find']
     L = db.search(Q,cls='cStruct')
+    R = []
     with click.progressbar(L) as pL:
         for l in pL:
             x = ccore.from_db(l)
@@ -373,8 +376,9 @@ def struct(ctx,conds):
                     ok = False
                     break
             if ok:
-                click.echo()
-                click.echo(x.show(db,form='C'))
+                R.append(x.show(db,form='C'))
+    if R:
+        click.echo('\n'.join(R))
 
 
 # show command:

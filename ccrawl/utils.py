@@ -149,6 +149,9 @@ def pstack(plist):
                 plist = []
             else:
                 plist.pop(0)
+        if len(plist)==1 and len(plist[0])==0:
+            S.append(fargs('()'))
+            return S
     if len(plist)>1:
         r = plist.pop()
         if not isinstance(r,list):
