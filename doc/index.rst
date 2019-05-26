@@ -3,12 +3,13 @@
 ======
 ccrawl
 ======
------------------------------------
-Search Engine for C data structures
------------------------------------
+---------------------------------------
+Search Engine for C/C++ data structures
+---------------------------------------
 
 
-ccrawl allows to extract, collect and search features related to C data structures (and macros).
+ccrawl allows to extract, collect and search features related to C/C++ data structures
+(i.e. everthing related to definitions of struct, union, class, enum, typedef, prototypes and macros).
 
 Motivation
 ==========
@@ -21,13 +22,13 @@ These various features ideally provide a kind of "decompiled" representation of 
 
 Plugins like "Hex-Rays" [2] perform an analysis of the control flow that leads to a decompiled
 representation much closer to an equivalent C source code than the initial assembly instruction
-listing or CFG. However, informations related to the nature and structure of manipulated data
+listing. However, informations related to the nature and structure of manipulated data
 are still mostly unidentified. Althrough some dedicated tools like TILIB or FLIRT [3]
 or plugins to import this kind of information from windows PDB [4] files exist, this time consuming
 identification is still largely performed manually by the user.
 This is particularly true in the case of embedded system firmware analysis.
 
-ccrawl aims at providing a kind of search engine related to data structures ideally automating
+ccrawl aims to provide a kind of search engine related to data structures ideally automating
 the identification of data types as well as constants/macros identifiers. Basically the idea
 is to allow queries like "find known structures that have a pointer to char at offset 8 and an
 unsigned integer at offset 56 and total size of 96 bytes ?"  or "find every macro that define
@@ -35,8 +36,8 @@ value 0x1234 ?" or even "find the mask of values from enum X that correspond to 
 
 Finally, once collected in its database(s), ccrawl allows to output queried structures in
 various dedicated formats: C of course, but also ctypes [5], VTypes (used by Volatility [6]),
-or amoco [9]. The subset of all types required to fully
-define a given structure can also be outputed as well.
+or amoco [9]. The subset of all types required to fully define a given structure can also
+be shown as well.
 
 .. ----------------------------------------------------------------------------  
 .. _user-docs:

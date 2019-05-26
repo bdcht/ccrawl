@@ -1,10 +1,8 @@
 Examples
 ========
 
-(Dans un 2eme terminal, ouvrir le fichier ccrawl/tests/samples/header.h)
-Remarque: le parcours des fichiers sources est "aléatoire", l'ordre des résultats peut donc varier...
-
-On commence par les exemples dans ccrawl/tests::
+In a terminal, open file "ccrawl/tests/samples/header.h".
+Open another terminal and within your virtualenv do::
 
   (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db collect ~/ccrawl/tests/samples
   [ 50%] /home/user/ccrawl/tests/samples/header.h                                                [ 23]

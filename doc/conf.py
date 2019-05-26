@@ -164,7 +164,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'ccrawl', 'ccrawl Documentation',
-     author, 'ccrawl', 'Search Engine for C data structures.',
+     author, 'ccrawl', 'Search Engine for C/C++ data structures.',
      'Reverse Engineering'),
 ]
 
