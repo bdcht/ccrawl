@@ -4,15 +4,17 @@ from ccrawl.utils import *
 class ccore(object):
     """ Generic class dedicated to a collected object
     used as parent of all types"""
-    _is_typedef = False
-    _is_struct  = False
-    _is_union   = False
-    _is_enum    = False
-    _is_macro   = False
-    _is_func    = False
-    formatter   = None
-
-    _cache_     = {}
+    _is_typedef   = False
+    _is_struct    = False
+    _is_union     = False
+    _is_enum      = False
+    _is_macro     = False
+    _is_func      = False
+    _is_class     = False
+    _is_template  = False
+    _is_namespace = False
+    formatter     = None
+    _cache_       = {}
 
     def show(self,db=None,r=None,form=None):
         if (not self.formatter) or form:
@@ -22,18 +24,6 @@ class ccore(object):
     def unfold(self,db,limit=None):
         self.subtypes = []
         return self
-
-    def build(self,db=None):
-        """default build method will execute the output
-         the show method in ctypes format to effectively
-         build the ctypes objects."""
-        import ctypes
-        G = ctypes.__dict__
-        x = self.show(db,set(),form='ctypes')
-        exec(x,G)
-        name = formatters.id_ctypes(c_type(self.identifier))
-        t = G[name]
-        return t
 
     def add_subtype(self,db,elt,limit=None):
         x = ccore._cache_.get(elt,None)
@@ -57,12 +47,15 @@ class ccore(object):
 
     @staticmethod
     def getcls(name):
-        if name == 'cTypedef': return cTypedef
-        if name == 'cStruct' : return cStruct
-        if name == 'cUnion'  : return cUnion
-        if name == 'cEnum'   : return cEnum
-        if name == 'cMacro'  : return cMacro
-        if name == 'cFunc'   : return cFunc
+        if name == 'cTypedef'   : return cTypedef
+        if name == 'cStruct'    : return cStruct
+        if name == 'cUnion'     : return cUnion
+        if name == 'cEnum'      : return cEnum
+        if name == 'cMacro'     : return cMacro
+        if name == 'cFunc'      : return cFunc
+        if name == 'cClass'     : return cClass
+        if name == 'cTemplate'  : return cTemplate
+        if name == 'cNamespace' : return cNamespace
 
     def to_db(self,identifier,tag,src):
         doc = {'id':identifier,
@@ -118,6 +111,17 @@ class cStruct(list,ccore):
                     self.add_subtype(db,elt,limit)
         return self
 
+class cClass(list,ccore):
+    _is_class = True
+    def unfold(self,db,limit=None):
+        if self.subtypes is None:
+            self.subtypes = []
+            T = list(struct_letters.keys())
+            T.append(self.identifier)
+            for (t,N,a,c) in self:
+                raise NotImplementedError
+        return self
+
 class cUnion(dict,ccore):
     _is_union = True
     def unfold(self,db,limit=None):
@@ -165,5 +169,19 @@ class cFunc(str,ccore):
                 if (elt not in T):
                     T.append(elt)
                     self.add_subtype(db,elt)
+        return self
+
+class cTemplate(dict,ccore):
+    _is_template = True
+
+class cNamespace(list,ccore):
+    _is_namespace = True
+    def unfold(self,db,limit=None):
+        if self.subtypes is None:
+            self.subtypes = []
+            T = list(struct_letters.keys())
+            T.append(self.identifier)
+            for elt in self:
+                self.add_subtype(db,elt)
         return self
 

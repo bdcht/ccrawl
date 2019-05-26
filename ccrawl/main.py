@@ -105,6 +105,10 @@ def cli(ctx,verbose,quiet,db,local,configfile,tag):
 # Collect command:
 #------------------------------------------------------------------------------
 
+def do_collect(ctx,src):
+    ctx.invoke(collect,allc=False,types=False,functions=False,macros=False,
+                       strict=False,xclang='',src=src)
+
 @cli.command()
 @click.option('-a','--all' ,'allc',is_flag=True,
               help='collect data from all files rather than headers only')
@@ -132,11 +136,11 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
     errors are not bypassed with fake types).
     """
     c = conf.config
-    F = lambda f:f.endswith('.h')
+    F = lambda f:f.endswith('.h') or f.endswith('.hpp')
     K = None
     c.Collect.strict = strict
     if allc is True:
-        F = lambda f: (f.endswith('.c') or F(f))
+        F = lambda f: (f.endswith('.c') or f.endswith('.cpp') or F(f))
     if types or functions or macros:
         K = []
         if types: K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL]
@@ -154,7 +158,10 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
     # if no clang params is provided, use defaults:
     if xclang is None:
         # keep comments in parser output:
-        args  = ['-ferror-limit=0','-fparse-all-comments']
+        args  = ['-ferror-limit=0',
+                 '-fparse-all-comments',
+                 '-fno-delayed-template-parsing',
+                 '-Xclang', '-detailed-preprocessing-record']
         # add header directories:
         for i in (D for D in src if os.path.isdir(D)):
             args.append('-I%s'%i)
@@ -171,7 +178,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
         elif os.path.isfile(D) and F(D):
             FILES.add(D)
     total = len(FILES)
-    W = c.Terminal.width-8
+    W = c.Terminal.width-12
     # parse and collect all sources:
     while len(FILES)>0:
         t0 = time.time()
@@ -201,7 +208,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
     db.insert_multiple(dbo.values())
     db.close()
     if not c.Terminal.quiet:
-        click.secho(('[%3d]'%N).rjust(8),fg='green')
+        click.secho(('[%4d]'%N).rjust(12),fg='green')
     return 0
 
 # match command:
@@ -520,6 +527,8 @@ def stats(ctx):
     click.echo('documents:')
     F = db.search(where('cls')=='cFunc')
     click.echo('       .cFunc   : %d'%len(F))
+    C = db.search(where('cls')=='cClass')
+    click.echo('       .cClass  : %d'%len(C))
     S = db.search(where('cls')=='cStruct')
     click.echo('       .cStruct : %d'%len(S))
     U = db.search(where('cls')=='cUnion')

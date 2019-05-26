@@ -5,8 +5,8 @@ filtered Structures/Unions, Enums, Macros and Functions prototypes.'''
 
 setup(
     name = 'ccrawl',
-    version = '0.9.5',
-    description = 'C source code crawler that creates a database of C-structures and constants',
+    version = '0.9.6',
+    description = 'C source code crawler that creates a database of C-structures, prototypes and macros',
     long_description = long_descr,
     # Metadata
     author = 'Axel Tillequin',
