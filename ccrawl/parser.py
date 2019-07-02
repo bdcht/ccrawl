@@ -80,6 +80,7 @@ def TypeDef(cur,cxx):
 def StructDecl(cur,cxx):
     typename = cur.type.spelling
     if not typename.startswith('struct'):
+        typename = typename.split('::')[-1]
         typename = 'struct %s'%(typename)
     typename = get_uniq_typename(typename)
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
@@ -91,6 +92,7 @@ def StructDecl(cur,cxx):
 def UnionDecl(cur,cxx):
     typename = cur.type.spelling
     if not typename.startswith('union'):
+        typename = typename.split('::')[-1]
         typename = 'union %s'%(typename)
     typename = get_uniq_typename(typename)
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
@@ -102,6 +104,7 @@ def UnionDecl(cur,cxx):
 def ClassDecl(cur,cxx):
     typename = cur.displayname
     if not typename.startswith('class'):
+        typename = typename.split('::')[-1]
         typename = 'class %s'%(typename)
     typename = get_uniq_typename(typename)
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
@@ -113,6 +116,7 @@ def ClassDecl(cur,cxx):
 def EnumDecl(cur,cxx):
     typename = cur.type.spelling
     if not typename.startswith('enum'):
+        typename = typename.split('::')[-1]
         typename = 'enum %s'%typename
     typename = get_uniq_typename(typename)
     S = cEnum()
@@ -189,15 +193,21 @@ def SetStructured(cur,S):
         if f.kind in (STRUCT_DECL,UNION_DECL,CLASS_DECL,ENUM_DECL):
             identifier,slocal = CHandlers[f.kind](f,S._is_class)
             local[identifier] = slocal
+        # c++ parent class:
         elif f.kind is CursorKind.CXX_BASE_SPECIFIER:
             is_virtual = clang.cindex.conf.lib.clang_isVirtualBase(f)
             virtual = 'virtual' if is_virtual else ''
-            S.append( (('parent',f.spelling),virtual,f.access_specifier.name) )
+            S.append( (('parent',virtual),('',f.spelling),(f.access_specifier.name,'')) )
+        # c++ 'using' declaration:
         elif f.kind is CursorKind.USING_DECLARATION:
             I = list(f.get_children())
-            S.append( ('using',[x.spelling for x in I]) )
+            S.append( (('using',''),('',[x.spelling for x in I]),('','')) )
+        # structured type member:
         else:
             comment = f.brief_comment or f.raw_comment
+            # type spelling is our member type only if this type is defined already,
+            # otherwise clang takes the default 'int' type here and we can't access
+            # the wanted type unless we access the cursor's tokens.
             t = f.type.spelling
             if '(anonymous' in t:
                 if not S._is_class:
@@ -216,6 +226,7 @@ def SetStructured(cur,S):
                         attr = ''
                         if f.kind==CursorKind.VAR_DECL: attr = 'static'
                         if f.is_virtual_method(): attr = 'virtual'
+                        if conf.DEBUG: echo('\t'*g_indent + str(t)+' '+str(f.spelling))
                         member = ((attr,t),
                                   (f.mangled_name,f.spelling),
                                   (f.access_specifier.name,comment))
@@ -305,10 +316,12 @@ def parse(filename,
     # to handle unknown types (due to missing headers)
     ok = False
     reparse = 0
+    faked = set()
+    trycplusplus = False
     while not ok:
         # normally we don't loop unless we have errors in diagnostics
         ok = True
-        trycplusplus = False
+        # if filename looks like C (not C++), we assume plain old C:
         # so lets check errors:
         for err in tu.diagnostics:
             if err.severity==3:
@@ -316,16 +329,30 @@ def parse(filename,
                 # if its a missing typename, we add it and ask for reparse:
                 if 'unknown type name' in err.spelling or \
                    'has incomplete' in err.spelling:
-                    tn = re.findall("'(.*)'",err.spelling)
+                    tn = re.findall("'([^']*)'",err.spelling)
                     if conf.config.Collect.strict: return None
-                    add_fake_type(tmpf,tn[0])
+                    if (tn[0] not in faked) and add_fake_type(tmpf,tn):
+                        faked.add(tn[0])
                     ok = False
                 # otherwise we will check if input is C++
+                elif 'no type named' in err.spelling or \
+                     'no template named' in err.spelling:
+                    tn = re.findall("'([^']*)'",err.spelling)
+                    trycplusplus = True
+                    if conf.config.Collect.strict: return None
+                    tq = '%s::%s'%(tn[1],tn[0])
+                    if (tq not in faked) and add_fake_type(tmpf,tn):
+                        faked.add(tq)
+                    ok = False
                 elif ("expected ';'" in err.spelling) or\
+                     ("use of undeclared identifier" in err.spelling) or\
                      ("'namespace'" in err.spelling):
                     trycplusplus = True
-                    ok = True
-                    break
+                    ns = re.findall("'([^']*)'",err.spelling)
+                    if conf.config.Collect.strict: return None
+                    if (ns[0]+'::' not in faked) and add_namespace(tmpf,ns[0]):
+                        faked.add(ns[0]+'::')
+                    ok = False
             elif err.severity==4:
                 # this should not happen anymore thanks to -M -MG opts...
                 # we keep it here just in case.
@@ -344,9 +371,15 @@ def parse(filename,
                     secho('[err]'.rjust(12),fg='red')
                     if conf.VERBOSE:
                         secho('clang index.parse error (c++)',fg='red')
+                tu = None
+                ok = True
             else:
                 cxx = True
-        if not ok:
+                reparse += 1
+                if reparse==5:
+                    if conf.VERBOSE: secho('parsed x5 limit!',fg='red')
+                    ok = True
+        elif not ok:
             try:
                 tu.reparse(unsaved_files,options)
             except:
@@ -355,16 +388,17 @@ def parse(filename,
                     if conf.VERBOSE:
                         secho('clang reparse error, file ignored',fg='red')
                 tu = None
+                ok = True
             else:
                 reparse += 1
-                if reparse==3:
-                    if conf.VERBOSE: secho('parsed x3 limit!',fg='red')
+                if reparse==5:
+                    if conf.VERBOSE: secho('parsed x5 limit!',fg='red')
                     ok = True
     # cleanup tempfiles
     if not conf.config.Collect.strict:
         for f in (tmpf,depf):
-            if conf.DEBUG: secho('removing tmp file %s'%f,fg='magenta')
-            if os.path.exists(f): os.remove(f)
+            if conf.VERBOSE: secho('removing tmp file %s'%f,fg='magenta')
+            if not conf.DEBUG and os.path.exists(f): os.remove(f)
     if tu is None: return []
     # walk down all AST to get all cursors:
     pool = [c for c in tu.cursor.get_children()]
@@ -385,8 +419,8 @@ def parse(filename,
                         defs[x['id']] = x
     if not conf.QUIET:
         pre = '(c++)' if cxx else ''
-        secho(('%s[%4d]'%(pre,len(defs))).rjust(12), fg='green' if reparse<3 else 'yellow')
-        if reparse==3 and conf.VERBOSE:
+        secho(('%s[%4d]'%(pre,len(defs))).rjust(12), fg='green' if reparse<5 else 'yellow')
+        if reparse==5 and conf.VERBOSE:
             secho('too many errors...parser stopped',fg='yellow')
     return defs.values()
 
@@ -399,7 +433,9 @@ def parse_string(s,args=None,options=0):
     return parse(tmph,args,[(tmph,s)],options)
 
 def add_fake_type(f,t):
-    if t in ('void',): return
+    if len(t)>1: return add_namespace(f,t[1],t[0])
+    t = t[0]
+    if t in ('void',): return 0
     with open(f,'a') as i:
         if 'struct ' in t: i.write('%s {int dummy};'%t)
         elif 'union ' in t: i.write('%s {int dummy};'%t)
@@ -407,3 +443,19 @@ def add_fake_type(f,t):
         else: i.write('typedef int %s;\n'%t)
         i.flush()
         if conf.VERBOSE: secho("fake type '%s' added"%t,fg='green')
+        return 1
+
+def add_namespace(f,ns,t=None):
+    if t is not None:
+        if not ('struct ' in t) or ('union ' in t) or ('enum ' in t):
+          t = 'typedef int %s;'%t
+        else:
+          t = '%s;'%t
+        if conf.VERBOSE: secho("fake type '%s' added in namespace '%s'"%(t,ns),fg='green')
+    else:
+        t = ''
+        if conf.VERBOSE: secho("fake namespace '%s' added"%ns,fg='green')
+    with open(f,'a') as i:
+        i.write('namespace %s {\n  %s\n}\n'%(ns,t))
+        i.flush()
+        return 1

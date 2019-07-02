@@ -21,6 +21,17 @@ struct_letters = {
 
 # C type declaration parser:
 #------------------------------------------------------------------------------
+# notes:
+# this part of ccrawl was a nightmare...I was aware that parsing C is difficult
+# and that was why I relied massively on clang. Still, libclang's AST will
+# only provide the C type string. I first thought it was going to be easy to
+# correctly parse this "simple" subpart of C...well, its not. And for C++ its
+# even worse! Try playing with cdecl.org and see how funny this can be ;) 
+#
+# ccrawl C type parser is implemented with below 'nested_c' pyparsing object.
+# It captures nested parenthesis expressions that allows to define complex C
+# types that represent pointer-to array-of ... function prototypes returning a
+# C type.
 #
 # definitions for objecttype --------------------------------------------------
 # the elementary type related to the parsed string.
@@ -52,6 +63,9 @@ nested_par = pp.nestedExpr(content=pp.Regex(r'[^()]+'),ignoreExpr=None)
 nested_c   = pp.OneOrMore(nested_par)
 
 class c_type(object):
+    """The c_type object parses a C type string and decomposes it into
+       several parts 
+    """
     def __init__(self,decl):
         # get final element type:
         x,r = (pp.Group(objecttype)+pp.restOfLine).parseString(decl)
@@ -97,6 +111,17 @@ class c_type(object):
         return s
     def show(self,name=''):
         return ('%s %s'%(self.show_base(),self.show_ptr(name))).strip()
+
+# C++ type declaration parser:
+#------------------------------------------------------------------------------
+# extends c_type essentially with extracting the namespace parts of the fully
+# qualified name of the C++ type.
+class cxx_type(c_type):
+    def __init__(self,decl):
+        # get namespaces:
+        c_type.__init__(self,decl)
+
+#------------------------------------------------------------------------------
 
 class ptr(object):
     def __init__(self,p,c):
