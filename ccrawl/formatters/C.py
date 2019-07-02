@@ -104,3 +104,75 @@ def cStruct_C(obj,db,recursive):
     return '\n'.join(R)+'\n'.join(S)
 
 cUnion_C = cStruct_C
+
+def cClass_C(obj,db,recursive):
+    #prepare query if recursion is needed:
+    if isinstance(recursive,set):
+        Q = True
+        recursive.update(struct_letters)
+    else:
+        Q = None
+    #declare structure:
+    name = obj.identifier
+    tn = name.split(' ')[0]
+    #if anonymous, remove anonymous name:
+    if '?_' in name:
+        name = tn
+    #R holds recursive definition strings needed for obj
+    R = []
+    #S holds obj title and fields declaration strings
+    S = [u'%s {'%name]
+    P = {'PUBLIC':[], 'PROTECTED':[], 'PRIVATE':[]}
+    #iterate through all fields:
+    for (x,y,z) in obj:
+        qal,t = x
+        mn,n  = y
+        p,c   = z
+        #decompose C-type t into specific parts:
+        r = cxx_type(t)
+        #get "element base" part of type t:
+        e = r.lbase
+        #query field element raw base type if needed:
+        if Q and (r.lbase not in recursive):
+            # check if querying the current struct type...
+            if r.lbase == obj.identifier:
+                #insert pre-declaration of struct
+                R.insert(0,'%s;'%r.lbase)
+                recursive.add(r.lbase)
+            else:
+                #prepare query
+                q = (where('id')==r.lbase)
+                #deal with anonymous type:
+                if '?_' in r.lbase:
+                    q &= (where('src')==obj.identifier)
+                if db.contains(q):
+                    #retreive the field type:
+                    x = obj.from_db(db.get(q)).show(db,recursive,form='C')
+                    if not '?_' in r.lbase:
+                        #if not anonymous, insert it directly in R
+                        R.insert(0,x)
+                        recursive.add(r.lbase)
+                    else:
+                        # anonymous struct/union: we need to transfer
+                        # any predefs into R
+                        x = x.split('\n\n')
+                        r.lbase = x.pop().replace('\n','\n  ').strip(';')
+                        if len(x):
+                            xr = x[0].split('\n')
+                            for xrl in xr:
+                                if xrl and xrl not in R: R.insert(0,xrl)
+                else:
+                    secho('identifier %s not found'%r.lbase,fg='red')
+        #finally add field type and name to the structure lines:
+        if qal: qal = '%s '%qal
+        P[p].append(u'  {}{};'.format(qal,r.show(n)))
+    for p in ('PUBLIC','PROTECTED','PRIVATE'):
+        if len(P[p])>0:
+            S.append('%s:'%p.lower())
+            for v in P[p]:
+                S.append(v)
+    #join R and S:
+    if len(R)>0: R.append('\n')
+    S.append('};')
+    return '\n'.join(R)+'\n'.join(S)
+
