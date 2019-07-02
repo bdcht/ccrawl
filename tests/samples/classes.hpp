@@ -1,25 +1,29 @@
 // see all AST with: clang -Xclang -ast-dump -fsyntax-only samples/classes.hpp
 //
-#include <cstddef>
-#include <string>
-#include <vector>
+//#include <cstddef>
+//#include <string>
+//#include <vector>
 
 // Basic Classes:
 //---------------
 //
+//
+namespace std {
+    template<int> class vector;
+}
 
 struct oldstruct {
-  int  *X;
+  myint  *X;
   char c;
 };
 
-struct oldunion {
+union oldunion {
   int  Y;
   char q;
 };
 
 struct newstruct {
-  int  *X;
+  myint  *X;
 protected:
   char c;
   void meth(void);
@@ -37,14 +41,13 @@ protected:
 class MyClass
 {
   int field;
-  MyClass(int x) : field(x) {};
-  ~MyClass() {};
   int method(wchar_t);
-  virtual void vmethod() const = 0;
-  virtual int  vmethod(int);
   virtual char vmethod(int,MyClass&);
 public:
-  int *pubfield;
+  myint *pubfield;
+  MyClass(int x) : field(x) {};
+  ~MyClass() {};
+  virtual int  vmethod(int);
   const int constmeth(char);
   virtual void pmethod();
 protected:
@@ -53,20 +56,23 @@ protected:
 };
 
 class S {
-protected:
-    int *d1; // non-static data member
-    int a[10] = {1,2}; // non-static data member with initializer (C++11)
-    static const int d2 = 1; // static data member with initializer
 public:
-    virtual void f1(int) = 0; // pure virtual member function
-    std::string d3, *d4, f2(int); // two data members and a member function
-    enum {NORTH, SOUTH, EAST, WEST};
+    int *d1; // non-static data member
+    virtual int fa(int) = 0; // pure virtual member function
     struct NestedS {
         std::string s;
         virtual void f(int);
     } d5, *d6;
-private:
-    typedef NestedS value_type, *pointer_type;
+protected:
+    int a[10] = {1,2}; // non-static data member with initializer (C++11)
+    static const int d2 = 1; // static data member with initializer
+    std::string d3, *d4, f2(int); // two data members and a member function
+    enum {NORTH, SOUTH, EAST, WEST};
+};
+
+class T : S {
+public:
+     virtual int fa(int);
 };
 
 class M {
