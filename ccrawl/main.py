@@ -60,7 +60,7 @@ def spawn_console(ctx):
               type=click.Path(exists=False,file_okay=True,dir_okay=False))
 @click.option('-c','--configfile',
               type=click.Path(exists=True,file_okay=True,dir_okay=False))
-@click.option('-g','--tag',help='add given tag to all collected objects')
+@click.option('-g','--tag',help='use given tag in all commands')
 @click.pass_context
 def cli(ctx,verbose,quiet,db,local,configfile,tag):
     ctx.obj = {}
