@@ -27,6 +27,8 @@ def declareHandler(kind):
         return f
     return decorate
 
+spec_chars = (',','*','::','&','(',')','[',']')
+
 # cursor types that will be parsed to instanciate ccrawl
 # objects:
 TYPEDEF_DECL  = CursorKind.TYPEDEF_DECL
@@ -41,43 +43,55 @@ CLASS_TEMPLATE= CursorKind.CLASS_TEMPLATE
 CLASS_TPSPEC  = CursorKind.CLASS_TEMPLATE_PARTIAL_SPECIALIZATION
 NAMESPACE     = CursorKind.NAMESPACE
 
-def template_fltr(x):
-    if x.kind==CursorKind.TEMPLATE_TYPE_PARAMETER: return True
-    if x.kind==CursorKind.TEMPLATE_NON_TYPE_PARAMETER: return True
-    return False
-
 # handlers:
 
 @declareHandler(FUNCTION_DECL)
-def FuncDecl(cur,cxx):
+def FuncDecl(cur,cxx,errors=None):
     identifier = cur.spelling
-    proto = cur.type.spelling
+    if not errors:
+        proto = cur.type.spelling
+    else:
+        toks = []
+        for t in cur.get_tokens():
+            if t.spelling == identifier: continue
+            pre = '' if t.spelling in spec_chars else ' '
+            toks.append(pre+t.spelling)
+        proto = ''.join(toks)
     f = re.sub('__attribute__.*','',proto)
     return identifier,cFunc(f)
 
 @declareHandler(MACRO_DEF)
-def MacroDef(cur,cxx):
+def MacroDef(cur,cxx,errors=None):
     if cur.extent.start.file:
         identifier = cur.spelling
         toks = []
         for t in list(cur.get_tokens())[1:]:
-            pre = '' if t.spelling in (',','*','#','(',')') else ' '
+            pre = '' if t.spelling in spec_chars else ' '
             toks.append(pre+t.spelling)
         s = ''.join(toks)
         return identifier,cMacro(s.replace('( ','('))
 
 @declareHandler(TYPEDEF_DECL)
-def TypeDef(cur,cxx):
-    dt = cur.underlying_typedef_type
-    if '(anonymous' in dt.spelling:
-        dt = dt.get_canonical().spelling
+def TypeDef(cur,cxx,errors=None):
+   identifier = cur.type.spelling
+    if not errors:
+        dt = cur.underlying_typedef_type
+        if '(anonymous' in dt.spelling:
+            dt = dt.get_canonical().spelling
+        else:
+            dt = dt.spelling
     else:
-        dt = dt.spelling
+        toks = []
+        for t in list(cur.get_tokens())[1:]:
+            if t.spelling == identifier: continue
+            pre = '' if t.spelling in spec_chars else ' '
+            toks.append(pre+t.spelling)
+        dt = ''.join(toks)
     dt = get_uniq_typename(dt)
-    return cur.type.spelling,cTypedef(dt)
+    return identifier,cTypedef(dt)
 
 @declareHandler(STRUCT_DECL)
-def StructDecl(cur,cxx):
+def StructDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
     if not typename.startswith('struct'):
         typename = typename.split('::')[-1]
@@ -85,11 +99,11 @@ def StructDecl(cur,cxx):
     typename = get_uniq_typename(typename)
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
     S = cClass() if cxx else cStruct()
-    SetStructured(cur,S)
+    SetStructured(cur,S,errors)
     return typename,S
 
 @declareHandler(UNION_DECL)
-def UnionDecl(cur,cxx):
+def UnionDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
     if not typename.startswith('union'):
         typename = typename.split('::')[-1]
@@ -97,11 +111,11 @@ def UnionDecl(cur,cxx):
     typename = get_uniq_typename(typename)
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
     S = cClass() if cxx else cUnion()
-    SetStructured(cur,S)
+    SetStructured(cur,S,errors)
     return typename,S
 
 @declareHandler(CLASS_DECL)
-def ClassDecl(cur,cxx):
+def ClassDecl(cur,cxx,errors=None):
     typename = cur.displayname
     if not typename.startswith('class'):
         typename = typename.split('::')[-1]
@@ -109,11 +123,11 @@ def ClassDecl(cur,cxx):
     typename = get_uniq_typename(typename)
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
     S = cClass()
-    SetStructured(cur,S)
+    SetStructured(cur,S,errors)
     return typename,S
 
 @declareHandler(ENUM_DECL)
-def EnumDecl(cur,cxx):
+def EnumDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
     if not typename.startswith('enum'):
         typename = typename.split('::')[-1]
@@ -134,7 +148,7 @@ def EnumDecl(cur,cxx):
     return typename,S
 
 @declareHandler(FUNC_TEMPLATE)
-def FuncTemplate(cur,cxx):
+def FuncTemplate(cur,cxx,errors=None):
     identifier = cur.displayname
     proto = cur.type.spelling
     TF = template_fltr
@@ -143,7 +157,7 @@ def FuncTemplate(cur,cxx):
     return identifier,cTemplate(params=p,cFunc=cFunc(f))
 
 @declareHandler(CLASS_TEMPLATE)
-def ClassTemplate(cur,cxx):
+def ClassTemplate(cur,cxx,errors=None):
     identifier = cur.displayname
     TF = template_fltr
     p = [x.spelling for x in filter(TF,cur.get_children())]
@@ -163,15 +177,20 @@ def ClassTemplate(cur,cxx):
         S = cUnion()
     else:
         S = cClass()
-    SetStructured(cur,S)
+    SetStructured(cur,S,errors)
     return identifier,cTemplate(params=p,cClass=S)
 
+def template_fltr(x):
+    if x.kind==CursorKind.TEMPLATE_TYPE_PARAMETER: return True
+    if x.kind==CursorKind.TEMPLATE_NON_TYPE_PARAMETER: return True
+    return False
+
 @declareHandler(CLASS_TPSPEC)
-def ClassTemplatePartialSpec(cur,cxx):
+def ClassTemplatePartialSpec(cur,cxx,errors=None):
     return ClassTemplate(cur,cxx)
 
 @declareHandler(NAMESPACE)
-def NameSpace(cur,cxx):
+def NameSpace(cur,cxx,errors=None):
     namespace = cur.spelling
     S = cNamespace()
     S.local = {}
@@ -182,17 +201,25 @@ def NameSpace(cur,cxx):
             S.local[i] = obj
     return namespace,S
 
-def SetStructured(cur,S):
+def SetStructured(cur,S,errors=None):
     global g_indent
     S._in = str(cur.extent.start.file)
     local = {}
+    attr_x = False
     g_indent += 1
     for f in cur.get_children():
         if conf.DEBUG: echo('\t'*g_indent + str(f.kind)+'='+str(f.spelling))
+        errs = []
+        for r in errors:
+            if (f.extent.start.line<=r.location.line<=f.extent.end.line) and\
+               (f.extent.start.column<=r.location.column<=f.extent.end.column):
+                errs.append(r)
         # in-structuted type definition of another structured type:
         if f.kind in (STRUCT_DECL,UNION_DECL,CLASS_DECL,ENUM_DECL):
-            identifier,slocal = CHandlers[f.kind](f,S._is_class)
+            identifier,slocal = CHandlers[f.kind](f,S._is_class,errs)
             local[identifier] = slocal
+            attr_x = True
+            if not S._is_class: S.append([identifier, '',''])
         # c++ parent class:
         elif f.kind is CursorKind.CXX_BASE_SPECIFIER:
             is_virtual = clang.cindex.conf.lib.clang_isVirtualBase(f)
@@ -208,7 +235,17 @@ def SetStructured(cur,S):
             # type spelling is our member type only if this type is defined already,
             # otherwise clang takes the default 'int' type here and we can't access
             # the wanted type unless we access the cursor's tokens.
-            t = f.type.spelling
+            if not errs:
+                t = f.type.spelling
+            elif not S._is_class:
+                toks = []
+                for x in cur.get_tokens():
+                    if x.spelling == f.spelling: continue
+                    pre = '' if x.spelling in spec_chars else ' '
+                    toks.append(pre+x.spelling)
+                t = ''.join(toks)
+            else:
+                raise NotImplementedError
             if '(anonymous' in t:
                 if not S._is_class:
                     t = f.type.get_canonical().spelling
@@ -219,22 +256,21 @@ def SetStructured(cur,S):
                           CursorKind.CONSTRUCTOR,
                           CursorKind.DESTRUCTOR,
                           CursorKind.CXX_METHOD):
-                if S._is_union:
-                    S[f.spelling] = (t,comment)
+                if S._is_class:
+                    attr = ''
+                    if f.kind==CursorKind.VAR_DECL: attr = 'static'
+                    if f.is_virtual_method(): attr = 'virtual'
+                    if conf.DEBUG: echo('\t'*g_indent + str(t)+' '+str(f.spelling))
+                    member = ((attr,t),
+                              (f.mangled_name,f.spelling),
+                              (f.access_specifier.name,comment))
                 else:
-                    if S._is_class:
-                        attr = ''
-                        if f.kind==CursorKind.VAR_DECL: attr = 'static'
-                        if f.is_virtual_method(): attr = 'virtual'
-                        if conf.DEBUG: echo('\t'*g_indent + str(t)+' '+str(f.spelling))
-                        member = ((attr,t),
-                                  (f.mangled_name,f.spelling),
-                                  (f.access_specifier.name,comment))
-                    else:
-                        member = (t,
-                                  f.spelling,
-                                  comment)
-                    S.append(member)
+                    if attr_x and t==S[-1][0]: S.pop()
+                    attr_x = False
+                    member = (t,
+                              f.spelling,
+                              comment)
+                S.append(member)
             elif f.kind == CursorKind.FRIEND_DECL:
                 for frd in f.get_children():
                     member = (('friend',frd.type.spelling),
@@ -267,14 +303,12 @@ def parse(filename,
     """
     # clang parser cindex options:
     if options is None:
-        # detailed processing allows to get macros in iterated cursors:
+        # (detailed processing allows to get macros in iterated cursors)
         options  = TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
-        # allow incomplete files
         options |= TranslationUnit.PARSE_INCOMPLETE
-        # ignore functions bodies
         options |= TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     if args is None:
-        # clang: keep comments in parser output
+        # clang: keep comments in parser output and get template definition
         _args = ['-ferror-limit=0','-fparse-all-comments','-fno-delayed-template-parsing']
     else:
         _args = args[:]
@@ -302,6 +336,20 @@ def parse(filename,
     # call clang parser:
     try:
         tu = index.parse(filename,_args,unsaved_files,options)
+        for err in tu.diagnostics:
+            if conf.VERBOSE: secho(err.format(),fg='yellow')
+            if err.severity==3:
+                # common errors when parsing c++ as c:
+                if ("expected ';'" in err.spelling) or\
+                   ("'namespace'" in err.spelling):
+                    A = ['-x','c++','-std=c++11']
+                    tu = index.parse(filename,_args+A,unsaved_files,options)
+                    break
+            elif err.severity==4:
+                # this should not happen anymore thanks to -M -MG opts...
+                # we keep it here just in case.
+                if conf.VERBOSE: secho(err.format(),bg='red')
+                raise StandardError
     except:
         if not conf.QUIET:
             secho('[err]',fg='red')
@@ -311,117 +359,37 @@ def parse(filename,
     else:
         if conf.VERBOSE:
             echo(':')
+        # cleanup tempfiles
+        if not conf.config.Collect.strict:
+            for f in (tmpf,depf):
+                if conf.DEBUG: secho('removing tmp file %s'%f,fg='magenta')
+                if os.path.exists(f): os.remove(f)
     name = tu.cursor.extent.start.file.name
-    # get diagnostics and check if a reparse is needed
-    # to handle unknown types (due to missing headers)
-    ok = False
-    reparse = 0
-    faked = set()
-    trycplusplus = False
-    while not ok:
-        # normally we don't loop unless we have errors in diagnostics
-        ok = True
-        # if filename looks like C (not C++), we assume plain old C:
-        # so lets check errors:
-        for err in tu.diagnostics:
-            if err.severity==3:
-                if conf.VERBOSE: secho(err.format(),fg='yellow')
-                # if its a missing typename, we add it and ask for reparse:
-                if 'unknown type name' in err.spelling or \
-                   'has incomplete' in err.spelling:
-                    tn = re.findall("'([^']*)'",err.spelling)
-                    if conf.config.Collect.strict: return None
-                    if (tn[0] not in faked) and add_fake_type(tmpf,tn):
-                        faked.add(tn[0])
-                    ok = False
-                # otherwise we will check if input is C++
-                elif 'no type named' in err.spelling or \
-                     'no template named' in err.spelling:
-                    tn = re.findall("'([^']*)'",err.spelling)
-                    trycplusplus = True
-                    if conf.config.Collect.strict: return None
-                    tq = '%s::%s'%(tn[1],tn[0])
-                    if (tq not in faked) and add_fake_type(tmpf,tn):
-                        faked.add(tq)
-                    ok = False
-                elif ("expected ';'" in err.spelling) or\
-                     ("use of undeclared identifier" in err.spelling) or\
-                     ("'namespace'" in err.spelling):
-                    trycplusplus = True
-                    ns = re.findall("'([^']*)'",err.spelling)
-                    if conf.config.Collect.strict: return None
-                    if (ns[0]+'::' not in faked) and add_namespace(tmpf,ns[0]):
-                        faked.add(ns[0]+'::')
-                    ok = False
-            elif err.severity==4:
-                # this should not happen anymore thanks to -M -MG opts...
-                # we keep it here just in case.
-                if conf.VERBOSE: secho(err.format(),bg='red')
-                if conf.config.Collect.strict: return None
-                if 'file not found' in err.spelling:
-                    uf = re.findall("'(.*)'",err.spelling)
-                    unsaved_files.append(('%s/%s'%(tmpf,uf[0]),''))
-                    ok = False
-        if trycplusplus:
-            A = ['-x','c++','-std=c++11']
-            try:
-                tu = index.parse(filename,_args+A,unsaved_files,options)
-            except:
-                if not conf.QUIET:
-                    secho('[err]'.rjust(12),fg='red')
-                    if conf.VERBOSE:
-                        secho('clang index.parse error (c++)',fg='red')
-                tu = None
-                ok = True
-            else:
-                cxx = True
-                reparse += 1
-                if reparse==5:
-                    if conf.VERBOSE: secho('parsed x5 limit!',fg='red')
-                    ok = True
-        elif not ok:
-            try:
-                tu.reparse(unsaved_files,options)
-            except:
-                if not conf.QUIET:
-                    secho('[err]'.rjust(12),fg='red')
-                    if conf.VERBOSE:
-                        secho('clang reparse error, file ignored',fg='red')
-                tu = None
-                ok = True
-            else:
-                reparse += 1
-                if reparse==5:
-                    if conf.VERBOSE: secho('parsed x5 limit!',fg='red')
-                    ok = True
-    # cleanup tempfiles
-    if not conf.config.Collect.strict:
-        for f in (tmpf,depf):
-            if conf.VERBOSE: secho('removing tmp file %s'%f,fg='magenta')
-            if not conf.DEBUG and os.path.exists(f): os.remove(f)
-    if tu is None: return []
     # walk down all AST to get all cursors:
-    pool = [c for c in tu.cursor.get_children()]
-    # fill defs with collected cursors:
-    while len(pool)>0:
-        cur = pool.pop(0)
-        if conf.DEBUG: echo('%s:%s'%(cur.kind,cur.spelling))
-        if not conf.config.Collect.strict and \
-           cur.location.file and \
-           cur.location.file.name == tmpf:
-            continue
+    pool = [(c,[]) for c in tu.cursor.get_children()]
+    # fix errors:
+    for r in tu.diagnostics:
+        for cur,errs in pool:
+            if (cur.extent.start.line<=r.location.line<=cur.extent.end.line) and\
+               (cur.extent.start.column<=r.location.column<=cur.extent.end.column):
+                if 'unknown type name' in r.spelling or\
+                   'has incomplete' in r.spelling or\
+                   'no type named' in r.spelling or\
+                   'no template named' in r.spelling:
+                    errs.append(r)
+    # now finally call the handlers:
+    for cur,errs in pool:
+        if conf.DEBUG: echo('%s: %s'%(cur.kind,cur.spelling))
         if cur.kind in kind:
-            kv = CHandlers[cur.kind](cur,cxx)
+            kv = CHandlers[cur.kind](cur,errs)
+            # fill defs with collected cursors:
             if kv:
                 ident,cobj = kv
                 if cobj:
                     for x in cobj.to_db(ident, tag, cur.location.file.name):
                         defs[x['id']] = x
     if not conf.QUIET:
-        pre = '(c++)' if cxx else ''
-        secho(('%s[%4d]'%(pre,len(defs))).rjust(12), fg='green' if reparse<5 else 'yellow')
-        if reparse==5 and conf.VERBOSE:
-            secho('too many errors...parser stopped',fg='yellow')
+        secho(('[%3d]'%len(defs)).rjust(8), fg='green')
     return defs.values()
 
 def parse_string(s,args=None,options=0):
@@ -432,30 +400,3 @@ def parse_string(s,args=None,options=0):
     os.remove(tmph)
     return parse(tmph,args,[(tmph,s)],options)
 
-def add_fake_type(f,t):
-    if len(t)>1: return add_namespace(f,t[1],t[0])
-    t = t[0]
-    if t in ('void',): return 0
-    with open(f,'a') as i:
-        if 'struct ' in t: i.write('%s {int dummy};'%t)
-        elif 'union ' in t: i.write('%s {int dummy};'%t)
-        elif 'enum ' in t: i.write('%s {dummy=0};'%t)
-        else: i.write('typedef int %s;\n'%t)
-        i.flush()
-        if conf.VERBOSE: secho("fake type '%s' added"%t,fg='green')
-        return 1
-
-def add_namespace(f,ns,t=None):
-    if t is not None:
-        if not ('struct ' in t) or ('union ' in t) or ('enum ' in t):
-          t = 'typedef int %s;'%t
-        else:
-          t = '%s;'%t
-        if conf.VERBOSE: secho("fake type '%s' added in namespace '%s'"%(t,ns),fg='green')
-    else:
-        t = ''
-        if conf.VERBOSE: secho("fake namespace '%s' added"%ns,fg='green')
-    with open(f,'a') as i:
-        i.write('namespace %s {\n  %s\n}\n'%(ns,t))
-        i.flush()
-        return 1

@@ -122,15 +122,14 @@ class cClass(list,ccore):
                 raise NotImplementedError
         return self
 
-class cUnion(dict,ccore):
+class cUnion(list,ccore):
     _is_union = True
     def unfold(self,db,limit=None):
         if self.subtypes is None:
             self.subtypes = []
             T = list(struct_letters.keys())
             T.append(self.identifier)
-            for n,tc in self.items():
-                t,c = tc
+            for (t,n,c) in self:
                 ctype = c_type(t)
                 if limit!=None:
                     if limit<=0 and ctype.is_ptr:
