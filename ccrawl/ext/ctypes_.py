@@ -57,19 +57,12 @@ def build(obj,Types={}):
     if obj._is_enum:
         Types[x] = ctypes.c_int
         globals()[x] = {}.update(obj)
-    elif obj._is_struct:
-        Types[x] = type(x,(ctypes.Structure,),{})
+    elif obj._is_struct or obj._is_union:
+        parent = ctypes.Structure
+        if obj._is_union: parent = ctypes.Union
+        Types[x] = type(x,(parent,),{})
         fmt = []
         for t,n,c in obj:
-            r = c_type(t)
-            r = mk_ctypes(r,Types)
-            fmt.append((str(n),r))
-        Types[x]._fields_ = fmt
-    elif obj._is_union:
-        Types[x] = type(x,(ctypes.Union,),{})
-        fmt = []
-        for n,tc in obj.items():
-            t,c = tc
             r = c_type(t)
             r = mk_ctypes(r,Types)
             fmt.append((str(n),r))

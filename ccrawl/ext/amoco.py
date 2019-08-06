@@ -29,7 +29,9 @@ else:
         if obj._is_enum:
             TypeDefine(x,'i')
             Consts.All[x] = {}.update(obj)
-        elif obj._is_struct:
+        elif obj._is_struct or obj._is_union:
+            define = StructDefine
+            if obj._is_union: define = UnionDefine
             cls = type(x,(StructFormatter,),{})
             fmt = []
             for t,n,c in obj:
@@ -37,17 +39,7 @@ else:
                 rt,t = fieldformat(r)
                 fmt.append('{} : {} ;{}'.format(rt or t,n,c or ''))
             fmt = '\n'.join(fmt)
-            StructDefine(fmt)(cls)
-        elif obj._is_union:
-            cls = type(x,(StructFormatter,),{})
-            fmt = []
-            for n,tc in obj.items():
-                t,c = tc
-                r = c_type(t)
-                rt,t = fieldformat(r)
-                fmt.append('{} : {} ;{}'.format(rt or t,n,c or ''))
-            fmt = '\n'.join(fmt)
-            UnionDefine(fmt)(cls)
+            define(fmt)(cls)
         else:
             raise NotImplementedError
         return StructDefine.All[x]

@@ -120,11 +120,7 @@ def cStruct_ctypes(obj,db,recursive):
     pad = ' '*len(fld)
     padded = False
     for i in obj:
-        if obj._is_struct:
-            t,n,c = i
-        elif obj._is_union:
-            n,tc = i,obj[i]
-            t,c  = tc
+        t,n,c = i
         r = c_type(t)
         if Q and (r.lbase not in recursive):
             if r.lbase == obj.identifier:

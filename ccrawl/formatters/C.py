@@ -56,11 +56,7 @@ def cStruct_C(obj,db,recursive):
     #iterate through all fields:
     for i in obj:
         #get type, name, comment:
-        if obj._is_struct:
-            t,n,c = i
-        elif obj._is_union:
-            n,tc = i,obj[i]
-            t,c  = tc
+        t,n,c = i
         #decompose C-type t into specific parts:
         r = c_type(t)
         #get "element base" part of type t:
