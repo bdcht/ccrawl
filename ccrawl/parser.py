@@ -73,7 +73,7 @@ def MacroDef(cur,cxx,errors=None):
 
 @declareHandler(TYPEDEF_DECL)
 def TypeDef(cur,cxx,errors=None):
-   identifier = cur.type.spelling
+    identifier = cur.type.spelling
     if not errors:
         dt = cur.underlying_typedef_type
         if '(anonymous' in dt.spelling:
@@ -187,7 +187,7 @@ def template_fltr(x):
 
 @declareHandler(CLASS_TPSPEC)
 def ClassTemplatePartialSpec(cur,cxx,errors=None):
-    return ClassTemplate(cur,cxx)
+    return ClassTemplate(cur,cxx,errors)
 
 @declareHandler(NAMESPACE)
 def NameSpace(cur,cxx,errors=None):
@@ -196,7 +196,7 @@ def NameSpace(cur,cxx,errors=None):
     S.local = {}
     for f in cur.get_children():
         if f.kind in CHandlers:
-            i,obj = CHandlers[f.kind](f,cxx)
+            i,obj = CHandlers[f.kind](f,cxx,errors)
             S.append(i)
             S.local[i] = obj
     return namespace,S
@@ -206,6 +206,7 @@ def SetStructured(cur,S,errors=None):
     S._in = str(cur.extent.start.file)
     local = {}
     attr_x = False
+    if errors is None: errors=[]
     g_indent += 1
     for f in cur.get_children():
         if conf.DEBUG: echo('\t'*g_indent + str(f.kind)+'='+str(f.spelling))
@@ -370,6 +371,8 @@ def parse(filename,
     # fix errors:
     for r in tu.diagnostics:
         for cur,errs in pool:
+            if (cur.location.file is None) or cur.location.file.name!=name:
+                continue
             if (cur.extent.start.line<=r.location.line<=cur.extent.end.line) and\
                (cur.extent.start.column<=r.location.column<=cur.extent.end.column):
                 if 'unknown type name' in r.spelling or\
@@ -377,11 +380,12 @@ def parse(filename,
                    'no type named' in r.spelling or\
                    'no template named' in r.spelling:
                     errs.append(r)
+                    if conf.DEBUG: secho("%s @ %s with %s"%(cur.spelling,cur.extent,r.spelling))
     # now finally call the handlers:
     for cur,errs in pool:
         if conf.DEBUG: echo('%s: %s'%(cur.kind,cur.spelling))
         if cur.kind in kind:
-            kv = CHandlers[cur.kind](cur,errs)
+            kv = CHandlers[cur.kind](cur,cxx,errs)
             # fill defs with collected cursors:
             if kv:
                 ident,cobj = kv
