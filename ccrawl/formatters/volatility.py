@@ -56,6 +56,7 @@ def cStruct_volatility(obj,db,recursive):
     S = [u"{0} = [ {1}, {{".format(n,sizeof(t))]
     for i,f in enumerate(obj):
         ft,fn,fc = f
+        if not fn: continue
         r = c_type(ft)
         off = getattr(t,fn).offset
         S.append(u"  '{0}': [{2}, {1}],".format(fn,ctype_to_volatility(r),off))

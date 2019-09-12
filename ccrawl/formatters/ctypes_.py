@@ -121,6 +121,7 @@ def cStruct_ctypes(obj,db,recursive):
     padded = False
     for i in obj:
         t,n,c = i
+        if not n: continue
         r = c_type(t)
         if Q and (r.lbase not in recursive):
             if r.lbase == obj.identifier:

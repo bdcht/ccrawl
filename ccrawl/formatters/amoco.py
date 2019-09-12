@@ -87,6 +87,7 @@ def cStruct_amoco(obj,db,recursive):
     S = ['@{}("""\n'.format(cls)]
     for i in obj:
         t,n,c = i
+        if not n: continue
         r = c_type(t)
         if Q and (r.lbase not in recursive):
             if r.lbase == obj.identifier:

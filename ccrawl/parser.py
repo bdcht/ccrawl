@@ -48,17 +48,8 @@ NAMESPACE     = CursorKind.NAMESPACE
 @declareHandler(FUNCTION_DECL)
 def FuncDecl(cur,cxx,errors=None):
     identifier = cur.spelling
-    if not errors:
-        proto = cur.type.spelling
-    else:
-        toks = []
-        for t in cur.get_tokens():
-            if t.spelling == identifier: continue
-            pre = '' if t.spelling in spec_chars else ' '
-            toks.append(pre+t.spelling)
-        proto = ''.join(toks)
-    f = re.sub('__attribute__.*','',proto)
-    return identifier,cFunc(f)
+    proto = fix_type_conversion(cur,cxx,errors)
+    return identifier,cFunc(proto)
 
 @declareHandler(MACRO_DEF)
 def MacroDef(cur,cxx,errors=None):
@@ -211,10 +202,12 @@ def SetStructured(cur,S,errors=None):
     for f in cur.get_children():
         if conf.DEBUG: echo('\t'*g_indent + str(f.kind)+'='+str(f.spelling))
         errs = []
-        for r in errors:
-            if (f.extent.start.line<=r.location.line<=f.extent.end.line) and\
-               (f.extent.start.column<=r.location.column<=f.extent.end.column):
-                errs.append(r)
+        for i,r in enumerate(errors):
+            if (f.extent.start.line<=r.location.line<=f.extent.end.line):
+                if (f.extent.start.line!=f.extent.end.line) or\
+                   (f.extent.start.column<=r.location.column<=f.extent.end.column):
+                    errs.append(r)
+                    secho('\t'*g_indent+str(r.spelling),fg='yellow')
         # in-structuted type definition of another structured type:
         if f.kind in (STRUCT_DECL,UNION_DECL,CLASS_DECL,ENUM_DECL):
             identifier,slocal = CHandlers[f.kind](f,S._is_class,errs)
@@ -235,18 +228,8 @@ def SetStructured(cur,S,errors=None):
             comment = f.brief_comment or f.raw_comment
             # type spelling is our member type only if this type is defined already,
             # otherwise clang takes the default 'int' type here and we can't access
-            # the wanted type unless we access the cursor's tokens.
-            if not errs:
-                t = f.type.spelling
-            elif not S._is_class:
-                toks = []
-                for x in cur.get_tokens():
-                    if x.spelling == f.spelling: continue
-                    pre = '' if x.spelling in spec_chars else ' '
-                    toks.append(pre+x.spelling)
-                t = ''.join(toks)
-            else:
-                raise NotImplementedError
+            # the wanted type unless we access f's tokens.
+            t = fix_type_conversion(f,S._is_class,errs)
             if '(anonymous' in t:
                 if not S._is_class:
                     t = f.type.get_canonical().spelling
@@ -261,7 +244,7 @@ def SetStructured(cur,S,errors=None):
                     attr = ''
                     if f.kind==CursorKind.VAR_DECL: attr = 'static'
                     if f.is_virtual_method(): attr = 'virtual'
-                    if conf.DEBUG: echo('\t'*g_indent + str(t)+' '+str(f.spelling))
+                    if conf.DEBUG: echo('\t'*g_indent + str(t))
                     member = ((attr,t),
                               (f.mangled_name,f.spelling),
                               (f.access_specifier.name,comment))
@@ -291,6 +274,44 @@ def get_uniq_typename(t):
     h = hashlib.sha256(s.encode('ascii')).hexdigest()[:8]
     return '%s ?_%s'%(kind,h)
 
+def fix_type_conversion(f,cxx,errs):
+    # get the pretended type t:
+    t = f.type.spelling
+    # this type might be a prototype a structured type or a
+    # "complex" type (as opposed to simple) in which a unknown
+    # type (denoted ut hereafter) as been replaced by 'int'.
+    # Typename ut is fully provided in errs but
+    # unfortunately, type t might contain several 'int' keywords,
+    # some of which being really 'ints' and not the result of the
+    # ut->int replacement.
+    # In a previous version of ccrawl, we used a trick: since ut
+    # is known by catching error messages, we'd add a fake typedef
+    # string in a private include and then recompile our file.
+    # The drawback was that we'd need several recompilation passes
+    # In this version we will detect which ints have been replaced
+    # as switch them back to ut...
+    # first, let's see if we need to do some conversion by looking
+    # at the errors...actually there might be several ut, so:
+    for r in errs:
+        tn = re.findall("'(.*)'",r.spelling)
+        ut = tn[0]
+        spans = []
+        for m in re.finditer('(^int\W)|(\Wint\W)|(\Wint$)',t):
+            spans.append(m.span())
+        # lets get the original string of this cursor f:
+        ftoks = ' '.join("%s"%x.spelling for x in f.get_tokens())
+        if conf.DEBUG: secho(ftoks,fg='green')
+        for tn in ut:
+            pos = ftoks.find(tn)
+            if pos==-1: continue
+            cnt = ftoks.count
+        # now we only need to replace some 'int' token be ut in t...
+        # to be extracting the missing types
+        # from the errs and replacing the 'int' identifier in t by its
+        # corresponding type. Either based on error location (column) or
+        # by counting 'int' occurences within f's tokens up to the point
+        # where the type string is located...
+    return t
 
 # ccrawl 'parse' function(s), wrapper of clang index.parse;
 #------------------------------------------------------------------------------
@@ -310,7 +331,9 @@ def parse(filename,
         options |= TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     if args is None:
         # clang: keep comments in parser output and get template definition
-        _args = ['-ferror-limit=0','-fparse-all-comments','-fno-delayed-template-parsing']
+        _args = ['-ferror-limit=0',
+                 '-fparse-all-comments',
+                 '-fno-delayed-template-parsing']
     else:
         _args = args[:]
     if filename.endswith('.hpp') or filename.endswith('.cpp'):
@@ -370,17 +393,18 @@ def parse(filename,
     pool = [(c,[]) for c in tu.cursor.get_children()]
     # fix errors:
     for r in tu.diagnostics:
+        if r.location.file is None: continue
         for cur,errs in pool:
-            if (cur.location.file is None) or cur.location.file.name!=name:
-                continue
-            if (cur.extent.start.line<=r.location.line<=cur.extent.end.line) and\
-               (cur.extent.start.column<=r.location.column<=cur.extent.end.column):
-                if 'unknown type name' in r.spelling or\
-                   'has incomplete' in r.spelling or\
-                   'no type named' in r.spelling or\
-                   'no template named' in r.spelling:
-                    errs.append(r)
-                    if conf.DEBUG: secho("%s @ %s with %s"%(cur.spelling,cur.extent,r.spelling))
+            if (str(cur.location.file) == str(r.location.file)) and\
+               (cur.extent.start.line<=r.location.line<=cur.extent.end.line):
+                if (cur.extent.start.line!=cur.extent.end.line) or\
+                   (cur.extent.start.column<=r.location.column<=cur.extent.end.column):
+                    if 'unknown type name' in r.spelling or\
+                       'has incomplete' in r.spelling or\
+                       'no type named' in r.spelling or\
+                       'no template named' in r.spelling:
+                        errs.append(r)
+                        break
     # now finally call the handlers:
     for cur,errs in pool:
         if conf.DEBUG: echo('%s: %s'%(cur.kind,cur.spelling))
