@@ -9,6 +9,7 @@ typedef __u8 myu8;
 struct xt_string_info {
     __u16 from_offset;
     __u16 to_offset;
+    int (*pfunc)(__unk,int);
     char      algo[C1];
     char      pattern[C2];
     __u8  patlen;

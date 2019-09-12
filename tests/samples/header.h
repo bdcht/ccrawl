@@ -9,7 +9,7 @@
 #define MYSTRING "toto"
 
 typedef xxx myinteger;
-typedef int (*foo) (int, int, int);
+typedef unk* (*foo)(int, unk, int, unk2);
 typedef int (*(*foo1)(void ))[3];  // declare foo1 as ptr to func(void) returning ptr to int[3]
 typedef void *(*(*foo2[2])( int, void * [] ))[3];
 
@@ -23,7 +23,7 @@ enum X {
 };
 
 struct _mystruct {
-    myinteger   I;                /* comment for field I */
+    myinteger   I;                       /* comment for field I */
     signed int   tab[MYMACRO(8)];        // modern comment for tab
     unsigned char p[MYCONST];
     short int *s;
@@ -49,7 +49,7 @@ struct testconst {
 typedef struct {
     /* above comment for c */
     char* c[MYEXPR];
-    void (*func[2]) (myinteger,foo,struct _mystruct*);  // comment for func
+    myinteger (*func[2]) (unk,foo,struct _mystruct*,int,unk2);  // comment for func
     unsigned struct _mystruct stab[0x12];
     signed *x;
     unsigned long long y;
@@ -59,6 +59,7 @@ typedef struct {
        unsigned int A;
        short w[2];
        myinteger* myi;
+       unk unused;
     } sAB;
 } unspelled, *p_unspelled;
 
