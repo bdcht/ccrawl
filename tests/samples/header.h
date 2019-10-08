@@ -9,7 +9,13 @@
 #define MYSTRING "toto"
 
 typedef xxx myinteger;
-typedef unk* (*foo)(int, unk, int, unk2);
+
+typedef int (*foo)(int, char c, unsigned x, void*);
+
+typedef int (*fox)(unk, char c, unsigned x, void*);
+
+//typedef unk (*foz)(int, char c, unsigned x, void*);  This leads to wrong parsing in clang!
+
 typedef int (*(*foo1)(void ))[3];  // declare foo1 as ptr to func(void) returning ptr to int[3]
 typedef void *(*(*foo2[2])( int, void * [] ))[3];
 
@@ -49,7 +55,7 @@ struct testconst {
 typedef struct {
     /* above comment for c */
     char* c[MYEXPR];
-    myinteger (*func[2]) (unk,foo,struct _mystruct*,int,unk2);  // comment for func
+    myinteger (*func[2]) (int,foo,struct _mystruct*,int,unk2,int);  // comment for func
     unsigned struct _mystruct stab[0x12];
     signed *x;
     unsigned long long y;
@@ -75,6 +81,7 @@ typedef union _myunion {
 } myunion;
 
 myunion myFunc(p_unspelled p, mystruct X);
+
 typedef char (*pac3)[3];
 
 #endif

@@ -22,7 +22,7 @@ def spawn_console(ctx):
         ctx.obj['db'] = Proxy(c.Database)
     cvars = dict(globals(),**locals())
     cvars.update(ctx.obj)
-    c.Collect.strict=False
+    #c.Collect.strict=False
     if c.Terminal.console.lower() == 'ipython':
         try:
             from IPython import start_ipython
@@ -138,7 +138,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
     c = conf.config
     F = lambda f:f.endswith('.h') or f.endswith('.hpp')
     K = None
-    c.Collect.strict = strict
+    c.Collect.strict |= strict
     if allc is True:
         F = lambda f: (f.endswith('.c') or f.endswith('.cpp') or F(f))
     if types or functions or macros:
@@ -160,8 +160,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
         # keep comments in parser output:
         args  = ['-ferror-limit=0',
                  '-fparse-all-comments',
-                 '-fno-delayed-template-parsing',
-                 '-Xclang', '-detailed-preprocessing-record']
+                ]
         # add header directories:
         for i in (D for D in src if os.path.isdir(D)):
             args.append('-I%s'%i)
