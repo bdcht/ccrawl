@@ -201,7 +201,6 @@ def SetStructured(cur,S,errors=None):
                 if (f.extent.start.line!=f.extent.end.line) or\
                    (f.extent.start.column<=r.location.column<=f.extent.end.column):
                     errs.append(r)
-                    secho('\t'*g_indent+str(r.spelling),fg='yellow')
         # in-structuted type definition of another structured type:
         if f.kind in (STRUCT_DECL,UNION_DECL,CLASS_DECL,ENUM_DECL):
             identifier,slocal = CHandlers[f.kind](f,S._is_class,errs)
@@ -266,7 +265,7 @@ def get_uniq_typename(t):
     x = re.compile('\(anonymous .*\)')
     s = x.search(t).group(0)
     h = hashlib.sha256(s.encode('ascii')).hexdigest()[:8]
-    return '%s ?_%s'%(kind,h)
+    return re.sub('\(anonymous .*\)','?_%s'%h,t,count=1)
 
 def fix_type_conversion(f,t,cxx,errs):
     # this type might be a prototype a structured type or a
