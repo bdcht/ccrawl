@@ -15,9 +15,11 @@ def cTypedef_C(obj,db,recursive):
             pre = x.show(db,recursive,form='C')+'\n'
         else:
             secho('identifier %s not found'%t.lbase,fg='red')
+    # if t base is an anonymous type, we replace is anon name
+    # by its struct/union definition in t:
     if recursive and '?_' in t.lbase:
         pre = pre.split('\n\n')
-        t.lbase = pre.pop().strip()
+        t.lbase = pre.pop().strip(';\n')
         pre.append('')
         pre = '\n\n'.join(pre)
     return u'{}typedef {};'.format(pre,t.show(obj.identifier))
@@ -62,25 +64,28 @@ def cStruct_C(obj,db,recursive):
         r = c_type(t)
         #get "element base" part of type t:
         e = r.lbase
-        #query field element raw base type if needed:
+        #query field element base type if recursive:
         if Q and (r.lbase not in recursive):
-            # check if querying the current struct type...
+            # check if we are about to query the current struct type...
             if r.lbase == obj.identifier:
                 #insert pre-declaration of struct
-                R.insert(0,'%s;'%r.lbase)
+                #R.insert(0,'%s;'%r.lbase)
+                R.append('%s;'%r.lbase)
                 recursive.add(r.lbase)
             else:
                 #prepare query
+                #(deal with the case of querying an anonymous type)
                 q = (where('id')==r.lbase)
-                #deal with anonymous type:
                 if '?_' in r.lbase:
                     q &= (where('src')==obj.identifier)
+                #do the query and update R:
                 if db.contains(q):
                     #retreive the field type:
                     x = obj.from_db(db.get(q)).show(db,recursive,form='C')
                     if not '?_' in r.lbase:
                         #if not anonymous, insert it directly in R
-                        R.insert(0,x)
+                        #R.insert(0,x)
+                        R.append(x)
                         recursive.add(r.lbase)
                     else:
                         # anonymous struct/union: we need to transfer
@@ -90,7 +95,9 @@ def cStruct_C(obj,db,recursive):
                         if len(x):
                             xr = x[0].split('\n')
                             for xrl in xr:
-                                if xrl and xrl not in R: R.insert(0,xrl)
+                                if xrl and xrl not in R:
+                                    #R.insert(0,xrl)
+                                    R.append(xrl)
                 else:
                     secho('identifier %s not found'%r.lbase,fg='red')
         #finally add field type and name to the structure lines:
