@@ -136,11 +136,12 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
     errors are not bypassed with fake types).
     """
     c = conf.config
-    F = lambda f:f.endswith('.h') or f.endswith('.hpp')
+    cxx = c.Collect.cxx
+    F = lambda f:f.endswith('.h') or (cxx and f.endswith('.hpp'))
     K = None
     c.Collect.strict |= strict
     if allc is True:
-        F = lambda f: (f.endswith('.c') or f.endswith('.cpp') or F(f))
+        F = lambda f: (f.endswith('.c') or (cxx and f.endswith('.cpp')) or F(f))
     if types or functions or macros:
         K = []
         if types: K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL]

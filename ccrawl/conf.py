@@ -64,6 +64,7 @@ class Database(Configurable):
 class Collect(Configurable):
     "configurable parameters related to the collect command"
     strict = Bool(False,config=True)
+    cxx = Bool(True,config=True)
     tmp = Unicode()
     lib = Unicode(clang_library_file,config=True)
     @observe('lib')

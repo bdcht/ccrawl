@@ -344,12 +344,15 @@ def parse(filename,
                 ]
     else:
         _args = args[:]
-    if filename.endswith('.hpp') or filename.endswith('.cpp'):
-        _args.extend(['-x','c++','-std=c++11', '-fno-delayed-template-parsing'])
+    if conf.config.Collect.cxx:
+        if filename.endswith('.hpp') or filename.endswith('.cpp'):
+            _args.extend(['-x','c++','-std=c++11', '-fno-delayed-template-parsing'])
     cxx = 'c++' in _args
     if not conf.config.Collect.strict:
         # in non strict mode, we allow missing includes
-        _args += ['-M', '-MG']
+        fd,depf = tempfile.mkstemp(prefix='ccrawl-')
+        os.close(fd)
+        _args += ['-M', '-MG', '-MF%s'%depf]
     if conf.DEBUG: echo('\nfilename: %s, args: %s'%(filename,_args))
     if unsaved_files is None:
         unsaved_files = []
@@ -363,14 +366,18 @@ def parse(filename,
     try:
         tu = index.parse(filename,_args,unsaved_files,options)
         for err in tu.diagnostics:
-            if conf.VERBOSE: secho(err.format(),fg='yellow')
+            if conf.DEBUG: secho(err.format(),fg='yellow')
             if err.severity==3:
                 # common errors when parsing c++ as c:
                 if ("expected ';'" in err.spelling) or\
                    ("'namespace'" in err.spelling):
-                    A = ['-x','c++','-std=c++11']
-                    tu = index.parse(filename,_args+A,unsaved_files,options)
-                    break
+                    if conf.config.Collect.cxx:
+                        A = ['-x','c++','-std=c++11']
+                        tu = index.parse(filename,_args+A,unsaved_files,options)
+                        break
+                    else:
+                        secho('[c++]'.rjust(8), fg='yellow')
+                        return []
             elif err.severity==4:
                 # this should not happen anymore thanks to -M -MG opts...
                 # we keep it here just in case.
