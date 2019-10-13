@@ -77,9 +77,6 @@ def TypeDef(cur,cxx,errors=None):
 def StructDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
-    #typename = typename.split('::')[-1]
-    #typename = 'struct %s'%(typename)
-    #if conf.DEBUG: echo('\t'*g_indent+'drop namespace: %s'%typename)
     typename = get_uniq_typename(typename)
     if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cClass() if cxx else cStruct()
@@ -90,9 +87,6 @@ def StructDecl(cur,cxx,errors=None):
 def UnionDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
-    #typename = typename.split('::')[-1]
-    #typename = 'union %s'%(typename)
-    #if conf.DEBUG: echo('\t'*g_indent+'drop namespace: %s'%typename)
     typename = get_uniq_typename(typename)
     if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cClass() if cxx else cUnion()
@@ -268,7 +262,8 @@ def get_uniq_typename(t):
     # anon types inside *named* struct/union are prefixed by
     # the struct/union namespace, we don't keep this since
     # we are creating a unique typename anyway
-    t = t.split('::')[-1]
+    if '::' in t:
+        t = "%s %s"%(kind,t.split('::')[-1])
     x = re.compile('\(anonymous .*\)')
     s = x.search(t).group(0)
     h = hashlib.sha256(s.encode('ascii')).hexdigest()[:8]
