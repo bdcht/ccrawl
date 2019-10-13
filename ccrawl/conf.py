@@ -30,17 +30,17 @@ BANNER  = \
  \___\___|_|  \__,_| \_/\_/ |_| v%s
 """%__version__
 
-# ccrawl configuration:
+# ccrawl configuration:                                                        # defaults:
 #------------------------------------------------------------------------------
 
 class Terminal(Configurable):
     "configurable parameters related to ui/output"
-    debug = Bool(DEBUG,config=True)
-    verbose = Bool(VERBOSE,config=True)
-    quiet = Bool(False,config=True)
-    console = Unicode('python',config=True)
-    banner = Unicode(BANNER)
-    timer = Bool(False,config=True)
+    debug = Bool(DEBUG,config=True)                                            # don't show debug output
+    verbose = Bool(VERBOSE,config=True)                                        # don't show verbose output
+    quiet = Bool(False,config=True)                                            # don't show no output
+    console = Unicode('python',config=True)                                    # use python interpreter is interactive mode
+    banner = Unicode(BANNER)                                                   # show above banner
+    timer = Bool(False,config=True)                                            # don't time file parsing
     @observe('debug')
     def _debug_changed(self,change):
         global DEBUG
@@ -56,25 +56,25 @@ class Terminal(Configurable):
 
 class Database(Configurable):
     "configurable parameters related to the database"
-    local  = Unicode('ccrawl.db',config=True)
-    url    = Unicode('',config=True)
-    user   = Unicode('',config=True)
-    verify = Bool(True,config=True)
+    local  = Unicode('ccrawl.db',config=True)                                  # local tiny database name is ccrawl.db
+    url    = Unicode('',config=True)                                           # don't use mongodb server
+    user   = Unicode('',config=True)                                           # don't define a mongodb user
+    verify = Bool(True,config=True)                                            # don't authenticate mongodb user
 
 class Collect(Configurable):
     "configurable parameters related to the collect command"
-    strict = Bool(False,config=True)
-    cxx = Bool(True,config=True)
-    tmp = Unicode()
-    lib = Unicode(clang_library_file,config=True)
+    strict = Bool(False,config=True)                                           # don't block on missing headers/types
+    cxx = Bool(False,config=True)                                              # don't parse c++ (support is still experimental)
+    tmp = Unicode()                                                            # don't change temp directory
+    lib = Unicode(clang_library_file,config=True)                              # assume clang_library_file is libclang-6.0.so
     @observe('lib')
     def _lib_changed(self,change):
         clang.cindex.Config.library_file = change['new']
 
 class Formats(Configurable):
     "configurable parameters related to formatters"
-    default = Unicode('C',config=True)
-    callcon = Unicode('cdecl',config=True)
+    default = Unicode('C',config=True)                                         # show results formatted as C code
+    callcon = Unicode('cdecl',config=True)                                     # assume cdecl calling convention
 
 class Config(object):
 

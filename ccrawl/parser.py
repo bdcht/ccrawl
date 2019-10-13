@@ -68,21 +68,20 @@ def TypeDef(cur,cxx,errors=None):
     identifier = cur.type.spelling
     dt = cur.underlying_typedef_type
     if '(anonymous' in dt.spelling: dt = dt.get_canonical()
-    if conf.DEBUG: echo('\t'*g_indent+'%s'%dt.spelling)
     t = fix_type_conversion(cur,dt.spelling,cxx,errors)
     t = get_uniq_typename(t)
-    if conf.DEBUG: echo('\t'*g_indent+'%s'%t)
+    if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%t)
     return identifier,cTypedef(t)
 
 @declareHandler(STRUCT_DECL)
 def StructDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
-    if not typename.startswith('struct'):
-        typename = typename.split('::')[-1]
-        typename = 'struct %s'%(typename)
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
+    #typename = typename.split('::')[-1]
+    #typename = 'struct %s'%(typename)
+    #if conf.DEBUG: echo('\t'*g_indent+'drop namespace: %s'%typename)
     typename = get_uniq_typename(typename)
-    if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
+    if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cClass() if cxx else cStruct()
     SetStructured(cur,S,errors)
     return typename,S
@@ -90,11 +89,12 @@ def StructDecl(cur,cxx,errors=None):
 @declareHandler(UNION_DECL)
 def UnionDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
-    if not typename.startswith('union'):
-        typename = typename.split('::')[-1]
-        typename = 'union %s'%(typename)
-    typename = get_uniq_typename(typename)
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
+    #typename = typename.split('::')[-1]
+    #typename = 'union %s'%(typename)
+    #if conf.DEBUG: echo('\t'*g_indent+'drop namespace: %s'%typename)
+    typename = get_uniq_typename(typename)
+    if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cClass() if cxx else cUnion()
     SetStructured(cur,S,errors)
     return typename,S
@@ -222,11 +222,13 @@ def SetStructured(cur,S,errors=None):
             # type spelling is our member type only if this type is defined already,
             # otherwise clang takes the default 'int' type here and we can't access
             # the wanted type unless we access f's tokens.
-            t = fix_type_conversion(f,f.type.spelling,S._is_class,errs)
+            t = f.type.spelling
             if '(anonymous' in t:
                 if not S._is_class:
                     t = f.type.get_canonical().spelling
-                t = get_uniq_typename(t)
+            else:
+                t = fix_type_conversion(f,t,S._is_class,errs)
+            t = get_uniq_typename(t)
             # field/member declaration:
             if f.kind in (CursorKind.FIELD_DECL,
                           CursorKind.VAR_DECL,
@@ -244,6 +246,7 @@ def SetStructured(cur,S,errors=None):
                 else:
                     if attr_x and t==S[-1][0]: S.pop()
                     attr_x = False
+                    if conf.DEBUG: echo('\t'*g_indent + str(t))
                     member = (t,
                               f.spelling,
                               comment)
@@ -262,6 +265,10 @@ def get_uniq_typename(t):
     if  'struct ' in t: kind='struct'
     elif 'union ' in t: kind='union'
     elif 'enum '  in t: kind='enum'
+    # anon types inside *named* struct/union are prefixed by
+    # the struct/union namespace, we don't keep this since
+    # we are creating a unique typename anyway
+    t = t.split('::')[-1]
     x = re.compile('\(anonymous .*\)')
     s = x.search(t).group(0)
     h = hashlib.sha256(s.encode('ascii')).hexdigest()[:8]
@@ -318,7 +325,7 @@ def fix_type_conversion(f,t,cxx,errs):
         for m,s in zip(marks,st):
             ct = ct+m+s
         t = ct
-    if conf.DEBUG: echo('type: %s'%t)
+    if conf.DEBUG: echo('\t'*g_indent+'type: %s'%t)
     return t
 
 # ccrawl 'parse' function(s), wrapper of clang index.parse;
@@ -412,7 +419,8 @@ def parse(filename,
                         errs.append(r)
     # now finally call the handlers:
     for cur,errs in pool:
-        if conf.DEBUG:
+        if conf.DEBUG and cur.location.file:
+            echo('-'*80)
             echo('%s: %s [%d errors]'%(cur.kind,cur.spelling,len(errs)))
         if cur.kind in kind:
             kv = CHandlers[cur.kind](cur,cxx,errs)
