@@ -280,12 +280,11 @@ def fix_type_conversion(f,t,cxx,errs):
     # In a previous version of ccrawl, we used a trick: since ut
     # is known by catching error messages, we'd add a fake typedef
     # string in a private include and then recompile our file.
-    # The drawback was that we'd need several recompilation passes
+    # The drawback was that we'd need several recompilations.
     # In this version we will detect which ints have been replaced
-    # as switch them back to ut...
-    # first, let's see if we need to do some conversion by looking
-    # at the errors...actually there might be several ut, so:
+    # and switch them back to ut...
     if re.search('(?<!\w)int(?!\w)',t):
+        #there is at least one int occurence in t...
         candidates = []
         for r in errs:
             if 'unknown type' in r.spelling:
