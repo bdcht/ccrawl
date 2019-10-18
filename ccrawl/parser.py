@@ -76,9 +76,12 @@ def TypeDef(cur,cxx,errors=None):
 @declareHandler(STRUCT_DECL)
 def StructDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
-    if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
-    typename = get_uniq_typename(typename)
-    if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
+    if cxx:
+        typename = cur.type.get_canonical().spelling
+        typename = 'struct '+typename
+    else:
+        typename = get_uniq_typename(typename)
+        if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cClass() if cxx else cStruct()
     SetStructured(cur,S,errors)
     return typename,S
@@ -86,20 +89,19 @@ def StructDecl(cur,cxx,errors=None):
 @declareHandler(UNION_DECL)
 def UnionDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
-    if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
-    typename = get_uniq_typename(typename)
-    if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
+    if cxx:
+        typename = cur.type.get_canonical().spelling
+        typename = 'union '+typename
+    else:
+        typename = get_uniq_typename(typename)
+        if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cClass() if cxx else cUnion()
     SetStructured(cur,S,errors)
     return typename,S
 
 @declareHandler(CLASS_DECL)
 def ClassDecl(cur,cxx,errors=None):
-    typename = cur.displayname
-    if not typename.startswith('class'):
-        typename = typename.split('::')[-1]
-        typename = 'class %s'%(typename)
-    typename = get_uniq_typename(typename)
+    typename = "class %s"%(cur.type.get_canonical().spelling)
     if conf.DEBUG: echo('\t'*g_indent+'%s'%typename)
     S = cClass()
     SetStructured(cur,S,errors)
@@ -108,10 +110,12 @@ def ClassDecl(cur,cxx,errors=None):
 @declareHandler(ENUM_DECL)
 def EnumDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
-    if not typename.startswith('enum'):
-        typename = typename.split('::')[-1]
-        typename = 'enum %s'%typename
-    typename = get_uniq_typename(typename)
+    if cxx:
+        typename = cur.type.get_canonical().spelling
+        typename = 'enum '+typename
+    else:
+        typename = get_uniq_typename(typename)
+        if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cEnum()
     S._in = str(cur.extent.start.file)
     a = 0
@@ -216,19 +220,23 @@ def SetStructured(cur,S,errors=None):
             # type spelling is our member type only if this type is defined already,
             # otherwise clang takes the default 'int' type here and we can't access
             # the wanted type unless we access f's tokens.
-            t = f.type.spelling
-            if '(anonymous' in t:
-                if not S._is_class:
-                    t = f.type.get_canonical().spelling
-            else:
-                t = fix_type_conversion(f,t,S._is_class,errs)
-            t = get_uniq_typename(t)
             # field/member declaration:
             if f.kind in (CursorKind.FIELD_DECL,
                           CursorKind.VAR_DECL,
                           CursorKind.CONSTRUCTOR,
                           CursorKind.DESTRUCTOR,
                           CursorKind.CXX_METHOD):
+                t = f.type.spelling
+                if '(anonymous' in t:
+                    if not S._is_class:
+                        t = f.type.get_canonical().spelling
+                else:
+                    if S._is_class:
+                        kind = get_kind_type(t)
+                        t = f.type.get_canonical().spelling
+                        if kind: t = "%s %s"%(kind,t)
+                    t = fix_type_conversion(f,t,S._is_class,errs)
+                t = get_uniq_typename(t)
                 if S._is_class:
                     attr = ''
                     if f.kind==CursorKind.VAR_DECL: attr = 'static'
@@ -254,11 +262,16 @@ def SetStructured(cur,S,errors=None):
     S.local = local
     g_indent -= 1
 
-def get_uniq_typename(t):
-    if not '(anonymous' in t: return t
+def get_kind_type(t):
     if  'struct ' in t: kind='struct'
     elif 'union ' in t: kind='union'
     elif 'enum '  in t: kind='enum'
+    else: kind=''
+    return kind
+
+def get_uniq_typename(t):
+    if not '(anonymous' in t: return t
+    kind = get_kind_type(t)
     # anon types inside *named* struct/union are prefixed by
     # the struct/union namespace, we don't keep this since
     # we are creating a unique typename anyway
@@ -302,7 +315,7 @@ def fix_type_conversion(f,t,cxx,errs):
             # where the type string is located...
             while len(T)>0:
                 x = T.pop(0)
-                if conf.DEBUG: secho("%s: %s"%(x.kind, x.spelling),fg='red')
+                #if conf.DEBUG: secho("%s: %s"%(x.kind, x.spelling),fg='red')
                 if x.kind == TokenKind.KEYWORD:
                     if x.spelling == 'int':
                         marks.append('int')

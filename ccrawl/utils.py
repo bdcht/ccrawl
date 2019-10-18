@@ -23,7 +23,7 @@ struct_letters = {
 #------------------------------------------------------------------------------
 # notes:
 # this part of ccrawl was a nightmare...I was aware that parsing C is difficult
-# and that was why I relied massively on clang. Still, libclang's AST will
+# and this was precisely why I'd use clang. Still, libclang's AST will
 # only provide the C type string. I first thought it was going to be easy to
 # correctly parse this "simple" subpart of C...well, its not. And for C++ its
 # even worse! Try playing with cdecl.org and see how funny this can be ;) 
@@ -44,7 +44,7 @@ rawtypes   = pp.Optional(prefix)+pp.Or(T)
 # define pointer indicators:
 pstars     = pp.Group(pp.Regex('\*+')+pp.Optional(const,default=''))
 # define structured types (struct,union,enum):
-symbol     = pp.Regex(r'[?]?[A-Za-z_][A-Za-z0-9_]*')
+symbol     = pp.Regex(r'[?]?[A-Za-z_:][A-Za-z0-9_:]*')
 structured = pp.oneOf('struct union enum')
 strucdecl  = pp.Optional(prefix)+pp.Optional(structured)+symbol
 # define objecttype:

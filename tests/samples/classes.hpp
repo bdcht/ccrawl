@@ -41,7 +41,7 @@ protected:
 class MyClass
 {
   int field;
-  int method(wchar_t);
+  newstruct method(wchar_t);
   virtual char vmethod(int,MyClass&);
 public:
   myint *pubfield;
@@ -57,11 +57,11 @@ protected:
 
 class S {
 public:
-    int *d1; // non-static data member
+    struct oldstruct *d1; // non-static data member
     virtual int fa(int) = 0; // pure virtual member function
     struct NestedS {
         std::string s;
-        virtual void f(int);
+        virtual union newunion f(int);
     } d5, *d6;
 protected:
     int a[10] = {1,2}; // non-static data member with initializer (C++11)
