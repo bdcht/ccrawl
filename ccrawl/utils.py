@@ -45,7 +45,7 @@ rawtypes   = pp.Optional(prefix)+pp.Or(T)
 pstars     = pp.Group(pp.Regex('\*+')+pp.Optional(const,default=''))
 # define structured types (struct,union,enum):
 symbol     = pp.Regex(r'[?]?[A-Za-z_:][A-Za-z0-9_:]*')
-structured = pp.oneOf('struct union enum')
+structured = pp.oneOf('struct union enum class')
 strucdecl  = pp.Optional(prefix)+pp.Optional(structured)+symbol
 # define objecttype:
 objecttype = pp.Or([rawtypes,strucdecl])
@@ -120,6 +120,21 @@ class cxx_type(c_type):
     def __init__(self,decl):
         # get namespaces:
         c_type.__init__(self,decl)
+        self.kw = ''
+        self.ns = ''
+        k = self.lbase.find(' ')
+        if k>0:
+            self.kw = self.lbase[:k]
+        x = self.lbase.rfind('::')
+        if x>0:
+            self.ns = self.lbase[k+1:x+2]
+    def show_base(self):
+        s = [self.lbase.replace(self.ns,'')]
+        if self.lunsigned: s.insert(0,'unsigned')
+        if self.lconst: s.insert(0,'const')
+        return ' '.join(s)
+    def show(self,name=''):
+        return ('%s %s'%(self.show_base(),self.show_ptr(name))).strip()
 
 #------------------------------------------------------------------------------
 

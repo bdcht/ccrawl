@@ -109,6 +109,7 @@ def ClassDecl(cur,cxx,errors=None):
 
 @declareHandler(ENUM_DECL)
 def EnumDecl(cur,cxx,errors=None):
+    global g_indent
     typename = cur.type.spelling
     if cxx:
         typename = cur.type.get_canonical().spelling
@@ -119,7 +120,6 @@ def EnumDecl(cur,cxx,errors=None):
     S = cEnum()
     S._in = str(cur.extent.start.file)
     a = 0
-    global g_indent
     g_indent += 1
     for f in cur.get_children():
         if conf.DEBUG: echo('\t'*g_indent + str(f.kind))

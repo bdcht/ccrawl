@@ -27,6 +27,8 @@ struct newstruct {
 protected:
   char c;
   void meth(void);
+private:
+  newstruct *next;
 };
 
 union newunion {
@@ -75,7 +77,7 @@ public:
      virtual int fa(int);
 };
 
-class M {
+class M : class T {
     std::size_t C;
     std::vector<int> data;
  public:
