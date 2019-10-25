@@ -133,7 +133,7 @@ def cClass_C(obj,db,recursive):
         if qal == 'parent':
             r = cxx_type(n)
             e = r.lbase
-            S[0] = S[0][:-1]+': %s {'%(r.show(form='C++'))
+            S[0] = S[0][:-1]+': %s {'%(r.show_base())
             if Q and (e not in recursive):
                 q = (where('id')==e)
                 x = obj.from_db(db.get(q)).show(db,recursive,form='C')
