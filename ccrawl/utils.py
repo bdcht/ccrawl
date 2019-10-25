@@ -128,13 +128,16 @@ class cxx_type(c_type):
         x = self.lbase.rfind('::')
         if x>0:
             self.ns = self.lbase[k+1:x+2]
-    def show_base(self):
-        s = [self.lbase.replace(self.ns,'')]
+    def show_base(self,kw=False,ns=False):
+        lbase = self.lbase
+        if not kw: lbase = lbase.replace(self.kw,'',1)
+        if not ns: lbase = lbase.replace(self.ns,'',1)
+        s = [lbase]
         if self.lunsigned: s.insert(0,'unsigned')
         if self.lconst: s.insert(0,'const')
-        return ' '.join(s)
-    def show(self,name=''):
-        return ('%s %s'%(self.show_base(),self.show_ptr(name))).strip()
+        return ' '.join(s).strip()
+    def show(self,name='',kw=True,ns=True):
+        return ('%s %s'%(self.show_base(kw,ns),self.show_ptr(name))).strip()
 
 #------------------------------------------------------------------------------
 

@@ -77,7 +77,7 @@ public:
      virtual int fa(int);
 };
 
-class M : class T {
+class M : T {
     std::size_t C;
     std::vector<int> data;
  public:

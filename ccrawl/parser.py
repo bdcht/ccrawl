@@ -302,6 +302,10 @@ def fix_type_conversion(f,t,cxx,errs):
         for r in errs:
             if 'unknown type' in r.spelling:
                 candidates.append(re.findall("'(.*)'",r.spelling)[0])
+            elif 'no type named' in r.spelling:
+                l = re.findall("'(\w+)'",r.spelling)
+                print l
+                candidates.append('::'.join(reversed(l)))
         marks = ['']
         # for every occurence of int type in t:
         T = [x for x in f.get_tokens()]

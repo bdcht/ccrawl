@@ -1,7 +1,6 @@
-import pdb
-from tinydb import Query, where
 from click import secho
 from ccrawl.utils import *
+from tinydb import where
 
 # C formatters:
 #------------------------------------------------------------------------------
@@ -113,6 +112,7 @@ cUnion_C = cStruct_C
 def cClass_C(obj,db,recursive):
     # get the cxx type object, for namespaces:
     tn = cxx_type(obj.identifier)
+    namespace = tn.show_base(kw=False,ns=False)
     #prepare query if recursion is needed:
     if isinstance(recursive,set):
         Q = True
@@ -133,7 +133,7 @@ def cClass_C(obj,db,recursive):
         if qal == 'parent':
             r = cxx_type(n)
             e = r.lbase
-            S[0] = S[0][:-1]+': %s {'%(r.show())
+            S[0] = S[0][:-1]+': %s {'%(r.show(form='C++'))
             if Q and (e not in recursive):
                 q = (where('id')==e)
                 x = obj.from_db(db.get(q)).show(db,recursive,form='C')
@@ -145,20 +145,22 @@ def cClass_C(obj,db,recursive):
         #get "element base" part of type t:
         e = r.lbase
         #query field element raw base type if needed:
-        if Q and (e not in recursive):
+        nested = r.ns.startswith(namespace)
+        if Q and ((e not in recursive) or nested):
             #prepare query
             q = (where('id')==e)
             #deal with nested type:
-            if '::' in e:
+            if nested:
                 q &= (where('src')==tn.lbase)
             if db.contains(q):
                 #retreive the field type:
                 x = obj.from_db(db.get(q)).show(db,recursive,form='C')
-                if not '::' in e:
+                if not nested:
                     #if not nested, insert it directly in R
                     R.append(x)
                     recursive.add(e)
                 else:
+                    x = x.replace('%s::'%namespace,'')
                     # nested struct/union/class: we need to transfer
                     # any predefs into R
                     x = x.split('\n\n')
@@ -172,7 +174,7 @@ def cClass_C(obj,db,recursive):
                 secho('identifier %s not found'%r.lbase,fg='red')
         #finally add field type and name to the structure lines:
         if qal: qal = '%s '%qal
-        P[p].append(u'    {}{};'.format(qal,r.show(n)))
+        P[p].append(u'    {}{};'.format(qal,r.show(n,kw=nested)))
     for p in ('PUBLIC','PROTECTED','PRIVATE'):
         if len(P[p])>0:
             S.append('  %s:'%p.lower())

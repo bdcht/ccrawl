@@ -1,6 +1,5 @@
 import requests
 import ctypes
-from ccrawl.parser import ccore
 from tinydb.storages import JSONStorage,MemoryStorage
 from tinydb.middlewares import CachingMiddleware
 from tinydb import TinyDB, Query, where
