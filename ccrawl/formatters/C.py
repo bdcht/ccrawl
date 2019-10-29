@@ -124,7 +124,7 @@ def cClass_C(obj,db,recursive):
     R = []
     #S holds obj title and fields declaration strings
     S = [u'%s {'%(tn.show())]
-    P = {'PUBLIC':[], 'PROTECTED':[], 'PRIVATE':[]}
+    P = {'':[],'PUBLIC':[], 'PROTECTED':[], 'PRIVATE':[]}
     #iterate through all fields:
     for (x,y,z) in obj:
         qal,t = x # parent/virtual qualifier & type
@@ -184,9 +184,10 @@ def cClass_C(obj,db,recursive):
             if ',' in qal: qal,fo = qal.split(',')
             qal = '%s '%qal
         P[p].append(u'    {}{}{};'.format(qal,r.show(n,kw=nested),fo))
-    for p in ('PUBLIC','PROTECTED','PRIVATE'):
+    # access specifier (empty is for friend members):
+    for p in ('PUBLIC','PROTECTED','PRIVATE',''):
         if len(P[p])>0:
-            S.append('  %s:'%p.lower())
+            if p: S.append('  %s:'%p.lower())
             for v in P[p]:
                 S.append(v)
     #join R and S:
@@ -194,3 +195,14 @@ def cClass_C(obj,db,recursive):
     S.append('};')
     return '\n'.join(R)+'\n'.join(S)
 
+def cTemplate_C(obj,db,recursive):
+    # get the cxx type object, for namespaces:
+    tn = cxx_type(obj.identifier)
+    namespace = tn.show_base(kw=False,ns=False)
+    #prepare query if recursion is needed:
+    if isinstance(recursive,set):
+        Q = True
+        recursive.update(struct_letters)
+        recursive.add(tn.lbase)
+    else:
+        Q = None
