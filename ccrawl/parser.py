@@ -114,6 +114,7 @@ def EnumDecl(cur,cxx,errors=None):
     if cxx:
         typename = cur.type.get_canonical().spelling
         typename = 'enum '+typename
+        if conf.DEBUG: echo('\t'*g_indent+typename)
     else:
         typename = get_uniq_typename(typename)
         if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
@@ -122,17 +123,20 @@ def EnumDecl(cur,cxx,errors=None):
     a = 0
     g_indent += 1
     for f in cur.get_children():
-        if conf.DEBUG: echo('\t'*g_indent + str(f.kind))
+        if conf.DEBUG: echo('\t'*g_indent + "%s: "%(f.kind),nl=False)
         if not f.is_definition():
             if a: raise ValueError
         if f.kind is CursorKind.ENUM_CONSTANT_DECL:
             S[f.spelling] = f.enum_value
+            if conf.DEBUG: echo(str(f.enum_value),nl=False)
+        echo('')
     g_indent -= 1
     return typename,S
 
 @declareHandler(FUNC_TEMPLATE)
 def FuncTemplate(cur,cxx,errors=None):
-    identifier = cur.displayname
+    identifier = cur.spelling
+    if conf.DEBUG: echo('\t'*g_indent + str(identifier))
     proto = cur.type.spelling
     TF = template_fltr
     p = [x.spelling for x in filter(TF,cur.get_children())]
@@ -154,12 +158,7 @@ def ClassTemplate(cur,cxx,errors=None):
         k = 'struct'
     identifier  = "%s %s"%(k,identifier)
     if conf.DEBUG: echo('\t'*g_indent + str(identifier))
-    if   k == 'struct':
-        S = cStruct()
-    elif k == 'union':
-        S = cUnion()
-    else:
-        S = cClass()
+    S = cClass()
     SetStructured(cur,S,errors)
     return identifier,cTemplate(params=p,cClass=S)
 
@@ -212,8 +211,15 @@ def SetStructured(cur,S,errors=None):
             S.append( (('parent',virtual),('',f.spelling),(f.access_specifier.name,'')) )
         # c++ 'using' declaration:
         elif f.kind is CursorKind.USING_DECLARATION:
-            I = list(f.get_children())
-            S.append( (('using',''),('',[x.spelling for x in I]),('','')) )
+            uses = []
+            name = ''
+            for x in f.get_children():
+                if x.kind==CursorKind.TYPE_REF:
+                    uses.append(x.spelling)
+                if x.kind==CursorKind.OVERLOADED_DECL_REF:
+                    name = x.spelling
+            if conf.DEBUG: echo('\t'*g_indent + "%s : %s"%(name,uses))
+            S.append( (('using',uses),('',name),('','')) )
         # structured type member:
         else:
             comment = f.brief_comment or f.raw_comment

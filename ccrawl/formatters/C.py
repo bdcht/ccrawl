@@ -140,6 +140,12 @@ def cClass_C(obj,db,recursive):
                 R.append(x)
                 recursive.add(e)
             continue
+        elif qal == 'using':
+            what = '::'.join((cxx_type(u).show_base() for u in t))
+            using = '  using %s'%what
+            using +='::%s;'%n if n!=namespace else ';'
+            S.append(using)
+            continue
         #decompose C-type t into specific parts:
         r = cxx_type(t)
         #get "element base" part of type t:

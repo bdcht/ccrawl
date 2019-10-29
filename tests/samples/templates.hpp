@@ -17,7 +17,7 @@ struct identity
 template<typename T, int size>
 struct sA {
   char tab[size];
-  void f() {}
+  void f(T& t) {}
 };
 
 template<class T1, class T2, int I>
