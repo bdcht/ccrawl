@@ -74,7 +74,17 @@ protected:
 
 class T : S {
 public:
-     virtual int fa(int);
+     int* X[2];
+     virtual int fa(int) override;
+};
+
+class Scv {
+    int mf1(); // non-static member function declaration
+    void mf2() volatile, mf3() &&; // can be cv-qualified and reference-qualified
+    int mf4() const { return data; } // can be defined inline
+    virtual void mf5() final; // can be virtual, can use final/override
+    Scv() : data(12) {} // constructors are member functions too
+    int data;
 };
 
 class M : T {

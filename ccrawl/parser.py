@@ -241,7 +241,21 @@ def SetStructured(cur,S,errors=None):
                     attr = ''
                     if f.kind==CursorKind.VAR_DECL: attr = 'static'
                     if f.is_virtual_method(): attr = 'virtual'
-                    if conf.DEBUG: echo('\t'*g_indent + str(t))
+                    for w in f.get_children():
+                        if conf.DEBUG:
+                            g_indent+=1
+                            subk = w.kind
+                            subs = w.spelling
+                            echo('\t'*g_indent + "%s: %s"%(subk,subs))
+                            g_indent-=1
+                        if w.kind==CursorKind.CXX_FINAL_ATTR:
+                            attr += ', final'
+                        if w.kind==CursorKind.CXX_OVERRIDE_ATTR:
+                            attr += ', override'
+                    # a C++ class member is stored as:
+                    # [ (static/virtual?, type definition),
+                    #   (mangled name, source name),
+                    #   (access specifier, comment) ]
                     member = ((attr,t),
                               (f.mangled_name,f.spelling),
                               (f.access_specifier.name,comment))

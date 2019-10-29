@@ -19,12 +19,12 @@ struct_letters = {
     'wchar_t'    : 'L',
 }
 
-# C type declaration parser:
+# C and C++ type declaration parsers:
 #------------------------------------------------------------------------------
 # notes:
-# this part of ccrawl was a nightmare...I was aware that parsing C is difficult
-# and this was precisely why I'd use clang. Still, libclang's AST will
-# only provide the C type string. I first thought it was going to be easy to
+# this part of ccrawl was a coding nightmare...I was aware that parsing C is
+# difficult and this was precisely why I'd use clang. Still, libclang's AST
+# only provides the C type string. I first tought it was going to be easy to
 # correctly parse this "simple" subpart of C...well, its not. And for C++ its
 # even worse! Try playing with cdecl.org and see how funny this can be ;) 
 #
@@ -38,11 +38,14 @@ struct_letters = {
 # define 'raw' types:
 unsigned   = pp.Keyword('unsigned')
 const      = pp.Keyword('const')
+volatile   = pp.Keyword('volatile')
 prefix     = pp.Or((const,unsigned,const+unsigned))
+cvqual     = pp.Or((const,volatile,const+volatile))
 T = [pp.Keyword(t) for t in struct_letters]
 rawtypes   = pp.Optional(prefix)+pp.Or(T)
 # define pointer indicators:
 pstars     = pp.Group(pp.Regex('\*+')+pp.Optional(const,default=''))
+ampers     = pp.Regex('&+')
 # define structured types (struct,union,enum):
 symbol     = pp.Regex(r'[?]?[A-Za-z_:][A-Za-z0-9_:]*')
 structured = pp.oneOf('struct union enum class')
@@ -54,6 +57,7 @@ intp       = pp.Regex(r'[1-9][0-9]*')
 intp.setParseAction(lambda r: int(r[0]))
 arraydecl  = pp.Suppress('[')+intp+pp.Suppress(']')
 pointer    = pp.Optional(pstars,default='')+pp.Optional(arraydecl,default=0)
+cvref      = pp.Or((cvqual,ampers))
 #
 # definitions for nested_c ----------------------------------------------------
 # nested_c captures "pointer to function/array" part of the declaration.
@@ -118,8 +122,14 @@ class c_type(object):
 # qualified name of the C++ type.
 class cxx_type(c_type):
     def __init__(self,decl):
+        x,r = (pp.Group(objecttype)+pp.restOfLine).parseString(decl)
+        self.lconst    = (x[0] =='const') and x.pop(0)
+        self.lunsigned = (x[0] =='unsigned') and x.pop(0)
+        self.lbase = ' '.join(x)
+        r = '(%s)'%r
+        nest = nested_c.parseString(r).asList()[0]
+        self.pstack = pstack(nest,cxx=True)
         # get namespaces:
-        c_type.__init__(self,decl)
         self.kw = ''
         self.ns = ''
         k = self.lbase.find(' ')
@@ -136,6 +146,18 @@ class cxx_type(c_type):
         if self.lunsigned: s.insert(0,'unsigned')
         if self.lconst: s.insert(0,'const')
         return ' '.join(s).strip()
+    def show_ptr(self,name):
+        s = name
+        stripok = False
+        for p in reversed(self.pstack):
+            if p.is_ptr:
+                s = '({}{})'.format(p,s)
+                stripok = True
+            else:
+                s = '{}{}'.format(s,str(p))
+                stripok = False
+        if stripok: s=s[1:-1]
+        return s
     def show(self,name='',kw=True,ns=True):
         return ('%s %s'%(self.show_base(kw,ns),self.show_ptr(name))).strip()
 
@@ -173,12 +195,15 @@ class fargs(object):
         return filter(None,A)
 
     def __str__(self):
+        if hasattr(self,'cvr'):
+            return "%s %s"%(self.f,self.cvr)
         return self.f
 
-def pstack(plist):
+def pstack(plist,cxx=False):
     """returns the 'stack' of pointers-to array-N-of pointer-to
        function() returning pointer to function() returning ..."""
     S = []
+    cvr = ''
     if plist:
         if not isinstance(plist[0],list):
             # we are declaring either a pointer or array,
@@ -188,8 +213,13 @@ def pstack(plist):
             if p: S.append(ptr(*p))
             if a: S.append(arr(a))
             if not (p or a):
-                S.append(fargs(flatten(plist)))
-                plist = []
+                if cxx:
+                    r = ampers.parseString(p0)[0]
+                    if r: S.append(ptr(r[0],''))
+                    plist.pop(0)
+                else:
+                    S.append(fargs(flatten(plist)))
+                    plist = []
             else:
                 plist.pop(0)
         if len(plist)==1 and len(plist[0])==0:
@@ -198,13 +228,22 @@ def pstack(plist):
     if len(plist)>1:
         r = plist.pop()
         if not isinstance(r,list):
-            r = arraydecl.parseString(r)[0]
-            S.append(arr(r))
+            try:
+                r = arraydecl.parseString(r)[0]
+                S.append(arr(r))
+            except pp.ParseException:
+                if cxx:
+                    cvr = cvref.parseString(r)[0]
         else:
             S.append(fargs(flatten(r)))
     if plist:
-        if len(plist)==1: plist=plist[0]
+        if len(plist)==1 and not cvr: plist=plist[0]
         S.extend(pstack(plist))
+    if cvr:
+        if len(S)>0:
+            S[-1].cvr = cvr
+        else:
+            print 'cvr %s but S is empty!' % cvr
     return S
 
 def flatten(args):

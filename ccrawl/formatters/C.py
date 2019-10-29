@@ -173,8 +173,11 @@ def cClass_C(obj,db,recursive):
             else:
                 secho('identifier %s not found'%r.lbase,fg='red')
         #finally add field type and name to the structure lines:
-        if qal: qal = '%s '%qal
-        P[p].append(u'    {}{};'.format(qal,r.show(n,kw=nested)))
+        fo = ''
+        if qal:
+            if ',' in qal: qal,fo = qal.split(',')
+            qal = '%s '%qal
+        P[p].append(u'    {}{}{};'.format(qal,r.show(n,kw=nested),fo))
     for p in ('PUBLIC','PROTECTED','PRIVATE'):
         if len(P[p])>0:
             S.append('  %s:'%p.lower())
