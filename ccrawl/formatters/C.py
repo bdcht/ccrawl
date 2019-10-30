@@ -110,8 +110,9 @@ def cStruct_C(obj,db,recursive):
 cUnion_C = cStruct_C
 
 def cClass_C(obj,db,recursive):
-    # get the cxx type object, for namespaces:
+    # get the cxx type object:
     tn = cxx_type(obj.identifier)
+    # get the current class namespace:
     namespace = tn.show_base(kw=False,ns=False)
     #prepare query if recursion is needed:
     if isinstance(recursive,set):
@@ -123,9 +124,12 @@ def cClass_C(obj,db,recursive):
     #R holds recursive definition strings needed for obj
     R = []
     #S holds obj title and fields declaration strings
-    S = [u'%s {'%(tn.show())]
+    #we need obj.identifier here and not tn.show() because
+    #template specialization need to keep the template string.
+    S = [u'%s {'%(obj.identifier)]
+    #P holds lists for each public/protected/private/friend members
     P = {'':[],'PUBLIC':[], 'PROTECTED':[], 'PRIVATE':[]}
-    #iterate through all fields:
+    #now, iterate through all fields:
     for (x,y,z) in obj:
         qal,t = x # parent/virtual qualifier & type
         mn,n  = y # mangled name & name
@@ -146,12 +150,16 @@ def cClass_C(obj,db,recursive):
             using +='::%s;'%n if n!=namespace else ';'
             S.append(using)
             continue
+        elif qal.startswith('template<'):
+            P[p].append('    '+qal)
+            qal=''
         #decompose C-type t into specific parts:
         r = cxx_type(t)
         #get "element base" part of type t:
         e = r.lbase
-        #query field element raw base type if needed:
+        #is t a nested class ?
         nested = r.ns.startswith(namespace)
+        #query field element raw base type if needed:
         if Q and ((e not in recursive) or nested):
             #prepare query
             q = (where('id')==e)
@@ -196,13 +204,36 @@ def cClass_C(obj,db,recursive):
     return '\n'.join(R)+'\n'.join(S)
 
 def cTemplate_C(obj,db,recursive):
+    identifier = obj.get_basename()
+    template = obj.get_template()
     # get the cxx type object, for namespaces:
-    tn = cxx_type(obj.identifier)
+    tn = cxx_type(identifier)
     namespace = tn.show_base(kw=False,ns=False)
     #prepare query if recursion is needed:
     if isinstance(recursive,set):
         Q = True
         recursive.update(struct_letters)
         recursive.add(tn.lbase)
+        for t in obj['params']:
+            if t.startswith('typename '):
+                t = t.replace('typename ','')
+                recursive.add(t)
     else:
         Q = None
+    R = []
+    #S holds template output lines:
+    S = [u'template%s'%template]
+    if 'cClass' in obj:
+        from ccrawl.core import cClass
+        o = cClass(obj['cClass'])
+        o.identifier = identifier
+        x = cClass_C(o,db,recursive)
+    if 'cFunc' in obj:
+        from ccrawl.core import cFunc
+        o = cFunc(obj['cFunc'])
+        o.identifier = identifier
+        x = cFunc_C(o,db,recursive)
+    x = x.split('\n\n')
+    S.append(x.pop())
+    if len(x): R.append(x[0])
+    return '\n'.join(R)+'\n'.join(S)

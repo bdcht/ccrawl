@@ -56,7 +56,9 @@ objecttype = pp.Or([rawtypes,strucdecl])
 intp       = pp.Regex(r'[1-9][0-9]*')
 intp.setParseAction(lambda r: int(r[0]))
 arraydecl  = pp.Suppress('[')+intp+pp.Suppress(']')
+arrazdecl  = pp.Suppress('[')+pp.Or((intp,symbol))+pp.Suppress(']')
 pointer    = pp.Optional(pstars,default='')+pp.Optional(arraydecl,default=0)
+pointerxx  = pp.Optional(ampers,default='')+pp.Optional(arrazdecl,default=0)
 cvref      = pp.Or((cvqual,ampers))
 #
 # definitions for nested_c ----------------------------------------------------
@@ -175,7 +177,7 @@ class arr(object):
         self.is_ptr = False
         self.a = a
     def __str__(self):
-        return '[%d]'%self.a
+        return '[%s]'%self.a
 
 class fargs(object):
     def __init__(self,f):
@@ -214,8 +216,9 @@ def pstack(plist,cxx=False):
             if a: S.append(arr(a))
             if not (p or a):
                 if cxx:
-                    r = ampers.parseString(p0)[0]
+                    r,a = pointerxx.parseString(p0)
                     if r: S.append(ptr(r[0],''))
+                    if a: S.append(arr(a))
                     plist.pop(0)
                 else:
                     S.append(fargs(flatten(plist)))

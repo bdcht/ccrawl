@@ -173,6 +173,15 @@ class cFunc(str,ccore):
 class cTemplate(dict,ccore):
     _is_template = True
 
+    def get_basename(self):
+        if self.get('partial_specialization',False):
+            return self.identifier
+        i = self.identifier.rfind('<')
+        assert i>0
+        return self.identifier[:i]
+    def get_template(self):
+        return '<%s>'%(','.join(self['params']))
+
 class cNamespace(list,ccore):
     _is_namespace = True
     def unfold(self,db,limit=None):

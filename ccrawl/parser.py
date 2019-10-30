@@ -133,23 +133,20 @@ def EnumDecl(cur,cxx,errors=None):
     g_indent -= 1
     return typename,S
 
-@declareHandler(FUNC_TEMPLATE)
-def FuncTemplate(cur,cxx,errors=None):
-    identifier = cur.spelling
-    if conf.DEBUG: echo('\t'*g_indent + str(identifier))
-    proto = cur.type.spelling
-    TF = template_fltr
-    p = [x.spelling for x in filter(TF,cur.get_children())]
-    f = re.sub('__attribute__.*','',proto)
-    return identifier,cTemplate(params=p,cFunc=cFunc(f))
-
 @declareHandler(CLASS_TEMPLATE)
 def ClassTemplate(cur,cxx,errors=None):
     identifier = cur.displayname
-    TF = template_fltr
-    p = [x.spelling for x in filter(TF,cur.get_children())]
-    # damn libclang...children should be a STRUCT_DECL or CLASS_DECL !
-    # (if not, there should be a STRUCT_TEMPLATE as well...)
+    p = []
+    for x in cur.get_children():
+        if x.kind==CursorKind.TEMPLATE_TYPE_PARAMETER:
+            p.append('typename %s'%x.spelling)
+        elif x.kind==CursorKind.TEMPLATE_NON_TYPE_PARAMETER:
+            p.append('%s %s'%(x.type.spelling,x.spelling))
+    # now we need this to distinguish struct/union/class template:
+    # damn libclang!! children here should really allow for
+    # this by having a STRUCT_DECL, UNION_DECL or CLASS_DECL !
+    # Or, if implicit CLASS_DECL due to being a CLASS_TEMPLATE,
+    # then there should be a STRUCT_TEMPLATE as well.
     toks = [x.spelling for x in cur.get_tokens()]
     try:
         i = toks.index(cur.spelling)
@@ -158,18 +155,31 @@ def ClassTemplate(cur,cxx,errors=None):
         k = 'struct'
     identifier  = "%s %s"%(k,identifier)
     if conf.DEBUG: echo('\t'*g_indent + str(identifier))
+    # ok so now proceed with the "class" parsing:
     S = cClass()
     SetStructured(cur,S,errors)
     return identifier,cTemplate(params=p,cClass=S)
 
-def template_fltr(x):
-    if x.kind==CursorKind.TEMPLATE_TYPE_PARAMETER: return True
-    if x.kind==CursorKind.TEMPLATE_NON_TYPE_PARAMETER: return True
-    return False
+@declareHandler(FUNC_TEMPLATE)
+def FuncTemplate(cur,cxx,errors=None):
+    identifier = cur.spelling
+    if conf.DEBUG: echo('\t'*g_indent + identifier)
+    proto = cur.type.spelling
+    if conf.DEBUG: echo('\t'*g_indent + proto)
+    p = []
+    for x in cur.get_children():
+        if x.kind==CursorKind.TEMPLATE_TYPE_PARAMETER:
+            p.append('typename %s'%x.spelling)
+        elif x.kind==CursorKind.TEMPLATE_NON_TYPE_PARAMETER:
+            p.append('%s %s'%(x.type.spelling,x.spelling))
+    f = re.sub('__attribute__.*','',proto)
+    return identifier,cTemplate(params=p,cFunc=cFunc(f))
 
 @declareHandler(CLASS_TPSPEC)
 def ClassTemplatePartialSpec(cur,cxx,errors=None):
-    return ClassTemplate(cur,cxx,errors)
+    identifier,obj =  ClassTemplate(cur,cxx,errors)
+    obj['partial_specialization'] = True
+    return identifier,obj
 
 @declareHandler(NAMESPACE)
 def NameSpace(cur,cxx,errors=None):
@@ -198,12 +208,18 @@ def SetStructured(cur,S,errors=None):
                 if (f.extent.start.line!=f.extent.end.line) or\
                    (f.extent.start.column<=r.location.column<=f.extent.end.column):
                     errs.append(r)
-        # in-structuted type definition of another structured type:
-        if f.kind in (STRUCT_DECL,UNION_DECL,CLASS_DECL,ENUM_DECL):
+        # nested type definition of another structured type:
+        if f.kind in (STRUCT_DECL,UNION_DECL,ENUM_DECL,
+                      CLASS_DECL, FUNC_TEMPLATE, CLASS_TEMPLATE):
             identifier,slocal = CHandlers[f.kind](f,S._is_class,errs)
-            local[identifier] = slocal
-            attr_x = True
-            if not S._is_class: S.append([identifier, '',''])
+            if f.kind==FUNC_TEMPLATE:
+                S.append((('template%s'%slocal.get_template(),slocal['cFunc']),
+                          ('',identifier),
+                          (f.access_specifier.name,'')))
+            else:
+                local[identifier] = slocal
+                attr_x = True
+                if not S._is_class: S.append([identifier, '',''])
         # c++ parent class:
         elif f.kind is CursorKind.CXX_BASE_SPECIFIER:
             is_virtual = clang.cindex.conf.lib.clang_isVirtualBase(f)
@@ -240,6 +256,8 @@ def SetStructured(cur,S,errors=None):
                     if S._is_class:
                         kind = get_kind_type(t)
                         t = f.type.get_canonical().spelling
+                        if 'type-parameter' in t:
+                            t = f.type.spelling
                         if kind: t = "%s %s"%(kind,t)
                     t = fix_type_conversion(f,t,S._is_class,errs)
                 t = get_uniq_typename(t)
