@@ -6,7 +6,7 @@ from clang.cindex import CursorKind,TokenKind,TranslationUnit,Index
 import clang.cindex
 import tempfile
 import hashlib
-from collections import OrderedDict
+from collections import OrderedDict,defaultdict
 from ccrawl import conf
 from ccrawl.core import *
 
@@ -129,7 +129,7 @@ def EnumDecl(cur,cxx,errors=None):
         if f.kind is CursorKind.ENUM_CONSTANT_DECL:
             S[f.spelling] = f.enum_value
             if conf.DEBUG: echo(str(f.enum_value),nl=False)
-        echo('')
+        if conf.DEBUG: echo('')
     g_indent -= 1
     return typename,S
 
@@ -431,7 +431,7 @@ def parse(filename,
                         tu = index.parse(filename,_args+A,unsaved_files,options)
                         break
                     else:
-                        secho('[c++]'.rjust(8), fg='yellow')
+                        secho('[c++]'.rjust(12), fg='yellow')
                         return []
             elif err.severity==4:
                 # this should not happen anymore thanks to -M -MG opts...
@@ -447,24 +447,18 @@ def parse(filename,
     else:
         if conf.VERBOSE:
             echo(':')
-    name = tu.cursor.extent.start.file.name
     # walk down all AST to get all cursors:
     pool = [(c,[]) for c in tu.cursor.get_children()]
+    name = str(tu.cursor.extent.start.file.name)
+    diag = defaultdict(list)
+    for r in tu.diagnostics:
+        if str(r.location.file)==name and selected_errs(r):
+            diag[r.location.line].append(r)
     # map diagnostics to cursors:
     for cur,errs in pool:
         if cur.location.file is None: continue
-        for r in tu.diagnostics:
-            if (str(cur.location.file) == str(r.location.file)) and\
-               (cur.extent.start.line<=r.location.line<=cur.extent.end.line):
-                if (cur.extent.start.line!=cur.extent.end.line) or\
-                   (cur.extent.start.column<=r.location.column<=cur.extent.end.column):
-                    if 'unknown type name' in r.spelling or\
-                       'type specifier missing' in r.spelling or\
-                       'has incomplete' in r.spelling or\
-                       'no type named' in r.spelling or\
-                       'function cannot return function type' in r.spelling or\
-                       'no template named' in r.spelling:
-                        errs.append(r)
+        for l in range(cur.extent.start.line,cur.extent.end.line+1):
+            errs.extend(diag[l])
     # now finally call the handlers:
     for cur,errs in pool:
         if conf.DEBUG and cur.location.file:
@@ -479,7 +473,7 @@ def parse(filename,
                     for x in cobj.to_db(ident, tag, cur.location.file.name):
                         defs[x['id']] = x
     if not conf.QUIET:
-        secho(('[%3d]'%len(defs)).rjust(8), fg='green')
+        secho(('[%3d]'%len(defs)).rjust(12), fg='green')
     return defs.values()
 
 def parse_string(s,args=None,options=0):
@@ -490,3 +484,13 @@ def parse_string(s,args=None,options=0):
     os.remove(tmph)
     return parse(tmph,args,[(tmph,s)],options)
 
+def selected_errs(r):
+    if 'unknown type name' in r.spelling or\
+       'type specifier missing' in r.spelling or\
+       'has incomplete' in r.spelling or\
+       'no type named' in r.spelling or\
+       'function cannot return function type' in r.spelling or\
+       'no template named' in r.spelling:
+        return True
+    else:
+        return False

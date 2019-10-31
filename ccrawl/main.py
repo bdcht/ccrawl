@@ -202,7 +202,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
             click.secho('%.2f)'%(t2-t1),fg='cyan')
     db = ctx.obj['db']
     if not c.Terminal.quiet:
-        click.echo('-'*(c.Terminal.width-1))
+        click.echo('-'*(c.Terminal.width))
         click.echo('saving database...'.ljust(W),nl=False)
     N = len(dbo)
     db.insert_multiple(dbo.values())
