@@ -10,8 +10,8 @@ It depends on:
  - pyparsing
  - tinydb
  - ujson
- - requests (interface avec CouchDB)
- - pymongo  (interface avec MongoDB)
+ - requests (interface for CouchDB)
+ - pymongo  (interface for MongoDB)
 
 It is advised to install ccrawl in its own virtualenv with included ipython::
 
@@ -47,7 +47,7 @@ It is advised to install ccrawl in its own virtualenv with included ipython::
     ___ _ __ __ ___      _| |
    / __| '__/ _` \ \ /\ / / |
   | (__| | | (_| |\ V  V /| |
-   \___|_|  \__,_| \_/\_/ |_| v0.9.1
+   \___|_|  \__,_| \_/\_/ |_| v1.0
 
 
   In [1]: [^D]

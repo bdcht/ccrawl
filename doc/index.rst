@@ -14,17 +14,17 @@ ccrawl allows to extract, collect and search features related to C/C++ data stru
 Motivation
 ==========
 
-In the context of binary code analysis, tools like IDA Pro [1] provide an initial
+In the context of binary code analysis, tools like IDA Pro [1] and Ghidra [2] provide an initial
 representation of the code in assembly language and usually enhance this simple representation
 with features extracted from the analysis of the control flow graph (executable code) and the
 analysis of how the data manipulated by instructions is structured.
 These various features ideally provide a kind of "decompiled" representation of the program.
 
-Plugins like "Hex-Rays" [2] perform an analysis of the control flow that leads to a decompiled
+Plugins like "Hex-Rays" [3] perform an analysis of the control flow that leads to a decompiled
 representation much closer to an equivalent C source code than the initial assembly instruction
 listing. However, informations related to the nature and structure of manipulated data
-are still mostly unidentified. Althrough some dedicated tools like TILIB or FLIRT [3]
-or plugins to import this kind of information from windows PDB [4] files exist, this time consuming
+are still mostly unidentified. Althrough some dedicated tools like TILIB or FLIRT [4]
+or plugins to import this kind of information from windows PDB [5] files exist, this time consuming
 identification is still largely performed manually by the user.
 This is particularly true in the case of embedded system firmware analysis.
 
@@ -35,8 +35,8 @@ unsigned integer at offset 56 and total size of 96 bytes ?"  or "find every macr
 value 0x1234 ?" or even "find the mask of values from enum X that correspond to 0xabcd ?"
 
 Finally, once collected in its database(s), ccrawl allows to output queried structures in
-various dedicated formats: C of course, but also ctypes [5], VTypes (used by Volatility [6]),
-or amoco [9]. The subset of all types required to fully define a given structure can also
+various dedicated formats: C of course, but also ctypes [6], VTypes (used by Volatility [7]),
+or amoco [10]. The subset of all types required to fully define a given structure can also
 be shown as well.
 
 .. ----------------------------------------------------------------------------  
@@ -82,11 +82,12 @@ Indices and tables
 
 
 .. _[1]: https://www.hex-rays.com/products/ida/index.shtml
-.. _[2]: https://www.hex-rays.com/products/decompiler/index.shtml
-.. _[3]: https://www.hex-rays.com/products/ida/tech/flirt/index.shtml
-.. _[4]: https://github.com/Microsoft/microsoft-pdb
-.. _[5]: https://docs.python.org/3.7/library/ctypes.html
-.. _[6]: https://volatility-labs.blogspot.com/2014/01/the-art-of-memory-forensics.html
-.. _[7]: https://kaitai.io
-.. _[8]: https://developers.google.com/protocol-buffers/
-.. _[9]: https://github.com/bdcht/amoco
+.. _[2]: https://www.hex-rays.com/products/ida/index.shtml
+.. _[3]: https://www.hex-rays.com/products/decompiler/index.shtml
+.. _[4]: https://www.hex-rays.com/products/ida/tech/flirt/index.shtml
+.. _[5]: https://github.com/Microsoft/microsoft-pdb
+.. _[6]: https://docs.python.org/3.7/library/ctypes.html
+.. _[7]: https://volatility-labs.blogspot.com/2014/01/the-art-of-memory-forensics.html
+.. _[8]: https://kaitai.io
+.. _[9]: https://developers.google.com/protocol-buffers/
+.. _[10]: https://github.com/bdcht/amoco
