@@ -84,4 +84,11 @@ myunion myFunc(p_unspelled p, mystruct X);
 
 typedef char (*pac3)[3];
 
+typedef struct bf {
+  unsigned int b3 : 3;
+  unsigned int b4 : 4;
+  signed int b6: 6;
+  int x:1;
+} bitfield;
+
 #endif

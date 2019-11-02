@@ -261,21 +261,26 @@ def SetStructured(cur,S,errors=None):
                         if kind: t = "%s %s"%(kind,t)
                     t = fix_type_conversion(f,t,S._is_class,errs)
                 t = get_uniq_typename(t)
+                attr = ''
+                if f.kind==CursorKind.VAR_DECL: attr = 'static'
+                if f.is_virtual_method(): attr = 'virtual'
+                if f.is_bitfield():
+                    bw = f.get_bitfield_width()
+                    if conf.DEBUG:
+                        echo('\t'*g_indent + 'bitfield size:%d'%bw)
+                    t += '# %d'%bw
+                for w in f.get_children():
+                    if conf.DEBUG:
+                        g_indent+=1
+                        subk = w.kind
+                        subs = w.spelling
+                        echo('\t'*g_indent + "%s: %s"%(subk,subs))
+                        g_indent-=1
+                    if w.kind==CursorKind.CXX_FINAL_ATTR:
+                        attr += ', final'
+                    if w.kind==CursorKind.CXX_OVERRIDE_ATTR:
+                        attr += ', override'
                 if S._is_class:
-                    attr = ''
-                    if f.kind==CursorKind.VAR_DECL: attr = 'static'
-                    if f.is_virtual_method(): attr = 'virtual'
-                    for w in f.get_children():
-                        if conf.DEBUG:
-                            g_indent+=1
-                            subk = w.kind
-                            subs = w.spelling
-                            echo('\t'*g_indent + "%s: %s"%(subk,subs))
-                            g_indent-=1
-                        if w.kind==CursorKind.CXX_FINAL_ATTR:
-                            attr += ', final'
-                        if w.kind==CursorKind.CXX_OVERRIDE_ATTR:
-                            attr += ', override'
                     # a C++ class member is stored as:
                     # [ (static/virtual?, type definition),
                     #   (mangled name, source name),
@@ -286,7 +291,6 @@ def SetStructured(cur,S,errors=None):
                 else:
                     if attr_x and t==S[-1][0]: S.pop()
                     attr_x = False
-                    if conf.DEBUG: echo('\t'*g_indent + str(t))
                     member = (t,
                               f.spelling,
                               comment)

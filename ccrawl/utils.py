@@ -55,6 +55,7 @@ objecttype = pp.Or([rawtypes,strucdecl])
 #define arrays:
 intp       = pp.Regex(r'[1-9][0-9]*')
 intp.setParseAction(lambda r: int(r[0]))
+bitfield   = rawtypes + pp.Suppress('#') + intp
 arraydecl  = pp.Suppress('[')+intp+pp.Suppress(']')
 arrazdecl  = pp.Suppress('[')+pp.Or((intp,symbol))+pp.Suppress(']')
 pointer    = pp.Optional(pstars,default='')+pp.Optional(arraydecl,default=0)
@@ -74,7 +75,14 @@ class c_type(object):
     """
     def __init__(self,decl):
         # get final element type:
-        x,r = (pp.Group(objecttype)+pp.restOfLine).parseString(decl)
+        bf = decl.rfind('#')
+        if bf>0:
+            x = bitfield.parseString(decl)
+            self.lbfw = x.pop()
+            r = ''
+        else:
+            x,r = (pp.Group(objecttype)+pp.restOfLine).parseString(decl)
+            self.lbfw = 0
         self.lconst    = (x[0] =='const') and x.pop(0)
         self.lunsigned = (x[0] =='unsigned') and x.pop(0)
         self.lbase = ' '.join(x)
@@ -116,7 +124,9 @@ class c_type(object):
         if stripok: s=s[1:-1]
         return s
     def show(self,name=''):
-        return ('%s %s'%(self.show_base(),self.show_ptr(name))).strip()
+        extra = ' : %d'%self.lbfw if self.lbfw else ''
+        s = ('%s %s'%(self.show_base(),self.show_ptr(name))).strip()
+        return s+extra
 
 # C++ type declaration parser:
 #------------------------------------------------------------------------------
@@ -161,7 +171,9 @@ class cxx_type(c_type):
         if stripok: s=s[1:-1]
         return s
     def show(self,name='',kw=True,ns=True):
-        return ('%s %s'%(self.show_base(kw,ns),self.show_ptr(name))).strip()
+        extra = ' : %d'%self.lbfw if self.lbfw else ''
+        s = ('%s %s'%(self.show_base(kw,ns),self.show_ptr(name))).strip()
+        return s+extra
 
 #------------------------------------------------------------------------------
 
