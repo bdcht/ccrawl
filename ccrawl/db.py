@@ -17,6 +17,8 @@ class Proxy(object):
                                   storage=CachingMiddleware(JSONStorage))
             except:
                 self.ldb = TinyDB(storage=MemoryStorage)
+        else:
+            self.ldb = TinyDB(storage=MemoryStorage)
         if config.url:
             auth = None
             if config.user:

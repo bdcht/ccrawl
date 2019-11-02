@@ -5,7 +5,7 @@ from traitlets.config import Configurable
 from traitlets.config import PyFileConfigLoader
 from traitlets import Integer, Unicode, Bool, observe
 
-__version__ = "0.9.6"
+__version__ = "1.0.0"
 
 # default clang library file:
 if os.name == 'posix':
@@ -57,7 +57,7 @@ class Terminal(Configurable):
 class Database(Configurable):
     "configurable parameters related to the database"
     local  = Unicode('ccrawl.db',config=True)                                  # local tiny database name is ccrawl.db
-    url    = Unicode('',config=True)                                           # don't use mongodb server
+    url    = Unicode('mongodb://localhost:27017',config=True)                  # use mongodb server
     user   = Unicode('',config=True)                                           # don't define a mongodb user
     verify = Bool(True,config=True)                                            # don't authenticate mongodb user
 
