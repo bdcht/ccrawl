@@ -17,12 +17,12 @@ enum class Cpp11Enum
 struct Wowza
 {
   virtual ~Wowza() = default;
-  virtual void foo(int i = 0) = 0;
+  virtual int foo(int i = 0) = 0;
 };
 
 struct Badabang : Wowza
 {
-  void foo(int) override;
+  int foo(int) override;
 
   bool operator==(const Badabang& o) const;
 };

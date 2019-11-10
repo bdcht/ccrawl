@@ -148,3 +148,49 @@ def cStruct_ctypes(obj,db,recursive):
     return ''.join(R)+'\n'+''.join(S)
 
 cUnion_ctypes = cStruct_ctypes
+
+def cClass_ctypes(obj,db,recursive):
+    if isinstance(recursive,set):
+        Q = True
+        recursive.update(struct_letters)
+    else:
+        Q = None
+    t = cxx_type(obj.identifier)
+    name = id_ctypes(t)
+    cls = 'Union' if t.kw=='union' else 'Structure'
+    R = ["{0} = type('{0}',({1},),{{}})\n".format(name,cls)]
+    S = []
+    fld = '%s._fields_ = ['%name
+    S.append(fld)
+    pad = ' '*len(fld)
+    padded = False
+    if obj.has_vtable():
+        S.append('("__vtable__", c_void_p),\n'+pad)
+    for (x,y,z) in obj:
+        qal,t = x
+        mn,n = y
+        p,c = z
+        r = cxx_type(t)
+        if Q and (r.lbase not in recursive):
+            if r.lbase == obj.identifier:
+                recursive.add(r.lbase)
+            else:
+                q = (where('id')==r.lbase)
+                if '?_' in r.lbase:
+                    q &= (where('src')==obj.identifier)
+                if db.contains(q):
+                    x = obj.from_db(db.get(q)).show(db,recursive,form='ctypes')
+                    x = x.split('\n')
+                    for xrl in x:
+                        if (xrl+'\n' in R) and not xrl.startswith(' '):
+                            continue
+                        if xrl: R.append(xrl+'\n')
+                    recursive.add(r.lbase)
+                else:
+                    secho('identifier %s not found'%r.lbase,fg='red')
+        t = id_ctypes(r)
+        S.append('("{}", {}),\n'.format(n,t)+pad)
+        padded = True
+    if padded: S.append(S.pop().strip()[:-1])
+    S.append(']')
+    return ''.join(R)+'\n'+''.join(S)

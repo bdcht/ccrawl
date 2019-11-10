@@ -1,16 +1,18 @@
 // see all AST with: clang -Xclang -ast-dump -fsyntax-only samples/classes.hpp
 //
-//#include <cstddef>
-//#include <string>
-//#include <vector>
+#include <cstddef>
+#include <string>
+#include <vector>
+
+typedef int myint;
 
 // Basic Classes:
 //---------------
 //
 //
-namespace std {
-    template<int> class vector;
-}
+//namespace std {
+//    template<int> class vector;
+//}
 
 struct oldstruct {
   myint  *X;
@@ -32,7 +34,7 @@ private:
 };
 
 union newunion {
-  int  *Y;
+  int  Y;
 protected:
   char c;
   void meth(void);
@@ -43,18 +45,26 @@ protected:
 class MyClass
 {
   int field;
-  newstruct method(wchar_t);
-  virtual char vmethod(int,MyClass&);
+  newstruct method(wchar_t w) {
+    newstruct x;
+    myint z;
+    z = (myint) w;
+    x.X = &z;
+    return x;
+  };
+  virtual char vmethod(int a,MyClass &b) {
+    return 'c' & char((a+*(b.pubfield))&0xff);
+  };
 public:
   myint *pubfield;
   MyClass(int x) : field(x) {};
   ~MyClass() {};
   virtual int  vmethod(int);
   const int constmeth(char);
-  virtual void pmethod();
+  virtual void pmethod() {};
 protected:
-  static const int static_field;
-  static int static_method();
+  static const int static_field = 10;
+  static int static_method() { return static_field; };
 };
 
 class S {
@@ -62,7 +72,7 @@ public:
     struct oldstruct *d1; // non-static data member
     virtual int fa(int) = 0; // pure virtual member function
     struct NestedS {
-        std::string s;
+        std::string s = "abc";
         virtual union newunion f(int);
     } d5, *d6;
 protected:
@@ -70,12 +80,27 @@ protected:
     static const int d2 = 1; // static data member with initializer
     std::string d3, *d4, f2(int); // two data members and a member function
     enum {NORTH, SOUTH, EAST, WEST};
+private:
+    int privS;
+    void setpriv(int x) { privS = x; };
 };
 
 class T : S {
+private:
+    int privT;
 public:
      int* X[2];
+     T() {
+        d3 = d5.s;
+        d4 = &d3;
+        d6 = &d5;
+     };
      virtual int fa(int) override;
+     void setpriv(int x) {
+        privT = x + d6->f(d2).Y;
+        X[0] = &(a[1]);
+        X[1] = &(a[0]);
+     };
 };
 
 class Scv {

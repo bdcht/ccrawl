@@ -118,9 +118,15 @@ class cClass(list,ccore):
             self.subtypes = []
             T = list(struct_letters.keys())
             T.append(self.identifier)
-            for (t,N,a,c) in self:
+            for (x,y,z) in self:
                 raise NotImplementedError
         return self
+    def has_vtable(self):
+        for x,y,z in self:
+            qal,t = x
+            if 'virtual' in qal:
+                return True
+        return False
 
 class cUnion(list,ccore):
     _is_union = True

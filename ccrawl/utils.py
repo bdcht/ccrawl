@@ -258,7 +258,7 @@ def pstack(plist,cxx=False):
         if len(S)>0:
             S[-1].cvr = cvr
         else:
-            print 'cvr %s but S is empty!' % cvr
+            print('cvr %s but S is empty!' % cvr)
     return S
 
 def flatten(args):
