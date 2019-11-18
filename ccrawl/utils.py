@@ -39,8 +39,9 @@ struct_letters = {
 unsigned   = pp.Keyword('unsigned')
 const      = pp.Keyword('const')
 volatile   = pp.Keyword('volatile')
+noexcept   = pp.Keyword('noexcept')
 prefix     = pp.Or((const,unsigned,const+unsigned))
-cvqual     = pp.Or((const,volatile,const+volatile))
+cvqual     = pp.Or((const,volatile,const+volatile,noexcept))
 T = [pp.Keyword(t) for t in struct_letters]
 rawtypes   = pp.Optional(prefix)+pp.Or(T)
 # define pointer indicators:
@@ -134,7 +135,14 @@ class c_type(object):
 # qualified name of the C++ type.
 class cxx_type(c_type):
     def __init__(self,decl):
-        x,r = (pp.Group(objecttype)+pp.restOfLine).parseString(decl)
+        bf = decl.rfind('#')
+        if bf>0:
+            x = bitfield.parseString(decl)
+            self.lbfw = x.pop()
+            r = ''
+        else:
+            x,r = (pp.Group(objecttype)+pp.restOfLine).parseString(decl)
+            self.lbfw = 0
         self.lconst    = (x[0] =='const') and x.pop(0)
         self.lunsigned = (x[0] =='unsigned') and x.pop(0)
         self.lbase = ' '.join(x)
@@ -150,6 +158,9 @@ class cxx_type(c_type):
         x = self.lbase.rfind('::')
         if x>0:
             self.ns = self.lbase[k+1:x+2]
+    @property
+    def is_method(self):
+        return (fargs in [type(p) for p in self.pstack])
     def show_base(self,kw=False,ns=False):
         lbase = self.lbase
         if not kw: lbase = lbase.replace(self.kw,'',1)
