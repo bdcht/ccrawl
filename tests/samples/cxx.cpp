@@ -1,4 +1,5 @@
 #include "wonza.hpp"
+#include <iostream>
 
 union newunion S::NestedS::f(int a) {
     union newunion u;
@@ -11,7 +12,7 @@ const int MyClass::constmeth(char c) {
 }
 
 int MyClass::vmethod(int x) {
-   return 42+x;
+   return this->static_method()+x;
 }
 
 int Badabang::foo(int i = 0) {
@@ -35,5 +36,7 @@ int main(int argc, char* argv[]) {
     i = x.constmeth('A');
     i += x.vmethod(-1);
     t.setpriv(99);
+    std::cout << "stats:";
+    std::cout << "sizeof(std::string)=" << sizeof(std::string);
     return i+w.foo();
 }

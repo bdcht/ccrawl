@@ -126,7 +126,7 @@ def cClass_C(obj,db,recursive):
     #S holds obj title and fields declaration strings
     #we need obj.identifier here and not tn.show() because
     #template specialization need to keep the template string.
-    S = [u'%s {'%(obj.identifier)]
+    S = [u'%s%s {'%(obj.identifier,obj.base_specifier_list())]
     #P holds lists for each public/protected/private/friend members
     P = {'':[],'PUBLIC':[], 'PROTECTED':[], 'PRIVATE':[]}
     #now, iterate through all fields:
@@ -137,7 +137,6 @@ def cClass_C(obj,db,recursive):
         if qal == 'parent':
             r = cxx_type(n)
             e = r.lbase
-            S[0] = S[0][:-1]+': %s {'%(r.show_base())
             if Q and (e not in recursive):
                 q = (where('id')==e)
                 x = obj.from_db(db.get(q)).show(db,recursive,form='C')
@@ -158,7 +157,7 @@ def cClass_C(obj,db,recursive):
         #get "element base" part of type t:
         e = r.lbase
         #is t a nested class ?
-        nested = r.ns.startswith(namespace)
+        nested = r.ns.split('::')[-1].startswith(namespace)
         #query field element raw base type if needed:
         if Q and ((e not in recursive) or nested):
             #prepare query

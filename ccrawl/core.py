@@ -76,6 +76,7 @@ class ccore(object):
         val.identifier = identifier
         val.subtypes = None
         return val
+#------------------------------------------------------------------------------
 
 class cTypedef(str,ccore):
     _is_typedef = True
@@ -91,6 +92,7 @@ class cTypedef(str,ccore):
                 if limit: limit-=1
                 self.add_subtype(db,elt,limit)
         return self
+#------------------------------------------------------------------------------
 
 class cStruct(list,ccore):
     _is_struct = True
@@ -110,6 +112,7 @@ class cStruct(list,ccore):
                     if limit: limit-=1
                     self.add_subtype(db,elt,limit)
         return self
+#------------------------------------------------------------------------------
 
 class cClass(list,ccore):
     _is_class = True
@@ -119,14 +122,59 @@ class cClass(list,ccore):
             T = list(struct_letters.keys())
             T.append(self.identifier)
             for (x,y,z) in self:
-                raise NotImplementedError
+                qal, t = x
+                mn, n  = y
+                p, c   = z
+                if qal == 'parent':
+                    elt = n
+                else:
+                    if mn or ('virtual' in qal):
+                        continue
+                    elt = cxx_type(t)
+                    elt = elt.show_base(kw=True,ns=True)
+                if (elt not in T):
+                    T.append(elt)
+                    self.add_subtype(db,elt,limit)
         return self
-    def has_vtable(self):
+
+    def has_virtual_members(self):
+        n = 0
         for x,y,z in self:
             qal,t = x
             if 'virtual' in qal:
                 return True
         return False
+
+    def vtables(self,db):
+        vtbl = []
+        vrts = []
+        self.unfold(db)
+        bsl = self.base_specifier_list()[3:]
+        if bsl:
+            for t in bsl.split(','):
+                if ' virtual ' in t:
+                    n = t.replace(' virtual ','')
+                    if not (n in vrts):
+                        vrts.append(n)
+
+    def base_specifier_list(self):
+        spe = []
+        for x,y,z in self:
+            qal,t = x
+            if 'parent' in qal:
+                mn, n = y
+                n = cxx_type(n)
+                p , c = z
+                s = ''
+                if t:
+                    s += ' virtual'
+                s+=' %s %s'%(p.lower(),n.show_base())
+                spe.append(s)
+        if len(spe)>0:
+            return ' :'+(','.join(spe))
+        else:
+            return ''
+#------------------------------------------------------------------------------
 
 class cUnion(list,ccore):
     _is_union = True
@@ -146,12 +194,15 @@ class cUnion(list,ccore):
                     if limit: limit-=1
                     self.add_subtype(db,elt,limit)
         return self
+#------------------------------------------------------------------------------
 
 class cEnum(dict,ccore):
     _is_enum = True
+#------------------------------------------------------------------------------
 
 class cMacro(str,ccore):
     _is_macro = True
+#------------------------------------------------------------------------------
 
 class cFunc(str,ccore):
     _is_func = True
@@ -175,6 +226,7 @@ class cFunc(str,ccore):
                     T.append(elt)
                     self.add_subtype(db,elt)
         return self
+#------------------------------------------------------------------------------
 
 class cTemplate(dict,ccore):
     _is_template = True
@@ -187,6 +239,7 @@ class cTemplate(dict,ccore):
         return self.identifier[:i]
     def get_template(self):
         return '<%s>'%(','.join(self['params']))
+#------------------------------------------------------------------------------
 
 class cNamespace(list,ccore):
     _is_namespace = True

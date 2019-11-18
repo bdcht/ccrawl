@@ -165,7 +165,7 @@ def cClass_ctypes(obj,db,recursive):
     pad = ' '*len(fld)
     padded = False
     if obj.has_vtable():
-        S.append('("__vtable__", c_void_p),\n'+pad)
+        S.append('("vptr_%s", c_void_p),\n'+pad)
     for (x,y,z) in obj:
         qal,t = x
         mn,n = y

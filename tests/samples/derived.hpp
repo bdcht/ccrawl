@@ -5,6 +5,7 @@ class Base {
  protected:
      int d;
 };
+
 class Derived : public Base {
  public:
     using Base::d; // make Base's protected member d a public member of Derived
@@ -17,7 +18,7 @@ struct vBase {
    }
 };
 
-struct vDerived : vBase {
+struct vDerived : private vBase {
    void f() override { // 'override' is optional
        std::cout << "derived\n";
    }
