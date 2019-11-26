@@ -25,6 +25,11 @@ class ccore(object):
         self.subtypes = []
         return self
 
+    def build(self,db):
+        self.unfold(db)
+        from ccrawl.ext import ctypes_
+        return ctypes_.build(self)
+
     def add_subtype(self,db,elt,limit=None):
         x = ccore._cache_.get(elt,None)
         if x is None:
@@ -137,6 +142,9 @@ class cClass(list,ccore):
                     self.add_subtype(db,elt,limit)
         return self
 
+    def as_cStruct(self,db):
+        self.unfold(db)
+
     def has_virtual_members(self):
         n = 0
         for x,y,z in self:
@@ -144,18 +152,6 @@ class cClass(list,ccore):
             if 'virtual' in qal:
                 return True
         return False
-
-    def vtables(self,db):
-        vtbl = []
-        vrts = []
-        self.unfold(db)
-        bsl = self.base_specifier_list()[3:]
-        if bsl:
-            for t in bsl.split(','):
-                if ' virtual ' in t:
-                    n = t.replace(' virtual ','')
-                    if not (n in vrts):
-                        vrts.append(n)
 
     def base_specifier_list(self):
         spe = []

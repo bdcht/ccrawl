@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from ccrawl.utils import *
 from ccrawl import conf
 from click import secho
@@ -150,45 +151,55 @@ def cStruct_ctypes(obj,db,recursive):
 cUnion_ctypes = cStruct_ctypes
 
 def cClass_ctypes(obj,db,recursive):
-    if isinstance(recursive,set):
-        Q = True
+    # recursive is forced for c++ classes
+    if not isinstance(recursive,set):
+        recursive = set()
         recursive.update(struct_letters)
-    else:
-        Q = None
+    Q = True
+    # prepare declaration & lists
     t = cxx_type(obj.identifier)
-    name = id_ctypes(t)
+    name = id_ctypes(t.show_base(kw=True))
     cls = 'Union' if t.kw=='union' else 'Structure'
     R = ["{0} = type('{0}',({1},),{{}})\n".format(name,cls)]
     S = []
+    T = []
+    P = []
+    F = []
+    V = OrderedDict()
     fld = '%s._fields_ = ['%name
     S.append(fld)
     pad = ' '*len(fld)
     padded = False
-    if obj.has_vtable():
-        S.append('("vptr_%s", c_void_p),\n'+pad)
+    need_vptr = False
+    # walk the class definition:
     for (x,y,z) in obj:
         qal,t = x
         mn,n = y
         p,c = z
-        r = cxx_type(t)
-        if Q and (r.lbase not in recursive):
-            if r.lbase == obj.identifier:
-                recursive.add(r.lbase)
-            else:
-                q = (where('id')==r.lbase)
-                if '?_' in r.lbase:
-                    q &= (where('src')==obj.identifier)
-                if db.contains(q):
-                    x = obj.from_db(db.get(q)).show(db,recursive,form='ctypes')
-                    x = x.split('\n')
-                    for xrl in x:
-                        if (xrl+'\n' in R) and not xrl.startswith(' '):
-                            continue
-                        if xrl: R.append(xrl+'\n')
-                    recursive.add(r.lbase)
-                else:
-                    secho('identifier %s not found'%r.lbase,fg='red')
-        t = id_ctypes(r)
+        if qal == 'parent':
+            r = cxx_type(n)
+            rbn = r.show_base(True,True)
+            L = P
+            if t == 'virtual':
+                if rbn in V: continue
+                L = V[rbn] = []
+        elif qal == 'virtual':
+            need_vptr = True
+            continue
+        elif qal == 'static':
+            continue
+        else:
+            r = cxx_type(t)
+            rbn = r.show_base(True,True)
+            L = F
+        if rbn not in recursive:
+            q = (where('id')==rbn)
+            if db.contains(q):
+                L.append((mn,obj.from_db(db.get(q))))
+                recursive.add(rbn)
+        # walk non-virtual parent instances:
+        for mn,p in P:
+            T.extend(p.parents)
         S.append('("{}", {}),\n'.format(n,t)+pad)
         padded = True
     if padded: S.append(S.pop().strip()[:-1])
