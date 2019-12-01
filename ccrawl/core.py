@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from ccrawl import formatters
 from ccrawl.utils import *
 
@@ -22,7 +23,7 @@ class ccore(object):
         return self.formatter(db,r)
 
     def unfold(self,db,limit=None):
-        self.subtypes = []
+        self.subtypes = OrderedDict()
         return self
 
     def build(self,db):
@@ -38,9 +39,9 @@ class ccore(object):
                 x = ccore.from_db(data)
                 ccore._cache_[elt] = x
             else:
-                self.subtypes.append(None)
+                self.subtypes[elt] = None
                 return
-        self.subtypes.append(x.unfold(db,limit))
+        self.subtypes[elt] = x.unfold(db,limit)
 
     @classmethod
     def set_formatter(cls,form):
@@ -87,7 +88,7 @@ class cTypedef(str,ccore):
     _is_typedef = True
     def unfold(self,db,limit=None,ctx=None):
         if self.subtypes is None:
-            self.subtypes = []
+            self.subtypes = OrderedDict()
             ctype = c_type(self)
             if limit!=None:
                 if limit<=0 and ctype.is_ptr:
@@ -103,7 +104,7 @@ class cStruct(list,ccore):
     _is_struct = True
     def unfold(self,db,limit=None):
         if self.subtypes is None:
-            self.subtypes = []
+            self.subtypes = OrderedDict()
             T = list(struct_letters.keys())
             T.append(self.identifier)
             for (t,n,c) in self:
@@ -123,7 +124,7 @@ class cClass(list,ccore):
     _is_class = True
     def unfold(self,db,limit=None):
         if self.subtypes is None:
-            self.subtypes = []
+            self.subtypes = OrderedDict()
             T = list(struct_letters.keys())
             T.append(self.identifier)
             for (x,y,z) in self:
@@ -142,8 +143,60 @@ class cClass(list,ccore):
                     self.add_subtype(db,elt,limit)
         return self
 
-    def as_cStruct(self,db):
+    def cStruct_build_info(self,db):
+        print("--- %s:"%self.identifier)
         self.unfold(db)
+        M,V = [], OrderedDict()
+        vptr = 0
+        for (x,y,z) in self:
+            print(x,y,z)
+            qal, t = x
+            mn, n  = y
+            p, c   = z
+            if qal == 'parent':
+                n = cxx_type(n)
+                nn = n.show_base()
+                name = n.show_base(True,True)
+                x = ccore._cache_.get(name,None)
+                if x is None:
+                    raise TypeError("unkown type '%s'"%n)
+                vtbl,m,v = x.cStruct_build_info(db)
+                if t=='virtual':
+                    vptr = 2
+                    if nn not in V:
+                        V[nn] = (vtbl,m)
+                else:
+                    if vtbl==1:
+                        vptr |= vtbl
+                        t = cxx_type('void *')
+                        M.append((t,'__vptr$%s'%nn))
+                    M.extend(m)
+                V.update(v)
+            elif 'virtual' in qal:
+                vptr = 1
+            else:
+                t = cxx_type(t)
+                if not t.is_method:
+                    M.append((t,n))
+        return (vptr,M,V)
+
+    def as_cStruct(self,db):
+        x = cStruct()
+        x.identifier = self.identifier
+        x.subtypes = None
+        vptr, M, V = self.cStruct_build_info(db)
+        if len(M)>0 and vptr:
+            if not M[0][1].startswith('__vptr'):
+                n = cxx_type(self.identifier)
+                x.append(('void *','__vptr$%s'%n.show_base(),''))
+        for t,n in M:
+            x.append((t.show(), n, ''))
+        for nn,v in V.items():
+            vptr, m = v
+            if vptr: x.append(('void *', '__vptr$%s'%nn,''))
+            for t,n in m:
+                x.append((t.show(), n, ''))
+        return x
 
     def has_virtual_members(self):
         n = 0
@@ -176,7 +229,7 @@ class cUnion(list,ccore):
     _is_union = True
     def unfold(self,db,limit=None):
         if self.subtypes is None:
-            self.subtypes = []
+            self.subtypes = OrderedDict()
             T = list(struct_letters.keys())
             T.append(self.identifier)
             for (t,n,c) in self:
@@ -211,7 +264,7 @@ class cFunc(str,ccore):
         return t.pstack[-1].args
     def unfold(self,db,limit=None):
         if self.subtypes is None:
-            self.subtypes = []
+            self.subtypes = OrderedDict()
             T = list(struct_letters.keys())
             rett = self.restype()
             args = self.argtypes()
@@ -241,7 +294,7 @@ class cNamespace(list,ccore):
     _is_namespace = True
     def unfold(self,db,limit=None):
         if self.subtypes is None:
-            self.subtypes = []
+            self.subtypes = OrderedDict()
             T = list(struct_letters.keys())
             T.append(self.identifier)
             for elt in self:

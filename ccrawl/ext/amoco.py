@@ -9,7 +9,7 @@ except ImportError:
         raise NotImplementedError
 else:
     def build(obj):
-        for subtype in (obj.subtypes or []):
+        for subtype in (obj.subtypes.values() or []):
             if subtype is None: continue
             build(subtype)
         if obj._is_typedef:

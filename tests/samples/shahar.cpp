@@ -39,22 +39,22 @@ struct AB : A, B {
 
 struct C : A, B {
   int c;
-  virtual void f() {this->c = this->a + this->b; };
+  virtual void fc() {this->c = this->a + this->b; };
 };
 
 struct D : virtual A, virtual B {
   int d;
-  virtual void g() {this->d = this->a + this->b; };
+  virtual void fd() {this->d = this->a + this->b; };
 };
 
 struct E : virtual B, virtual A {
   int e;
-  virtual void h() {this->e = this->a + this->b; };
+  virtual void fe() {this->e = this->a + this->b; };
 };
 
 struct F : D, E {
   int f;
-  virtual void i() {this->f = this->d + this->e; };
+  virtual void ff() {this->f = this->d + this->e; };
 };
 
 struct G : virtual A, B {
@@ -67,7 +67,22 @@ struct H : B, virtual A {
 
 struct I : G, H {
   int i;
-  virtual void j() {};
+  virtual void fi() {};
+};
+
+struct I2 : G, virtual H {
+  int i;
+  virtual void fi() {};
+};
+
+struct J : virtual H {
+  int j;
+  virtual void fj() {};
+};
+
+struct K : I2, J {
+  int k;
+  virtual void fk() {};
 };
 
 int main() {
@@ -83,16 +98,18 @@ int main() {
   G g;
   H h;
   I i;
+  J j;
+  K k;
 
   c.a = 1;
   c.b = 2;
-  c.f();
+  c.fc();
   f.a = 5;
   f.b = 6;
-  f.g();
-  f.h();
+  f.fd();
+  f.fe();
   f.e = 20;
-  f.i();
+  f.ff();
 
   i.a = 0x100;
   ((G*)&i)->b = 0x101;

@@ -461,7 +461,7 @@ def store(ctx,update):
         x = ccore.from_db(l)
         if conf.VERBOSE:
             click.echo("unfolding '%s'..."%x.identifier,nl=False)
-        l['use'] = [t.identifier for t in filter(None,x.unfold(db).subtypes)]
+        l['use'] = x.unfold(db).subtypes.keys()
         if conf.VERBOSE:
             click.echo('done')
         if update is True:
