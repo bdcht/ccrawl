@@ -143,13 +143,17 @@ class cClass(list,ccore):
                     self.add_subtype(db,elt,limit)
         return self
 
+    def build(self,db):
+        from ccrawl.ext import ctypes_
+        x = self.as_cStruct(db)
+        x.unfold(db)
+        return ctypes_.build(x)
+
     def cStruct_build_info(self,db):
-        print("--- %s:"%self.identifier)
         self.unfold(db)
         M,V = [], OrderedDict()
         vptr = 0
         for (x,y,z) in self:
-            print(x,y,z)
             qal, t = x
             mn, n  = y
             p, c   = z
@@ -166,10 +170,12 @@ class cClass(list,ccore):
                     if nn not in V:
                         V[nn] = (vtbl,m)
                 else:
-                    if vtbl==1:
-                        vptr |= vtbl
-                        t = cxx_type('void *')
-                        M.append((t,'__vptr$%s'%nn))
+                    if vtbl:
+                        vptr += vtbl
+                        if len(m)>0:
+                            if not m[0][1].startswith('__vptr'):
+                                t = cxx_type('void *')
+                                M.append((t,'__vptr$%s'%nn))
                     M.extend(m)
                 V.update(v)
             elif 'virtual' in qal:
