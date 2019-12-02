@@ -187,7 +187,10 @@ class cClass(list,ccore):
         return (vptr,M,V)
 
     def as_cStruct(self,db):
-        x = cStruct()
+        if self.identifier.startswith('union '):
+            x = cUnion()
+        else:
+            x = cStruct()
         x.identifier = self.identifier
         x.subtypes = None
         vptr, M, V = self.cStruct_build_info(db)
