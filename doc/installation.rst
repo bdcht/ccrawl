@@ -1,19 +1,19 @@
 Installation
 ============
 
-ccrawl est un outil écrit en Python, supportant les versions >=2.7 et >=3.5.
-Il dépend des paquets suivants:
+ccrawl is written in Python, it supports versions >=2.7 and >=3.5.
+It depends on:
 
- - libclang <= 6.0.0.2
+ - libclang == 6.0.0.2
  - Click
  - traitlets
  - pyparsing
  - tinydb
  - ujson
- - requests (interface avec CouchDB)
- - pymongo  (interface avec MongoDB)
+ - requests (interface for CouchDB)
+ - pymongo  (interface for MongoDB)
 
-Il est conseillé d'utiliser ccrawl dans un virtualenv python avec ipython::
+It is advised to install ccrawl in its own virtualenv with included ipython::
 
   user@machine:~ % tar xzvf ccrawl.tgz; cd ccrawl
 
@@ -47,7 +47,7 @@ Il est conseillé d'utiliser ccrawl dans un virtualenv python avec ipython::
     ___ _ __ __ ___      _| |
    / __| '__/ _` \ \ /\ / / |
   | (__| | | (_| |\ V  V /| |
-   \___|_|  \__,_| \_/\_/ |_| v0.9.1
+   \___|_|  \__,_| \_/\_/ |_| v1.0
 
 
   In [1]: [^D]

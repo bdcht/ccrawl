@@ -4,12 +4,12 @@ Usage
 We now provide a description of the ccrawl command-line tool which defines several sub-commands.
 Of course, the ccrawl package can be used as well as a traditional package within Python scripts.
 
-ccrawl's initial command consist in building a local database from C (header) files.
+ccrawl's initial command consist in building a local database from C/C++ (header) files.
 The libclang [8] library is used to extract the following features ::
 
  - definitions of macros (#define)
  - definitions of simple types (typedef)
- - definitions of structured types (struct, union, enum)
+ - definitions of structured types (struct, union, enum, class & template)
  - definitions of function types (prototypes)
 
 Since files are only parsed and not compiled by libclang, the set of included files can be
@@ -21,7 +21,6 @@ when possible.
 The local database is a TinyDB JSON Storage file. For performance and scaling reasons, ccrawl
 supports also the use of remote MongoDB or CouchDB databases allowing massive indexing of
 the samples build locally.
-
 
 Commands
 --------

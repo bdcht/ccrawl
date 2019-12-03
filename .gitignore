@@ -6,6 +6,5 @@ dist/
 .eggs/
 TODO
 *.egg-info/
-tests/
 .pytest_cache/
 tests/.pytest_cache/

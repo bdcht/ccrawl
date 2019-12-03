@@ -5,8 +5,8 @@ filtered Structures/Unions, Enums, Macros and Functions prototypes.'''
 
 setup(
     name = 'ccrawl',
-    version = '0.9.4',
-    description = 'C source code crawler that creates a database of C-structures and constants',
+    version = '1.0',
+    description = 'C source code crawler that creates a database of C-structures, prototypes and macros',
     long_description = long_descr,
     # Metadata
     author = 'Axel Tillequin',
@@ -21,12 +21,12 @@ setup(
       'Topic :: Scientific/Engineering :: Information Analysis',
       'Topic :: Security',
     ],
-    keywords='Clang C-structure database',
+    keywords='Clang C C++ data-structures database',
     packages=find_packages(exclude=['doc','tests*']),
     url = 'https://github.com/bdcht/ccrawl',
     setup_requires=['pytest-runner',],
     tests_require=['pytest',],
-    install_requires = ['clang<=6.0.0.2',
+    install_requires = ['clang==6.0.0.2',
                         'click',
                         'traitlets',
                         'pyparsing',
