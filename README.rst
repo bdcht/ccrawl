@@ -25,10 +25,10 @@ data types and constants/macros by querying this database for specific propertie
 "memory-layout" properties. Basically it allows for example
 to
 
-  - **"find all structures that have a pointer to char at offset 8 and an unsigned integer at offset 56 with total size of 96 bytes ?"**  or
-  - **"find every macro that define value 0x1234 ?"** or
-  - **"find the mask of values from enum X that correspond to 0xabcd ?"**
-  - **"find all functions that return 'size_t' and have 'struct X' has first argument ?"**
+- **"find all structures that have a pointer to char at offset 8 and an unsigned integer at offset 56 with total size of 96 bytes ?"**  or
+- **"find every macro that define value 0x1234 ?"** or
+- **"find the mask of values from enum X that correspond to 0xabcd ?"**
+- **"find all functions that return 'size_t' and have 'struct X' as first argument ?"**
 
 Ccrawl then allows to output found structures in many formats: C/C++ of course,
 but also ctypes_, or amoco_. The ctypes_ output of a C++ class corresponds to
