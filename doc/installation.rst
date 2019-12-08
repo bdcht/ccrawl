@@ -4,16 +4,15 @@ Installation
 ccrawl is written in Python, it supports versions >=2.7 and >=3.5.
 It depends on:
 
- - libclang == 6.0.0.2
- - Click
- - traitlets
- - pyparsing
- - tinydb
- - ujson
- - requests (interface for CouchDB)
- - pymongo  (interface for MongoDB)
+ - libclang_ == 6.0.0.2
+ - Click_
+ - traitlets_
+ - pyparsing_
+ - tinydb_
+ - ujson_
+ - pymongo_  (interface for MongoDB)
 
-It is advised to install ccrawl in its own virtualenv with included ipython::
+We recommend to install ccrawl in its own *virtualenv* with included ipython_ ::
 
   user@machine:~ % tar xzvf ccrawl.tgz; cd ccrawl
 
@@ -52,3 +51,11 @@ It is advised to install ccrawl in its own virtualenv with included ipython::
 
   In [1]: [^D]
 
+
+.. _libclang: https://pypi.org/project/clang/
+.. _Click: https://click.palletsprojects.com/en/7.x/
+.. _traitlets: https://traitlets.readthedocs.io/en/stable/
+.. _pyparsing: https://github.com/pyparsing/pyparsing
+.. _tinydb: https://tinydb.readthedocs.io/en/latest/intro.html
+.. _ujson: https://pypi.org/project/ujson/
+.. _pymongo: https://api.mongodb.com/python/current/

@@ -5,7 +5,7 @@ We now provide a description of the ccrawl command-line tool which defines sever
 Of course, the ccrawl package can be used as well as a traditional package within Python scripts.
 
 ccrawl's initial command consist in building a local database from C/C++ (header) files.
-The libclang [8] library is used to extract the following features ::
+The libclang_ library is used to extract the following features ::
 
  - definitions of macros (#define)
  - definitions of simple types (typedef)
@@ -19,8 +19,8 @@ by ccrawl at parsing time. ccrawl will also try to extract comments associated t
 when possible.
 
 The local database is a TinyDB JSON Storage file. For performance and scaling reasons, ccrawl
-supports also the use of remote MongoDB or CouchDB databases allowing massive indexing of
-the samples build locally.
+supports also the use of a remote MongoDB database allowing massive indexing of
+the samples built locally.
 
 Commands
 --------
@@ -35,11 +35,11 @@ These global options which apply to all commands are::
              [-g, --tag <name>]             tag used to filter documents of the database
              [<command> [options] [args]]
 
-All default parameters are possibly overwritten by a configuration file which defaults to
-$HOME/.ccrawlrc unless provided by the -c option. The format of the configuration file is
-based on the 'traitlets' python package.
+All default parameters are possibly overwritten by a configuration file (which defaults to
+*$HOME/.ccrawlrc* unless provided with the -c option.) The format of the configuration file is
+based on the traitlets_ python package.
 Parameters allow to set the default python interpreter, the mandatory pathname of the
-libclang library required by the libclang python wrapper, the default local database path
+libclang_ library required by the libclang python wrapper, the default local database path
 or remote database url.
 
 Documents of the local database are stored with the following format::
@@ -50,7 +50,7 @@ Documents of the local database are stored with the following format::
      'tag': '<name>',
      'val': <object>}
 
-For example, structure "struct _mystruct" in file "samples/header.h" is stored as::
+For example, structure ``struct _mystruct`` in file *"samples/header.h"* is stored as::
 
      {'cls': 'cStruct',
         'id': 'struct _mystruct',
@@ -71,7 +71,7 @@ the current collect time.)
 Collect
 +++++++
 
-The 'collect' command locally extracts definitions from the provided sources <src>::
+The ``collect`` command locally extracts definitions from the provided sources <src>::
 
     $ ccrawl [global options] collect [options] <src>
 
@@ -95,7 +95,7 @@ The 'collect' command locally extracts definitions from the provided sources <sr
 Match
 +++++
 
-The 'match' command performs a regular expression search within database 'id' and 'val' keys::
+The ``match`` command performs a regular expression search within database 'id' and 'val' keys::
 
     $ ccrawl [global options] match <rex>
 
@@ -106,7 +106,7 @@ The 'match' command performs a regular expression search within database 'id' an
 Find
 ++++
 
-The 'find' command performs advanced queries within the local database::
+The ``find`` command performs advanced queries within the local database::
 
     $ ccrawl [global options] find [-a, --ands <str>]
                                   [-o, --ors  <str>]
@@ -143,12 +143,15 @@ The 'find' command performs advanced queries within the local database::
 Show
 ++++
 
-The 'show' command allows to recursively output a requested definition in selected formats::
+The ``show`` command allows to recursively output a requested definition in selected formats::
 
     $ ccrawl [global options] show [options] <identifier>
 
       options: [-r, --recursive]     recursively include all required definitions in the output
                                      such that type <identifier> is fully defined.
                [-f, --format <fmt>]  use output format <fmt>. Defaults to C, other formats are
-                                     "ctypes", "amoco", "volatility", "kaitaistruct", "protobuf".
+                                     "ctypes", "amoco", "volatility".
 
+
+.. _libclang: https://clang.llvm.org/doxygen/group__CINDEX.html
+.. _traitlets: https://traitlets.readthedocs.io/en/stable/
