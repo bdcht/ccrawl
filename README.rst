@@ -19,13 +19,15 @@ Ccrawl
 Description
 ===========
 
-Ccrawl is a clang-based tool that builds a database related to various C/C++ data structures
-(struct, union, class, enum, typedef, prototypes and macros). It then allows to identify
+Ccrawl uses clang_ to build a database related to various C/C++ data structures
+(struct, union, class, enum, typedef, prototypes and macros) which allows to identify
 data types and constants/macros by querying this database for specific properties, including
-"memory-layout" properties. Basically it allows for example
-to
+properties related to the struct/class memory layout.
 
-- **"find all structures that have a pointer to char at offset 8 and an unsigned integer at offset 56 with total size of 96 bytes ?"**  or
+Basically it allows for example to
+
+- **"find all structures that have a pointer to char at offset 8 and an unsigned integer at offset 56 ?**
+- **"find types with a total size of 96 bytes ?"**  or
 - **"find every macro that define value 0x1234 ?"** or
 - **"find the mask of values from enum X that correspond to 0xabcd ?"**
 - **"find all functions that return 'size_t' and have 'struct X' as first argument ?"**
@@ -36,10 +38,13 @@ an instance (object) layout in memory, including all virtual table pointers (or 
 that result from possibly multiple parent (possibly virtual) classes.
 
 Finally, Ccrawl allows to compute various statistics about a library API, and allows to
-draw the dependency graph of all types.
+compute the dependency graph of all collected types.
 
 User documentation and API can be found at
 `http://ccrawl.readthedocs.io/en/latest/index.html`
+
+Examples
+========
 
 Todo
 ====
@@ -63,6 +68,7 @@ Changelog
   * support bitfield structures
   * support user-defined alignment policies
 
+.. _clang: https://pypi.org/project/clang/
 .. _ctypes: https://docs.python.org/3.7/library/ctypes.html
 .. _amoco: https://github.com/bdcht/amoco
 .. _v1.0: https://github.com/bdcht/ccrawl/releases/tag/v1.0
