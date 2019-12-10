@@ -32,7 +32,8 @@ setup(
                         'pyparsing',
                         'tinydb',
                         'ujson',
-                        'requests'],
+                        'requests',
+                        'pymongo'],
     package_data = {
     },
     data_files = [],

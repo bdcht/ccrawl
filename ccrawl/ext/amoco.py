@@ -40,6 +40,8 @@ else:
                 fmt.append('{} : {} ;{}'.format(rt or t,n,c or ''))
             fmt = '\n'.join(fmt)
             define(fmt)(cls)
+        elif obj._is_class:
+            return build(obj.as_cStruct())
         else:
             raise NotImplementedError
         return StructDefine.All[x]

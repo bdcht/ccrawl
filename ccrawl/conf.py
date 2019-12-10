@@ -9,7 +9,7 @@ __version__ = "1.0.0"
 
 # default clang library file:
 if os.name == 'posix':
-    clang_library_file = 'libclang-6.0.so'
+    clang_library_file = '/usr/lib/llvm-6.0/lib/libclang-6.0.so.1'
 else:
     clang_library_file = 'libclang-6.0.dll'
 
@@ -64,7 +64,7 @@ class Database(Configurable):
 class Collect(Configurable):
     "configurable parameters related to the collect command"
     strict = Bool(False,config=True)                                           # don't block on missing headers/types
-    cxx = Bool(False,config=True)                                              # don't parse c++ (support is still experimental)
+    cxx = Bool(True,config=True)                                               # try detecting c++ inputs
     tmp = Unicode()                                                            # don't change temp directory
     lib = Unicode(clang_library_file,config=True)                              # assume clang_library_file is libclang-6.0.so
     @observe('lib')

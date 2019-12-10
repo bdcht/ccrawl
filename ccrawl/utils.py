@@ -193,7 +193,8 @@ class ptr(object):
         self.is_ptr = True
         self.p, self.const = p,c
     def __str__(self):
-        return '{0.p}{0.const}'.format(self)
+        sfx = '%s '%self.const if self.const else ''
+        return '{}{}'.format(self.p,sfx)
 
 class arr(object):
     def __init__(self,a):
@@ -217,7 +218,7 @@ class fargs(object):
                 r = A.pop()
                 r += flatten(x)
                 A.append(r)
-        return filter(None,A)
+        return list(filter(None,A))
 
     def __str__(self):
         if hasattr(self,'cvr'):

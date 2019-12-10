@@ -1,0 +1,9 @@
+future
+clang==6.0.0.2
+click
+traitlets
+pyparsing
+tinydb
+ujson
+pymongo
+requests
