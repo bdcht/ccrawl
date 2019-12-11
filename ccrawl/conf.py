@@ -91,6 +91,7 @@ class Config(object):
         self.Collect  = Collect(config=c)
         self.Formats  = Formats(config=c)
         self.src = c
+        clang.cindex.Config.library_file = self.Collect.lib
 
     def __str__(self):
         s = []

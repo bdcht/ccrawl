@@ -23,6 +23,37 @@ def c_header():
     return samples_dir+'/header.h'
 
 @pytest.fixture
+def cxx_myclass():
+    return """\
+//// MyClass comment
+class MyClass
+{
+  int field;
+  newstruct method(wchar_t w) {
+    newstruct x;
+    myint z;
+    z = (myint) w;
+    x.X = &z;
+    return x;
+  };
+  virtual char vmethod(int a,MyClass &b) {
+    return 'c' & char((a+*(b.pubfield))&0xff);
+  };
+public: 
+  myint *pubfield; 
+  MyClass(int x) : field(x) {};
+  ~MyClass() {};
+  virtual int  vmethod(int);
+  const int constmeth(char);
+  virtual void pmethod() {};
+protected:
+  static const int static_field = 10; 
+  static int static_method() { return static_field; };
+};
+"""
+
+
+@pytest.fixture
 def c_sources():
     files=[]
     for R,D,F in os.walk(samples_dir):
