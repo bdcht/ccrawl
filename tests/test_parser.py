@@ -2,7 +2,6 @@ import pytest
 from ccrawl.parser import *
 
 def test_clang_cindex(configfile):
-    print(clang.cindex.Config.library_file)
     c = conf.Config(configfile)
     c.Terminal.quiet = True
     c.Terminal.timer = False

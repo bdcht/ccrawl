@@ -99,9 +99,9 @@ def db_doc2():
              'val': 'int *'}]
     return docs
 
-@pytest.fixture(scope="session")
+@pytest.fixture(autouse=True,scope="session")
 def configfile():
-    fd,fname = tempfile.mkstemp('.conf',prefix='ccrawl-test')
+    fd,fname = tempfile.mkstemp('.conf',prefix='ccrawl-test-')
     os.write(fd,bytes(\
 u"""c.Terminal.debug = False
 c.Collect.strict = False
@@ -111,5 +111,12 @@ c.Database.local = 'test.db'
 c.Database.url   = 'mongodb://localhost:27017'
 """,'ascii'))
     os.close(fd)
-    return fname
+    yield fname
+    os.remove(fname)
 
+@pytest.fixture(autouse=True,scope="session")
+def dbfile():
+    fd,fname = tempfile.mkstemp('.db',prefix='ccrawl-test-')
+    os.close(fd)
+    yield fname
+    os.remove(fname)

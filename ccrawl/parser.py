@@ -451,6 +451,8 @@ def parse(filename,
     else:
         if conf.VERBOSE:
             echo(':')
+    if not conf.config.Collect.strict:
+        os.remove(depf)
     # walk down all AST to get all cursors:
     pool = [(c,[]) for c in tu.cursor.get_children()]
     name = str(tu.cursor.extent.start.file.name)
