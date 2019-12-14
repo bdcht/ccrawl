@@ -17,10 +17,10 @@ def test_00_cmd_collect(configfile,dbfile):
     assert result.stdout.startswith('[100%]')
     assert 'xxx/yyy/somewhere.h' in result.stdout
 
-def test_01_cmd_match(dbfile):
+def test_01_cmd_search(dbfile):
     runner = CliRunner()
     result = runner.invoke(cli, ['-l',dbfile,'-b','None',
-                           'match', '\?_\w'])
+                           'search', '\?_\w'])
     assert result.exit_code == 0
     l = result.output.split('\n')
     assert len(l)==5
@@ -28,10 +28,10 @@ def test_01_cmd_match(dbfile):
     assert 'found cUnion identifer "union ?_' in result.output
 
 
-def test_02_cmd_find(dbfile):
+def test_02_cmd_select(dbfile):
     runner = CliRunner()
     result = runner.invoke(cli, ['-l',dbfile,'-b','None',
-                           'find', 'constant', '10'])
+                           'select', 'constant', '10'])
     assert result.exit_code == 0
     assert result.output == 'C1\n'
 

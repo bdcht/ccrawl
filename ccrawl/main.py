@@ -52,14 +52,16 @@ def spawn_console(ctx):
 
 @click.group(invoke_without_command=True)
 @click.option('-v','--verbose',
-              is_flag=True,default=False)
+              is_flag=True,default=False,help='display more infos')
 @click.option('-q','--quiet',
-              is_flag=True,default=False)
-@click.option('-b','--db')
+              is_flag=True,default=False,help="don't display anything")
+@click.option('-b','--db', help='url for the remote database')
 @click.option('-l','--local',
-              type=click.Path(exists=False,file_okay=True,dir_okay=False))
-@click.option('-c','--configfile',
-              type=click.Path(exists=True,file_okay=True,dir_okay=False))
+              type=click.Path(exists=False,file_okay=True,dir_okay=False),
+              help='path to the local database')
+@click.option('-c','--config','configfile',
+              type=click.Path(exists=True,file_okay=True,dir_okay=False),
+              help='path to configuration file')
 @click.option('-g','--tag',help='use given tag in all commands')
 @click.pass_context
 def cli(ctx,verbose,quiet,db,local,configfile,tag):
@@ -111,20 +113,24 @@ def do_collect(ctx,src):
 
 @cli.command()
 @click.option('-a','--all' ,'allc',is_flag=True,
-              help='collect data from all files rather than headers only')
+              #help='collect data from all files rather than headers only'
+              )
 @click.option('-t','--types'      ,is_flag=True,help='collect types')
 @click.option('-f','--functions'  ,is_flag=True,help='collect functions')
 @click.option('-m','--macros'     ,is_flag=True,help='collect macros')
 @click.option('-s','--strict'     ,is_flag=True,help='strict mode')
-@click.option('--clang','xclang', help='pass parameters to clang')
+@click.option('--clang','xclang', help='parameters passed to clang')
 @click.argument('src', nargs=-1, type=click.Path(exists=True,
                                                  file_okay=True,
-                                                 readable=True))
+                                                 readable=True),
+                #help='directory/files with definitions to collect',
+                                                 )
 @click.pass_context
 def collect(ctx,allc,types,functions,macros,strict,xclang,src):
-    """ Command that collects type/union/enum definitions, functions prototypes
-    or macro definitions from SRC path into a local database. The collected
-    definitions are tagged with the global option TAG string or with a timestamp.
+    """Collects types (struct,union,class,...) definitions,
+    functions prototypes and/or macro definitions from SRC files/directory.
+    Collected definitions are stored in a local database,
+    tagged with the global 'tag' option if present or with a timestamp.
 
     The extraction is performed using libclang parser which can receive
     specific parameters through the --clang option.
@@ -211,13 +217,17 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
         click.secho(('[%4d]'%N).rjust(12),fg='green')
     return 0
 
-# match command:
+# search command:
 #------------------------------------------------------------------------------
 
 @cli.command()
 @click.argument('rex',nargs=1,type=click.STRING)
 @click.pass_context
-def match(ctx,rex):
+def search(ctx,rex):
+    """Search for documents in the remote database
+    (or the local database if no remote is found) with either name
+    or definition matching the provided regular expression. 
+    """
     db = ctx.obj['db']
     if db.rdb:
         L = db.rdb.match(rex)
@@ -243,7 +253,11 @@ def match(ctx,rex):
 @click.option('-a','--and','ands',type=click.STRING,multiple=True)
 @click.option('-o','--or' ,'ors', type=click.STRING,multiple=True)
 @click.pass_context
-def find(ctx,ands,ors):
+def select(ctx,ands,ors):
+    """Get document(s) from the remote database
+    (or the local database if no remote is found) matching  
+    multiple constraints. 
+    """
     Q = Query()
     try:
         for x in ands:
@@ -267,10 +281,15 @@ def find(ctx,ands,ors):
         if conf.DEBUG:
             click.echo('FIND_COMMAND: %s'%ctx.invoked_subcommand)
 
-@find.command()
+@select.command()
 @click.argument('proto',nargs=-1,type=click.STRING)
 @click.pass_context
 def prototype(ctx,proto):
+    """Get prototype definitions from the remote database
+    (or the local database if no remote is found) matching  
+    constraints on name of its return type or specific
+    arguments. 
+    """
     reqs = {}
     try:
         for p in proto:
@@ -296,12 +315,17 @@ def prototype(ctx,proto):
     if R:
         click.echo('\n'.join(R))
 
-@find.command()
+@select.command()
 @click.option('-m','--mask',is_flag=True)
 @click.option('-s','--symbol',default='')
 @click.argument('val')
 @click.pass_context
 def constant(ctx,mask,symbol,val):
+    """Get constant definitions (macros or enums)
+    from the remote database (or the local database if no remote is found) matching  
+    constraints on value (possibly representing a mask of several symbols) and
+    symbol prefix. 
+    """
     value = int(val,0)
     db = ctx.obj['db']
     Q  = ctx.obj['find']
@@ -336,10 +360,15 @@ def constant(ctx,mask,symbol,val):
         s = ''.join(R)
         click.echo(s.strip(' |\n'))
 
-@find.command()
+@select.command()
 @click.argument('conds',nargs=-1,type=click.STRING)
 @click.pass_context
 def struct(ctx,conds):
+    """Get structured definitions (struct, union or class)
+    from the remote database (or the local database if no remote is found) matching  
+    constraints on total size or specific type name or size at given offset within
+    the structure.
+    """
     reqs = {}
     try:
         for p in conds:
@@ -400,6 +429,12 @@ def struct(ctx,conds):
 @click.argument('identifier',nargs=1,type=click.STRING)
 @click.pass_context
 def show(ctx,form,recursive,identifier):
+    """Print a definition
+    from the remote database (or the local database if no remote is found) in
+    C/C++ (default) format or other supported format (ctypes, amoco, raw).
+    If the recursive option is used, the printed definitions include all
+    other types required by the topmost definition.
+    """
     db = ctx.obj['db']
     if recursive is True:
         recursive = set()
@@ -418,6 +453,8 @@ def show(ctx,form,recursive,identifier):
 @click.argument('identifier',nargs=1,type=click.STRING)
 @click.pass_context
 def info(ctx,identifier):
+    """Get database internal informations about a definition.
+    """
     db = ctx.obj['db']
     Q = where('id')==identifier
     if db.contains(Q):
@@ -453,6 +490,10 @@ def info(ctx,identifier):
               help='update local base with all subtypes')
 @click.pass_context
 def store(ctx,update):
+    """Update the remote database with definitions from the current local database.
+    If the update option flag is set, the dependency graph of local definitions 
+    is computed before pushing definitions to the remote database.
+    """
     db = ctx.obj['db']
     rdb = db.rdb
     db.rdb = None
@@ -483,6 +524,9 @@ def store(ctx,update):
 @cli.command()
 @click.pass_context
 def fetch(ctx):
+    """Fetch a collection of definitions from the remote database into
+    the local database.
+    """
     db = ctx.obj['db']
 
 # tags command:
@@ -491,6 +535,9 @@ def fetch(ctx):
 @cli.command()
 @click.pass_context
 def tags(ctx):
+    """Get the list of all tags in the remote (or local if remote is not found)
+    database.
+    """
     db = ctx.obj['db']
     T = set()
     for l in db.search():
@@ -504,6 +551,9 @@ def tags(ctx):
 @cli.command()
 @click.pass_context
 def sources(ctx):
+    """Get the list of all source files referenced in the remote (or local if
+    remote is not found) database.
+    """
     db = ctx.obj['db']
     T = set()
     for l in db.search():
@@ -520,6 +570,9 @@ def sources(ctx):
 @cli.command()
 @click.pass_context
 def stats(ctx):
+    """Show some statistics about the remote (or local if
+    remote is not found) database.
+    """
     db = ctx.obj['db']
     click.echo('database: ')
     click.echo('       .local     : %s'%str(db.ldb))
