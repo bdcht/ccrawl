@@ -67,7 +67,7 @@ def cTypedef_ctypes(obj,db,recursive):
             pre = x.show(db,recursive,form='ctypes')
             pre += '\n\n'
         else:
-            secho("identifier %s not found"%t.lbase,fg='red')
+            secho("identifier %s not found"%t.lbase,fg='red',err=True)
     return u'{}{} = {}'.format(pre, obj.identifier, id_ctypes(t))
 
 def cMacro_ctypes(obj,db,recursive):
@@ -93,7 +93,7 @@ def cFunc_ctypes(obj,db,recursive):
                     pre = x.show(db,recursive,form='ctypes')
                     pre += '\n\n'
                 else:
-                    secho("identifier %s not found"%t.lbase,fg='red')
+                    secho("identifier %s not found"%t.lbase,fg='red',err=True)
     params = [id_ctypes(c_type(x)) for x in args]
     res = id_ctypes(c_type(res))
     if res=='c_void': res='None'
@@ -140,7 +140,7 @@ def cStruct_ctypes(obj,db,recursive):
                         if xrl: R.append(xrl+'\n')
                     recursive.add(r.lbase)
                 else:
-                    secho('identifier %s not found'%r.lbase,fg='red')
+                    secho('identifier %s not found'%r.lbase,fg='red',err=True)
         t = id_ctypes(r)
         S.append('("{}", {}),\n'.format(n,t)+pad)
         padded = True

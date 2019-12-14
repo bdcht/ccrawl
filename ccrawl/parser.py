@@ -440,13 +440,13 @@ def parse(filename,
             elif err.severity==4:
                 # this should not happen anymore thanks to -M -MG opts...
                 # we keep it here just in case.
-                if conf.VERBOSE: secho(err.format(),bg='red')
+                if conf.VERBOSE: secho(err.format(),bg='red',err=True)
                 raise StandardError
     except:
         if not conf.QUIET:
             secho('[err]',fg='red')
             if conf.VERBOSE:
-                secho('clang index.parse error',fg='red')
+                secho('clang index.parse error',fg='red',err=True)
         return []
     else:
         if conf.VERBOSE:

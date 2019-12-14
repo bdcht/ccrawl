@@ -35,8 +35,18 @@ def test_02_cmd_select(dbfile):
     assert result.exit_code == 0
     assert result.output == 'C1\n'
 
+def test_03_cmd_select(dbfile):
+    runner = CliRunner(mix_stderr=False)
+    result = runner.invoke(cli, ['-l',dbfile,'-b','None',
+            'select', 'struct', '-n', '*:1'])
+    assert result.exit_code == 0
+    l = result.stdout.strip().split('\n')
+    assert len(l)==2
+    assert 'struct ?_' in l[0]
+    assert 'struct ?_' in l[1]
 
-def test_03_cmd_show(dbfile):
+
+def test_04_cmd_show(dbfile):
     runner = CliRunner()
     result = runner.invoke(cli, ['-l',dbfile,'-b','None',
                            'show', '-f', 'C', 'struct xt_string_info'])

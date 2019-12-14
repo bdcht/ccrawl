@@ -53,7 +53,7 @@ def cTypedef_amoco(obj,db,recursive):
             pre = x.show(db,recursive,form='amoco')
             pre += '\n\n'
         else:
-            secho("identifier {} not found".format(t.lbase),fg="red")
+            secho("identifier {} not found".format(t.lbase),fg="red",err=True)
     rn,n = fieldformat(t)
     return u"{}TypeDefine('{}','{}')".format(pre,obj.identifier, rn or n)
 
@@ -106,7 +106,7 @@ def cStruct_amoco(obj,db,recursive):
                         if xrl: R.append(xrl+'\n')
                     recursive.add(r.lbase)
                 else:
-                    secho('identifier %s not found'%r.lbase,fg='red')
+                    secho('identifier %s not found'%r.lbase,fg='red',err=True)
         rt,t = fieldformat(r)
         if rt: t = rt
         S.append('{} : {} ;{}\n'.format(t,n,c or ''))

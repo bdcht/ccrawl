@@ -27,7 +27,7 @@ def spawn_console(ctx):
         try:
             from IPython import start_ipython
         except ImportError:
-            if conf.VERBOSE: click.echo('ipython not found')
+            if conf.VERBOSE: click.echo('ipython not found',err=True)
             c.Terminal.console = 'python'
         else:
             ic = c.src.__class__()
@@ -42,7 +42,7 @@ def spawn_console(ctx):
             readline.parse_and_bind("Tab: complete")
             del readline,rlcompleter
         except ImportError:
-            click.echo('readline not found')
+            click.echo('readline not found',err=True)
         interact(banner=conf.BANNER+"\n",
                  local=cvars)
 
@@ -88,14 +88,14 @@ def cli(ctx,verbose,quiet,db,local,configfile,tag):
         ctx.obj['db'] = Proxy(c.Database)
         if tag: ctx.obj['db'].set_tag(tag)
     except:
-        click.secho('failed',fg='red')
+        click.secho('failed',fg='red',err=True)
         exit(1)
     if conf.VERBOSE:
         click.echo('done')
         if c.Database.url and ctx.obj['db'].rdb:
             click.echo('remote database is: %s'%c.Database.url)
         elif c.Database.url:
-            click.secho('remote database (%s) not connected'%c.Database.url,fg='red')
+            click.secho('remote database (%s) not connected'%c.Database.url,fg='red',err=True)
         else:
             click.echo('no remote database')
     if ctx.invoked_subcommand is None:
@@ -267,7 +267,7 @@ def select(ctx,ands,ors):
             k,v = x.split('=')
             Q |= (where(k).search(v))
     except:
-        click.secho('invalid options (ignored)',fg='yellow')
+        click.secho('invalid options (ignored)',fg='yellow',err=True)
     ctx.obj['find'] = Q
     if ctx.invoked_subcommand is None:
         db = ctx.obj['db']
@@ -297,10 +297,10 @@ def prototype(ctx,proto):
             pos = int(pos)
             reqs[pos] = c_type(t).show()
     except:
-        click.secho('invalid arguments',fg='red')
+        click.secho('invalid arguments',fg='red',err=True)
         return
     db = ctx.obj['db']
-    Q  = ctx.obj.get('find',Query())
+    Q  = ctx.obj.get('select',Query())
     L = db.search(Q,cls='cFunc')
     R = []
     with click.progressbar(L) as pL:
@@ -328,7 +328,7 @@ def constant(ctx,mask,symbol,val):
     """
     value = int(val,0)
     db = ctx.obj['db']
-    Q  = ctx.obj['find']
+    Q  = ctx.obj.get('select',Query())
     Q &= ((where('cls')=='cMacro')|(where('cls')=='cEnum'))
     L = db.search(Q)
     R = []
@@ -361,9 +361,10 @@ def constant(ctx,mask,symbol,val):
         click.echo(s.strip(' |\n'))
 
 @select.command()
+@click.option('-n','--name',is_flag=True)
 @click.argument('conds',nargs=-1,type=click.STRING)
 @click.pass_context
-def struct(ctx,conds):
+def struct(ctx,name,conds):
     """Get structured definitions (struct, union or class)
     from the remote database (or the local database if no remote is found) matching  
     constraints on total size or specific type name or size at given offset within
@@ -380,10 +381,10 @@ def struct(ctx,conds):
                 off = int(off)
                 reqs[off] = int(t) if t[0]=='+' else c_type(t).show()
     except:
-       click.secho('invalid arguments',fg='red')
+       click.secho('invalid arguments',fg='red',err=True)
        return
     db = ctx.obj['db']
-    Q  = ctx.obj['find']
+    Q  = ctx.obj.get('select',Query())
     L = db.search(Q,cls='cStruct')
     R = []
     with click.progressbar(L) as pL:
@@ -393,26 +394,29 @@ def struct(ctx,conds):
             try:
                 t = x.build(db)
             except:
-                click.secho("can't build %s..skipping."%x.identifier,fg='red')
+                click.secho("can't build %s..skipping."%x.identifier,fg='red',err=True)
                 continue
             F = []
             for i,f in enumerate(t._fields_):
                 field = getattr(t,f[0])
                 F.append((field.offset,field.size,c_type(x[i][0]).show()))
-            xsize = F[-1][0]+F[-1][1]
-            if '*' in reqs:
-                if not (reqs.pop('*')==xsize): continue
-            F = dict(((f[0],f[1:3]) for f in F))
-            ok = True
-            for o,s in reqs.items():
-                if not (o in F):
-                    ok = False
-                    break
-                if not (s in F[o]):
-                    ok = False
-                    break
-            if ok:
-                R.append(x.show(db,form='C'))
+            if F:
+                xsize = F[-1][0]+F[-1][1]
+                if '*' in reqs:
+                    if not (reqs.pop('*')==xsize): continue
+                F = dict(((f[0],f[1:3]) for f in F))
+                ok = True
+                for o,s in reqs.items():
+                    if not (o in F):
+                        ok = False
+                        break
+                    if not (s in F[o]):
+                        ok = False
+                        break
+                if ok:
+                    if name: res = x.identifier
+                    else   : res = x.show(db,form='C')
+                    R.append(res)
     if R:
         click.echo('\n'.join(R))
 
@@ -444,7 +448,7 @@ def show(ctx,form,recursive,identifier):
             x = ccore.from_db(l)
             click.echo(x.show(db,recursive,form=form))
     else:
-        click.secho("identifier '%s' not found"%identifier,fg='red')
+        click.secho("identifier '%s' not found"%identifier,fg='red',err=True)
 
 # info command:
 #------------------------------------------------------------------------------
@@ -468,8 +472,8 @@ def info(ctx,identifier):
                 try:
                     t = x.build(db)
                 except:
-                    click.secho("can't build %s..skipping."%x.identifier,fg='red')
-                    click.echo('')
+                    click.secho("can't build %s..skipping."%x.identifier,fg='red',err=True)
+                    click.echo('',err=True)
                     continue
                 F = []
                 for i,f in enumerate(t._fields_):
@@ -480,7 +484,7 @@ def info(ctx,identifier):
                 click.secho("offsets   : {}".format([(f[0],f[1]) for f in F]),fg='yellow')
 
     else:
-        click.secho("identifier '%s' not found"%identifier,fg='red')
+        click.secho("identifier '%s' not found"%identifier,fg='red',err=True)
 
 # store command:
 #------------------------------------------------------------------------------
