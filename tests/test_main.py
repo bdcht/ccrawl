@@ -1,6 +1,5 @@
 import pytest
 from click.testing import CliRunner
-import tempfile
 from ccrawl.main import *
 
 def test_00_cmd_collect(configfile,dbfile):
