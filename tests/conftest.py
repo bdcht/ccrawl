@@ -102,14 +102,18 @@ def db_doc2():
 @pytest.fixture(autouse=True,scope="session")
 def configfile():
     fd,fname = tempfile.mkstemp('.conf',prefix='ccrawl-test-')
-    os.write(fd,bytes(\
+    S = \
 u"""c.Terminal.debug = False
 c.Collect.strict = False
 c.Collect.cxx    = True
 c.Terminal.console = 'ipython'
 c.Database.local = 'test.db'
 c.Database.url   = 'mongodb://localhost:27017'
-""",'ascii'))
+"""
+    try:
+        os.write(fd,bytes(S,'ascii'))
+    except TypeError:
+        os.write(fd,str(S))
     os.close(fd)
     yield fname
     os.remove(fname)
