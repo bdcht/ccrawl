@@ -29,7 +29,7 @@ class ccore(object):
     def build(self,db):
         self.unfold(db)
         from ccrawl.ext import ctypes_
-        return ctypes_.build(self)
+        return ctypes_.build(self,db)
 
     def add_subtype(self,db,elt,limit=None):
         x = ccore._cache_.get(elt,None)
@@ -147,7 +147,7 @@ class cClass(list,ccore):
         from ccrawl.ext import ctypes_
         x = self.as_cStruct(db)
         x.unfold(db)
-        return ctypes_.build(x)
+        return ctypes_.build(x,db)
 
     def cStruct_build_info(self,db):
         self.unfold(db)
@@ -162,8 +162,13 @@ class cClass(list,ccore):
                 nn = n.show_base()
                 name = n.show_base(True,True)
                 x = ccore._cache_.get(name,None)
+                try:
+                    if x._is_typedef:
+                        x = ccore._cache_.get(x,None)
+                except: pass
                 if x is None:
                     raise TypeError("unkown type '%s'"%n)
+                assert x._is_class
                 vtbl,m,v = x.cStruct_build_info(db)
                 if t=='virtual':
                     vptr = 2

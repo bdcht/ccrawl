@@ -62,7 +62,7 @@ def spawn_console(ctx):
 @click.option('-c','--config','configfile',
               type=click.Path(exists=True,file_okay=True,dir_okay=False),
               help='path to configuration file')
-@click.option('-g','--tag',help='use given tag in all commands')
+@click.option('-g','--tag',help='filter queries with given tag')
 @click.pass_context
 def cli(ctx,verbose,quiet,db,local,configfile,tag):
     ctx.obj = {}
@@ -304,7 +304,7 @@ def prototype(ctx,proto):
     L = db.search(Q,cls='cFunc')
     R = []
     with click.progressbar(L) as pL:
-        for l in pL:
+        for l in L:
             x = ccore.from_db(l)
             P = [c_type(t).show() for t in x.argtypes()]
             P.insert(0,c_type(x.restype()).show())
@@ -379,44 +379,55 @@ def struct(ctx,name,conds):
                 reqs[off] = sz
             else:
                 off = int(off)
-                reqs[off] = int(t) if t[0]=='+' else c_type(t).show()
+                if t[0]=='+':
+                    reqs[off] = int(t)
+                elif t[0]=='?':
+                    reqs[off] = t
+                else:
+                    reqs[off] = c_type(t).show()
     except:
        click.secho('invalid arguments',fg='red',err=True)
        return
     db = ctx.obj['db']
     Q  = ctx.obj.get('select',Query())
-    L = db.search(Q,cls='cStruct')
+    L = db.search(Q & ((where('cls')=='cStruct') | (where('cls')=='cClass')))
     R = []
+    fails = []
     with click.progressbar(L) as pL:
         for l in pL:
             x = ccore.from_db(l)
-            #x.unfold(db,limit=0)
+            ctcls = c_type
             try:
+                if x._is_class:
+                    x = x.as_cStruct(db)
                 t = x.build(db)
             except:
-                click.secho("can't build %s..skipping."%x.identifier,fg='red',err=True)
+                fails.append("can't build %s"%x.identifier)
                 continue
             F = []
             for i,f in enumerate(t._fields_):
                 field = getattr(t,f[0])
-                F.append((field.offset,field.size,c_type(x[i][0]).show()))
+                F.append((field.offset,field.size,ctcls(x[i][0])))
             if F:
                 xsize = F[-1][0]+F[-1][1]
-                if '*' in reqs:
-                    if not (reqs.pop('*')==xsize): continue
+                if '*' in reqs and reqs['*']!=xsize: continue
                 F = dict(((f[0],f[1:3]) for f in F))
-                ok = True
+                ok = []
                 for o,s in reqs.items():
-                    if not (o in F):
-                        ok = False
-                        break
-                    if not (s in F[o]):
-                        ok = False
-                        break
-                if ok:
+                    if o=='*': continue
+                    cond = (o in F)
+                    ok.append(cond)
+                    if not cond: break
+                    if s=='?': continue
+                    if s=='*': cond = (F[o][1].is_ptr)
+                    else     : cond = (F[o][0]==int(s))
+                    ok.append(cond)
+                    if not cond: break
+                if all(ok):
                     if name: res = x.identifier
                     else   : res = x.show(db,form='C')
                     R.append(res)
+    click.secho(u'\n'.join(fails),fg='red',err=True)
     if R:
         click.echo('\n'.join(R))
 
@@ -468,11 +479,14 @@ def info(ctx,identifier):
             click.secho("class     : {}".format(l['cls']),fg='cyan')
             click.echo ("source    : {}".format(l['src']))
             click.secho("tag       : {}".format(l['tag']),fg='magenta')
-            if x._is_struct or x._is_union:
+            if x._is_struct or x._is_union or x._is_class:
                 try:
                     t = x.build(db)
-                except:
-                    click.secho("can't build %s..skipping."%x.identifier,fg='red',err=True)
+                except (TypeError,KeyError) as e:
+                    what = e.args[0]
+                    click.secho("can't build %s:\nmissing type: '%s'"%(x.identifier,what),
+                                fg='red',
+                                err=True)
                     click.echo('',err=True)
                     continue
                 F = []
