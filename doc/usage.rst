@@ -27,12 +27,13 @@ Commands
 
 These global options which apply to all commands are::
 
-    $ ccrawl [-v, --verbose]                increase output verbosity
-             [-q, --quiet]                  remove all outputs
-             [-c, --configfile <file>]      optional configuration file
-             [-l, --local <file>]           local database file
-             [-b, --db <url>]               remote database url
-             [-g, --tag <name>]             tag used to filter documents of the database
+    $ ccrawl [-v, --verbose]                display more infos
+             [-q, --quiet]                  don't display anything
+             [-c, --config <file>]          path to configuration file
+             [-l, --local <file>]           path to local database file
+             [-b, --db <url>]               url for the remote database
+             [-g, --tag <name>]             filter queries with given tag
+             [--help]                       show this message
              [<command> [options] [args]]
 
 All default parameters are possibly overwritten by a configuration file (which defaults to
@@ -65,7 +66,7 @@ For example, structure ``struct _mystruct`` in file *"samples/header.h"* is stor
                 ['struct _bar [2]', 'bar', None]
                ]}
 
-(Notice that if no --tag global option is provided, the default tag name is constructed from
+(Notice that if no ``--tag`` global option is provided, the default tag name is constructed from
 the current collect time.)
 
 Collect
@@ -92,25 +93,55 @@ The ``collect`` command locally extracts definitions from the provided sources <
                                   selected definitions shall be extracted and collected in the
                                   local database.
 
-Match
-+++++
 
-The ``match`` command performs a regular expression search within database 'id' and 'val' keys::
+For example::
 
-    $ ccrawl [global options] match <rex>
+    $ cd tests/
+    $ ccrawl -b None -l test.db collect samples/
+    [  9%] samples/cxxabi.h                                            [ 13]
+    [ 18%] samples/derived.hpp                                         [  4]
+    [ 27%] samples/stru.h                                              [  0]
+    [ 36%] samples/c_linkage.hpp                                       [  1]
+    [ 45%] samples/00_empty.h                                          [  0]
+    [ 54%] samples/templates.hpp                                       [352]
+    [ 63%] samples/wonza.hpp                                           2326]
+    [ 81%] samples/header.h                                            [ 25]
+    [ 90%] samples/fwd_decl.hpp                                        [  2]
+    [100%] samples/xxx/yyy/somewhere.h                                 [ 10]
+    ------------------------------------------------------------------------
+    saving database...                                                 2393]
+
+
+Search
+++++++
+
+The ``search`` command performs a regular expression search within database 'id' and 'val' keys::
+
+    $ ccrawl [global options] search <rex>
 
                <rex>              python (re) regular expression matched against local database
                                   documents keys 'id' and 'val'. Documents are filtered with
                                   'tag' as well if the --tag global options is used.
 
-Find
-++++
+For example::
 
-The ``find`` command performs advanced queries within the local database::
+    $ ccrawl -b None -l test.db search "_my"
+    found cStruct identifer "struct ?_7e12ea0f" with matching value
+    found cTypedef identifer "mystruct" with matching value
+    found cTypedef identifer "myunion" with matching value
+    found cUnion identifer "union _myunion"
+    found cStruct identifer "struct _mystruct" with matching value
 
-    $ ccrawl [global options] find [-a, --ands <str>]
-                                  [-o, --ors  <str>]
-                                  [<find_command> [options] [args]]
+
+
+Select
+++++++
+
+The ``select`` command performs advanced queries within the local database::
+
+    $ ccrawl [global options] select [-a, --ands <str>]
+                                     [-o, --ors  <str>]
+                                     [<find_command> [options] [args]]
 
                [-a, --ands <str>] filters <str> of the form "key=value" added to current query
                                   with operator AND:
@@ -139,6 +170,13 @@ The ``find`` command performs advanced queries within the local database::
                          If <type> is "*", match any pointer type at given offset,
                          If <type> is "+<val>", match if sizeof(type)==val at given offset.
                          Si "*:+<val>", match struct only if sizeof(struct)==val.
+
+
+For example::
+
+    $ ccrawl -b None -l test.db select constant -s "MY" 0x10
+    MYCONST
+
 
 Show
 ++++

@@ -9,34 +9,35 @@ Search Engine for C/C++ data structures
 
 
 ccrawl allows to extract, collect and search features related to C/C++ data structures
-(i.e. everthing related to definitions of struct, union, class, enum, typedef, prototypes and macros).
+(more precisely everthing related to definitions of
+struct, union, class, enum, typedef, prototypes and macros).
 
 Motivation
 ==========
 
-In the context of binary code analysis, tools like IDA Pro [1] and Ghidra [2] provide an initial
+In the context of binary code analysis, tools like IDA Pro [1]_ and Ghidra [2]_ provide an initial
 representation of the code in assembly language and usually enhance this simple representation
 with features extracted from the analysis of the control flow graph (executable code) and the
 analysis of how the data manipulated by instructions is structured.
 These various features ideally provide a kind of "decompiled" representation of the program.
 
-Plugins like "Hex-Rays" [3] perform an analysis of the control flow that leads to a decompiled
+Plugins like "Hex-Rays" [3]_ perform an analysis of the control flow that leads to a decompiled
 representation much closer to an equivalent C source code than the initial assembly instruction
 listing. However, informations related to the nature and structure of manipulated data
-are still mostly unidentified. Althrough some dedicated tools like TILIB or FLIRT [4]
-or plugins to import this kind of information from windows PDB [5] files exist, this time consuming
-identification is still largely performed manually by the user.
+are still mostly unidentified. Althrough some dedicated tools like TILIB or FLIRT [4]_
+or plugins to import this kind of information from windows PDB [5]_ files exist,
+this time consuming identification is still largely performed manually by the user.
 This is particularly true in the case of embedded system firmware analysis.
 
 ccrawl aims to provide a kind of search engine related to data structures ideally automating
 the identification of data types as well as constants/macros identifiers. Basically the idea
 is to allow queries like "find known structures that have a pointer to char at offset 8 and an
-unsigned integer at offset 56 and total size of 96 bytes ?"  or "find every macro that define
+unsigned integer at offset 56 with total size of 96 bytes ?"  or "find every macro that define
 value 0x1234 ?" or even "find the mask of values from enum X that correspond to 0xabcd ?"
 
 Finally, once collected in its database(s), ccrawl allows to output queried structures in
-various dedicated formats: C of course, but also ctypes [6], VTypes (used by Volatility [7]),
-or amoco [10]. The subset of all types required to fully define a given structure can also
+various dedicated formats: C of course, but also ctypes [6]_, VTypes (used by Volatility [7]_),
+or amoco [10]_. The subset of all types required to fully define a given structure can also
 be shown as well.
 
 .. ----------------------------------------------------------------------------  
@@ -82,7 +83,7 @@ Indices and tables
 
 
 .. _[1]: https://www.hex-rays.com/products/ida/index.shtml
-.. _[2]: https://www.hex-rays.com/products/ida/index.shtml
+.. _[2]: https://ghidra-sre.org/
 .. _[3]: https://www.hex-rays.com/products/decompiler/index.shtml
 .. _[4]: https://www.hex-rays.com/products/ida/tech/flirt/index.shtml
 .. _[5]: https://github.com/Microsoft/microsoft-pdb
