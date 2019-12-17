@@ -5,13 +5,13 @@ try:
     from amoco.system.structs import *
 except ImportError:
     secho("amoco package not found",fg="red")
-    def build(t):
+    def build(t,db):
         raise NotImplementedError
 else:
-    def build(obj):
+    def build(obj,db):
         for subtype in (obj.subtypes.values() or []):
             if subtype is None: continue
-            build(subtype)
+            build(subtype,db)
         if obj._is_typedef:
             t = c_type(obj)
             rn,n = fieldformat(t)
@@ -41,7 +41,9 @@ else:
             fmt = '\n'.join(fmt)
             define(fmt)(cls)
         elif obj._is_class:
-            return build(obj.as_cStruct())
+            x = obj.as_cStruct(db)
+            x.unfold(db)
+            return build(x,db)
         else:
             raise NotImplementedError
         return StructDefine.All[x]

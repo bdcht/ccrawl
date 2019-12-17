@@ -37,10 +37,10 @@ def formatproto(res,proto,Types):
     params.insert(0,res)
     return ctypes.CFUNCTYPE(*params)
 
-def build(obj,Types={}):
+def build(obj,db,Types={}):
     for subtype in (obj.subtypes.values() or []):
         if subtype is None: continue
-        build(subtype,Types)
+        build(subtype,db,Types)
     if obj._is_typedef:
         t = c_type(obj)
         Types[obj.identifier] = mk_ctypes(t,Types)
@@ -68,7 +68,9 @@ def build(obj,Types={}):
             fmt.append((str(n),r))
         Types[x]._fields_ = fmt
     elif obj._is_class:
-        return build(obj.as_cStruct())
+        x = obj.as_cStruct(db)
+        x.unfold(db)
+        return build(x,db)
     else:
         raise NotImplementedError
     return Types[x]
