@@ -162,33 +162,91 @@ The ``select`` command performs advanced queries within the local database::
                          Option --mask allows to look for the set of macros or enum symbols
                          that equals <value> when OR-ed.
 
-               struct "<offset>:<type>" ...
+               struct [-n, --name] "<offset>:<type>" ...
                          Find structures (cls=cStruct) satisfying constraints of the form:
                          "<offset>:<type>" where offset indicates a byte offset value (or '*')
                          and type is a C type name, symbol '?', '*' or a byte size value:
                          If <type> is "?", match any type at given offset,
                          If <type> is "*", match any pointer type at given offset,
                          If <type> is "+<val>", match if sizeof(type)==val at given offset.
-                         Si "*:+<val>", match struct only if sizeof(struct)==val.
+                         If "*:+<val>", match struct only if sizeof(struct)==val.
 
 
 For example::
 
     $ ccrawl -b None -l test.db select constant -s "MY" 0x10
     MYCONST
+    $ ccrawl -b None -l test.db select struct -n "*:+104"
+    [####################################]  100%
+    struct _mystruct
+
 
 
 Show
 ++++
 
-The ``show`` command allows to recursively output a requested definition in selected formats::
+The ``show`` command allows to recursively output a given identifier in various formats::
 
     $ ccrawl [global options] show [options] <identifier>
 
       options: [-r, --recursive]     recursively include all required definitions in the output
                                      such that type <identifier> is fully defined.
                [-f, --format <fmt>]  use output format <fmt>. Defaults to C, other formats are
-                                     "ctypes", "amoco", "volatility".
+                                     "ctypes", "amoco".
+
+For example::
+
+    $ ccrawl -b None -l test.db show -r 'struct _mystruct'
+    typedef unsigned char xxx;
+    typedef xxx myinteger;
+    struct _mystruct;
+    typedef int (*foo)(int, char, unsigned int, void *);
+    enum X {
+      X_0 = 0,
+      X_1 = 1,
+      X_2 = 2,
+      X_3 = 3
+    };
+    
+    struct _bar {
+      enum X x;
+    };
+    
+    struct _mystruct {
+      myinteger I;
+      int tab[12];
+      unsigned char p[16];
+      short *s;
+      struct _mystruct *next;
+      foo func;
+      struct _bar bar[2];
+    };
+
+
+
+
+Info
+++++
+
+The ``info`` command provides meta-data information about a given identifier. For structures
+the offsets and sizes of every field is displayed if all subtypes are defined::
+
+    $ ccrawl [global options] info <identifier>
+
+
+For example::
+
+    $ ccrawl -b None -l test.db info 'struct _mystruct'
+    identifier: struct _mystruct
+    class     : cStruct
+    source    : samples/header.h
+    tag       : 1576426279.643788
+    size      : 104
+    offsets   : [(0, 1), (4, 48), (52, 16), (72, 8), (80, 8), (88, 8), (96, 8)]
+
+
+
+
 
 
 .. _libclang: https://clang.llvm.org/doxygen/group__CINDEX.html
