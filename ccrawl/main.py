@@ -384,7 +384,7 @@ def struct(ctx,name,conds):
                 elif t[0]=='?':
                     reqs[off] = t
                 else:
-                    reqs[off] = c_type(t).show()
+                    reqs[off] = c_type(t)
     except:
        click.secho('invalid arguments',fg='red',err=True)
        return
@@ -420,14 +420,18 @@ def struct(ctx,name,conds):
                     if not cond: break
                     if s=='?': continue
                     if s=='*': cond = (F[o][1].is_ptr)
-                    else     : cond = (F[o][0]==int(s))
+                    elif isinstance(s,c_type):
+                        cond = (F[o][1].show()==s.show())
+                    else:
+                        cond = (F[o][0]==s)
                     ok.append(cond)
                     if not cond: break
                 if all(ok):
                     if name: res = x.identifier
                     else   : res = x.show(db,form='C')
                     R.append(res)
-    click.secho(u'\n'.join(fails),fg='red',err=True)
+    if conf.VERBOSE:
+        click.secho(u'\n'.join(fails),fg='red',err=True)
     if R:
         click.echo('\n'.join(R))
 
