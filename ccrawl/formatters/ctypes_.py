@@ -45,6 +45,7 @@ def id_ctypes(t):
             r = formatproto(r,p)
             x = P.pop(0)
             assert x.is_ptr
+            r = 'POINTER(%s)'%r
         else:
             r = '%s*%d'%(r,p.a)
     if r=='c_void': return 'None'

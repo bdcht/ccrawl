@@ -28,6 +28,7 @@ def mk_ctypes(t,Types):
             r = formatproto(r,p,Types)
             x = P.pop(0)
             assert x.is_ptr
+            r = ctypes.POINTER(r)
         else:
             r = r * p.a
     return r
@@ -63,6 +64,7 @@ def build(obj,db,Types={}):
         Types[x] = type(x,(parent,),{})
         fmt = []
         for t,n,c in obj:
+            if not n: continue
             r = c_type(t)
             r = mk_ctypes(r,Types)
             fmt.append((str(n),r))
