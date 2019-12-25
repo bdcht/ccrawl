@@ -186,9 +186,21 @@ def NameSpace(cur,cxx,errors=None):
     namespace = cur.spelling
     S = cNamespace()
     S.local = {}
+    #check if namespace is inlined:
+    toks = [t.spelling for t in cur.get_tokens()]
+    print(toks)
+    try:
+        i = toks.index(namespace)
+        S.inline = (toks[i-2]=='inline')
+        S.parent = cur.lexical_parent.spelling if S.inline else ''
+    except ValueError:
+        S.inline = False
+        S.parent = ''
     for f in cur.get_children():
         if f.kind in CHandlers:
             i,obj = CHandlers[f.kind](f,cxx,errors)
+            if S.inline:
+                i = i.replace('%s::'%namespace,'')
             S.append(i)
             S.local[i] = obj
     return namespace,S
@@ -486,7 +498,8 @@ def parse_string(s,args=None,options=0):
     """ Crawl wrapper to parse an input string rather than file.
     """
     # create a tmp filename (file can be removed immediately)
-    tmph = tempfile.mkstemp(prefix='ccrawl-',suffix='.h')[1]
+    fd,tmph = tempfile.mkstemp(prefix='ccrawl-',suffix='.h')
+    os.close(fd)
     os.remove(tmph)
     return parse(tmph,args,[(tmph,s)],options)
 
