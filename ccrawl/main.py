@@ -361,10 +361,10 @@ def constant(ctx,mask,symbol,val):
         click.echo(s.strip(' |\n'))
 
 @select.command()
-@click.option('-n','--name',is_flag=True)
+@click.option('-d','--def','pdef',is_flag=True)
 @click.argument('conds',nargs=-1,type=click.STRING)
 @click.pass_context
-def struct(ctx,name,conds):
+def struct(ctx,pdef,conds):
     """Get structured definitions (struct, union or class)
     from the remote database (or the local database if no remote is found) matching  
     constraints on total size or specific type name or size at given offset within
@@ -427,7 +427,7 @@ def struct(ctx,name,conds):
                     ok.append(cond)
                     if not cond: break
                 if all(ok):
-                    if name: res = x.identifier
+                    if not pdef: res = x.identifier
                     else   : res = x.show(db,form='C')
                     R.append(res)
     if conf.VERBOSE:
@@ -518,26 +518,38 @@ def store(ctx,update):
     """
     db = ctx.obj['db']
     rdb = db.rdb
+    #force all operations to occur on local database:
     db.rdb = None
     Done = []
     for l in db.search(db.tag):
         x = ccore.from_db(l)
-        if conf.VERBOSE:
+        if not conf.QUIET:
             click.echo("unfolding '%s'..."%x.identifier,nl=False)
-        l['use'] = x.unfold(db).subtypes.keys()
-        if conf.VERBOSE:
-            click.echo('done')
-        if update is True:
-            db.ldb.update(l)
+        try:
+            l['use'] = list(x.unfold(db).subtypes.keys())
+        except:
+            if not conf.QUIET:
+                click.secho('failed.',fg='red')
+        else:
+            if not conf.QUIET:
+                click.secho('ok.',fg='green')
+            if update is True:
+                db.ldb.update(l)
         Done.append(l)
     if rdb:
-        if conf.VERBOSE:
+        if not conf.QUIET:
             click.echo('remote db insert multiple ...',nl=False)
-        rdb.insert_multiple(Done)
-        if conf.VERBOSE:
-            click.echo('done')
-        if not update:
-            db.ldb.remove(doc_ids=[l.doc_id for l in Done])
+        try:
+            rdb.insert_multiple(Done)
+        except:
+            if not conf.QUIET:
+                click.secho('failed.',fg='red')
+        else:
+            if not conf.QUIET:
+                click.secho('done.',fg='green')
+            if not update:
+                db.ldb.remove(doc_ids=[l.doc_id for l in Done])
+    #restore remote database operations:
     db.rdb = rdb
 
 # fetch command:
@@ -550,6 +562,7 @@ def fetch(ctx):
     the local database.
     """
     db = ctx.obj['db']
+    raise NotImplementedError
 
 # tags command:
 #------------------------------------------------------------------------------

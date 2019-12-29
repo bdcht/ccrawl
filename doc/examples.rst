@@ -14,7 +14,8 @@ Open another terminal and within your virtualenv do::
   ----------------------------------------------------------------------------------------------------
   saving database...                                                                             [ 32]
 
-ccrawl has now collected all "*.h" files in the samples/ directory.
+
+ccrawl has now collected all "\*.h" files in the samples/ directory.
 
 Let us search for all objects with symbol containing "MY"::
 
@@ -24,9 +25,9 @@ Let us search for all objects with symbol containing "MY"::
   found cMacro identifer "MYMACRO"
   found cMacro identifer "MYCONST"
 
-On cherche tous les objects de classe 'cTypedef' (typedef)::
+Search for all typedefs currently in the test1.db local database::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db find -a "cls=cTypedef"
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db select -a "cls=cTypedef"
   found cTypedef identifer "foo1"
   found cTypedef identifer "__u8"
   found cTypedef identifer "myunion"
@@ -41,18 +42,18 @@ On cherche tous les objects de classe 'cTypedef' (typedef)::
   found cTypedef identifer "pac3"
   found cTypedef identifer "p_unspelled"
 
-On cherche tous les prototypes de fonction retournant un type myunion et dont le 2eme argument
-est de type mystruct::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db find prototype 0:myunion 2:mystruct
+Search for all functions prototypes that return a myunion type and have a mystruct type as 2d arg::
+
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db select prototype 0:myunion 2:mystruct
   myunion myFunc(p_unspelled, mystruct);
 
-On cherche une constante dont la valeur est 0x10::
+Search all constants with value 0x10::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db find constant 0x10
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db select constant 0x10
   MYCONST
 
-On imprime le type "foo2" en C et en ctypes::
+Print type "foo2" in C language as then as python ctypes::
 
   (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show -r foo2
   typedef void *(*(*foo2[2])(int, void **))[3];
@@ -61,7 +62,7 @@ On imprime le type "foo2" en C et en ctypes::
   foo2 = CFUNCTYPE(POINTER(c_void_p*3), c_int, c_void_p)*2
 
 
-On imprime le type "p_unspelled" (sans et avec recurssion) en C:
+Print type "p_unspelled" (without and then with recurssion) in C::
 
   (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show p_unspelled
   typedef struct unspelled *p_unspelled;
@@ -107,7 +108,8 @@ On imprime le type "p_unspelled" (sans et avec recurssion) en C:
   }
   typedef struct unspelled *p_unspelled;
 
-On imprime le type "struct _mystruct" (sans recurssion) au format ctypes::
+
+Print type "struct _mystruct" (without recurssion) in ctypes format::
 
   (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show -f ctypes 'struct _mystruct'
   struct__mystruct = type('struct__mystruct',(Structure,),{})
@@ -120,7 +122,8 @@ On imprime le type "struct _mystruct" (sans recurssion) au format ctypes::
                                ("func", foo),
                                ("bar", struct__bar*2)]
 
-On cherche les structures ayant un type de longueur 8 à l'offset 88 (octets)::
+
+Select data structures with a type of length 8 at offset 88 (bytes)::
 
   (venv) user@machine:/tmp % ccrawl -l test1.db find struct "88:+8"
   struct _mystruct {
@@ -137,8 +140,9 @@ On cherche les structures ayant un type de longueur 8 à l'offset 88 (octets)::
   identifier struct ts_config not found
   can't build struct xt_string_info..skipping.
 
-ps: certaines structures ne peuvent pas (encore) être construite car il manque la definition
-des types __u16 et 'struct ts_config' dans la base.
+
+A more realistic case
+---------------------
 
 On utilise ccrawl maintenant sur un cas "réaliste"::
 

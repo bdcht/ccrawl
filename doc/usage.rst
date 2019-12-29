@@ -5,7 +5,7 @@ We now provide a description of the ccrawl command-line tool which defines sever
 Of course, the ccrawl package can be used as well as a traditional package within Python scripts.
 
 ccrawl's initial command consist in building a local database from C/C++ (header) files.
-The libclang_ library is used to extract the following features ::
+The libclang_ library is used to extract the following features::
 
  - definitions of macros (#define)
  - definitions of simple types (typedef)
@@ -43,7 +43,7 @@ Parameters allow to set the default python interpreter, the mandatory pathname o
 libclang_ library required by the libclang python wrapper, the default local database path
 or remote database url.
 
-Documents of the local database are stored with the following format::
+Documents of the local database are stored with the following json format::
 
     {'cls': '<class>',
      'id' : '<identifier>',
@@ -141,7 +141,7 @@ The ``select`` command performs advanced queries within the local database::
 
     $ ccrawl [global options] select [-a, --ands <str>]
                                      [-o, --ors  <str>]
-                                     [<find_command> [options] [args]]
+                                     [<select_command> [options] [args]]
 
                [-a, --ands <str>] filters <str> of the form "key=value" added to current query
                                   with operator AND:
@@ -149,7 +149,7 @@ The ``select`` command performs advanced queries within the local database::
                [-o, --ors <str>]  same form, but added to current query with operator OR:
                                   Equivalent to "Q |= where(key).search(value)".
 
-               <find_command>:
+               <select_command>:
 
                prototype "<pos>:<type>" ...
                          Find prototypes (cls=cFunc) for which constraints of the form 
@@ -162,7 +162,7 @@ The ``select`` command performs advanced queries within the local database::
                          Option --mask allows to look for the set of macros or enum symbols
                          that equals <value> when OR-ed.
 
-               struct [-n, --name] "<offset>:<type>" ...
+               struct [-d, --def] "<offset>:<type>" ...
                          Find structures (cls=cStruct) satisfying constraints of the form:
                          "<offset>:<type>" where offset indicates a byte offset value (or '*')
                          and type is a C type name, symbol '?', '*' or a byte size value:
@@ -170,6 +170,8 @@ The ``select`` command performs advanced queries within the local database::
                          If <type> is "*", match any pointer type at given offset,
                          If <type> is "+<val>", match if sizeof(type)==val at given offset.
                          If "*:+<val>", match struct only if sizeof(struct)==val.
+                         Option --def outputs the definitions of found types rather than
+                         their identifiers.
 
 
 For example::
@@ -221,7 +223,6 @@ For example::
       foo func;
       struct _bar bar[2];
     };
-
 
 
 
