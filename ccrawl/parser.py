@@ -188,7 +188,6 @@ def NameSpace(cur,cxx,errors=None):
     S.local = {}
     #check if namespace is inlined:
     toks = [t.spelling for t in cur.get_tokens()]
-    print(toks)
     try:
         i = toks.index(namespace)
         S.inline = (toks[i-2]=='inline')
