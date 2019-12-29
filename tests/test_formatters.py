@@ -36,10 +36,10 @@ def test_format_ctypes(configfile,c_header):
     assert x.show(form='ctypes') == 'MYCONST = 16'
     x = ccore.from_db(defs[5])
     assert x._is_typedef
-    assert x.show(form='ctypes') == 'foo = CFUNCTYPE(c_int, c_int, c_byte, c_uint, c_void_p)'
+    assert x.show(form='ctypes') == 'foo = POINTER(CFUNCTYPE(c_int, c_int, c_byte, c_uint, c_void_p))'
     x = ccore.from_db(defs[8])
     assert x._is_typedef
-    assert x.show(form='ctypes') == 'foo2 = CFUNCTYPE(POINTER(c_void_p*3), c_int, c_void_p)*2'
+    assert x.show(form='ctypes') == 'foo2 = POINTER(CFUNCTYPE(POINTER(c_void_p*3), c_int, c_void_p))*2'
     x = ccore.from_db(defs[10])
     assert x._is_struct
     assert x.show(form='ctypes') ==  """struct__mystruct = type('struct__mystruct',(Structure,),{})

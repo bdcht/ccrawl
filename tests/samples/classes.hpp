@@ -1,8 +1,8 @@
 // see all AST with: clang -Xclang -ast-dump -fsyntax-only samples/classes.hpp
 //
-#include <cstddef>
-#include <string>
-#include <vector>
+//#include <cstddef>
+//#include <string>
+//#include <vector>
 
 typedef int myint;
 

@@ -37,7 +37,7 @@ def test_02_cmd_select(dbfile):
 def test_03_cmd_select(dbfile):
     runner = CliRunner(mix_stderr=False)
     result = runner.invoke(cli, ['-l',dbfile,'-b','None',
-            'select', 'struct', '-n', '*:1'])
+            'select', 'struct', '*:1'])
     assert result.exit_code == 0
     l = result.stdout.strip().split('\n')
     assert len(l)==2

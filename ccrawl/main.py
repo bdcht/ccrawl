@@ -316,7 +316,7 @@ def prototype(ctx,proto):
         click.echo('\n'.join(R))
 
 @select.command()
-@click.option('-m','--mask',is_flag=True)
+@click.option('-m','--mask',is_flag=True,default=False)
 @click.option('-s','--symbol',default='')
 @click.argument('val')
 @click.pass_context
@@ -361,7 +361,7 @@ def constant(ctx,mask,symbol,val):
         click.echo(s.strip(' |\n'))
 
 @select.command()
-@click.option('-d','--def','pdef',is_flag=True)
+@click.option('-d','--def','pdef',is_flag=True,default=False)
 @click.argument('conds',nargs=-1,type=click.STRING)
 @click.pass_context
 def struct(ctx,pdef,conds):
@@ -428,7 +428,7 @@ def struct(ctx,pdef,conds):
                     if not cond: break
                 if all(ok):
                     if not pdef: res = x.identifier
-                    else   : res = x.show(db,form='C')
+                    else       : res = x.show(db,form='C')
                     R.append(res)
     if conf.VERBOSE:
         click.secho(u'\n'.join(fails),fg='red',err=True)
