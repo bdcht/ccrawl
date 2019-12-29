@@ -1,6 +1,10 @@
 Examples
 ========
 
+
+A simple C case
+---------------
+
 In a terminal, open file "ccrawl/tests/samples/header.h".
 Open another terminal and within your virtualenv do::
 
@@ -10,11 +14,11 @@ Open another terminal and within your virtualenv do::
   ----------------------------------------------------------------------------------------------------
   saving database...                                                                             [ 32]
 
-ccrawl a collecté tous les fichiers "*.h" du repertoire samples/.
+ccrawl has now collected all "*.h" files in the samples/ directory.
 
-On cherche tous les objects dont le nom contient "MY"::
+Let us search for all objects with symbol containing "MY"::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db match "MY"
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db search "MY"
   found cMacro identifer "MYSTRING"
   found cMacro identifer "MYEXPR"
   found cMacro identifer "MYMACRO"
@@ -297,25 +301,3 @@ pointeur sur EC_KEY* ::
 
 Et voilà.
 
-*******************************************************************************************************
-Bugs et développements à venir
-==============================
-
-Bon evidemment, il doit y avoir encore quelques bugs...
-
-court terme (mi-2019)
----------------------
-
-- gestion des bitlists dans les structures C
-- support de la collecte des fichiers PDB (windows) via pdbparser
-
-moyen terme (fin 2019)
-----------------------
-
-- adaptation du parser à la collecte des definitions des classes C++
-- collecte d'informations sur le corps des fonctions permettant d'aider la reconnaissance des
-  fonctions par comparaison aux structures de boucles etc...
-
-*******************************************************************************************************
-FIN
-*******************************************************************************************************
