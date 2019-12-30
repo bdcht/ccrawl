@@ -47,7 +47,7 @@ def spawn_console(ctx):
                  local=cvars)
 
 #------------------------------------------------------------------------------
-# Crawl Commands :
+# ccrawl Commands :
 #------------------------------------------------------------------------------
 
 @click.group(invoke_without_command=True)
