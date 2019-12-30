@@ -49,10 +49,11 @@ Examples
 Todo
 ====
 
-- plugin for IDA Pro
-- plugin for Ghidra
-- collect infos about functions internals (number/types of local vars, blocks?)
 - add support for C++ template formatters
+- add web frontend
+- plugin for Ghidra
+- plugin for IDA Pro
+- collect infos about functions internals (number/types of local vars, blocks?)
 
 Changelog
 =========
