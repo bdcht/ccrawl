@@ -79,7 +79,7 @@ protected:
     int a[10] = {1,2}; // non-static data member with initializer (C++11)
     static const int d2 = 1; // static data member with initializer
     std::string d3, *d4, f2(int); // two data members and a member function
-    enum {NORTH, SOUTH, EAST, WEST};
+    enum {NORTH, SOUTH, EAST, WEST} e;
 private:
     int privS;
     void setpriv(int x) { privS = x; };

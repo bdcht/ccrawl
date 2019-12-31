@@ -114,10 +114,8 @@ def EnumDecl(cur,cxx,errors=None):
     if cxx:
         typename = cur.type.get_canonical().spelling
         typename = 'enum '+typename
-        if conf.DEBUG: echo('\t'*g_indent+typename)
-    else:
-        typename = get_uniq_typename(typename)
-        if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
+    typename = get_uniq_typename(typename)
+    if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cEnum()
     S._in = str(cur.extent.start.file)
     a = 0
@@ -336,8 +334,9 @@ def get_uniq_typename(t):
     return re.sub('\(anonymous .*\)','?_%s'%h,t,count=1)
 
 def fix_type_conversion(f,t,cxx,errs):
-    # this type might be a prototype a structured type or a
-    # "complex" type (as opposed to simple) in which a unknown
+    if not errs: return t
+    # type t might be a prototype, a structured type, or a
+    # "complex" type (as opposed to simple) in which an unknown
     # type (denoted ut hereafter) as been replaced by 'int'.
     # Typename ut is fully provided in errs but
     # unfortunately, type t might contain several 'int' keywords,

@@ -36,7 +36,8 @@ def cEnum_C(obj,db,recursive):
     for k,v in sorted(obj.items(),key=lambda t:t[1]):
         S.append('  {} = {:d}'.format(k,v))
     S = ',\n'.join(S)
-    return u"%s {\n%s\n};"%(obj.identifier,S)
+    name = re.sub('\?_.*','',obj.identifier)
+    return u"%s {\n%s\n};"%(name,S)
 
 def cStruct_C(obj,db,recursive):
     #prepare query if recursion is needed:
@@ -158,6 +159,8 @@ def cClass_C(obj,db,recursive):
         e = r.lbase
         #is t a nested class ?
         nested = r.ns.split('::')[-1].startswith(namespace)
+        #is t a nested enum ?
+        nested |= e.startswith('enum ?_')
         #query field element raw base type if needed:
         if Q and ((e not in recursive) or nested):
             #prepare query
@@ -167,7 +170,8 @@ def cClass_C(obj,db,recursive):
                 q &= (where('src')==tn.lbase)
             if db.contains(q):
                 #retreive the field type:
-                x = obj.from_db(db.get(q)).show(db,recursive,form='C')
+                x = obj.from_db(db.get(q))
+                x = x.show(db,recursive,form='C')
                 if not nested:
                     #if not nested, insert it directly in R
                     R.append(x)
