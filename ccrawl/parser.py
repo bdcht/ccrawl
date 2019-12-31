@@ -358,7 +358,12 @@ def fix_type_conversion(f,t,cxx,errs):
             elif 'no type named' in r.spelling:
                 l = re.findall("'(\w+)'",r.spelling)
                 candidates.append('::'.join(reversed(l)))
+            elif 'undeclared identifier' in r.spelling:
+                l = re.findall("'(\w+)'",r.spelling)
+                candidates.append('::'.join(reversed(l))+'~')
+        if not candidates: return t
         marks = ['']
+        if conf.DEBUG: secho("%s"%candidates,fg='magenta')
         # for every occurence of int type in t:
         T = [x for x in f.get_tokens()]
         for m in re.finditer('(?<!\w)int(?!\w)',t):
@@ -371,7 +376,7 @@ def fix_type_conversion(f,t,cxx,errs):
             # where the type string is located...
             while len(T)>0:
                 x = T.pop(0)
-                #if conf.DEBUG: secho("%s: %s"%(x.kind, x.spelling),fg='red')
+                if conf.DEBUG: secho("%s: %s"%(x.kind, x.spelling),fg='red')
                 if x.kind == TokenKind.KEYWORD:
                     if x.spelling == 'int':
                         marks.append('int')
@@ -379,6 +384,12 @@ def fix_type_conversion(f,t,cxx,errs):
                 elif x.kind == TokenKind.IDENTIFIER:
                     for c in candidates:
                         if x.spelling in c:
+                            if c.endswith('~'):
+                                c = c[:-1]
+                                while len(T)>0 and T[0].spelling=='::':
+                                    x = T.pop(0)
+                                    x = T.pop(0)
+                                    c += '::%s'%(x.spelling)
                             marks.append(c)
                             break
         st = re.split('(?<!\w)int(?!\w)',t)
@@ -504,6 +515,7 @@ def parse_string(s,args=None,options=0):
 
 def selected_errs(r):
     if 'unknown type name' in r.spelling or\
+       'use of undeclared identifier' in r.spelling or\
        'type specifier missing' in r.spelling or\
        'has incomplete' in r.spelling or\
        'no type named' in r.spelling or\
