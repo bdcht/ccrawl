@@ -53,7 +53,7 @@ Todo
 - add web frontend
 - plugin for Ghidra
 - plugin for IDA Pro
-- collect infos about functions internals (number/types of local vars, blocks?)
+- add support for parsing functions bodies (number/types of local vars, blocks?)
 
 Changelog
 =========
