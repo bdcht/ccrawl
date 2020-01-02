@@ -46,6 +46,94 @@ User documentation and API can be found at
 Examples
 ========
 
+Consider the following C struct from file *samples/simple.h* ::
+
+  struct S {
+    char c;
+    int  n;
+    union {
+      unsigned char x[2];
+      unsigned short s;
+    } u;
+    char (*PtrCharArrayOf3[2])[3];
+    void (*pfunc)(int, int);
+  };
+
+First, collect the structure definition in a local database::
+
+  $ ccrawl -b None -l test.db -g 'test0' collect samples/simple.h
+  [100%] simple.h                                                [  2]
+  --------------------------------------------------------------------
+  saving database...                                            [   2]
+
+Then, its possible to translate the structure in ctypes_ ::
+
+  $ ccrawl -b None -l test.db show -f ctypes 'struct S'
+  struct_S = type('struct_S',(Structure,),{})
+  
+  struct_S._fields_ = [("c", c_byte),
+                       ("n", c_int),
+                       ("u", union_e196a9bd),
+                       ("PtrCharArrayOf3", POINTER(c_byte*3)*2),
+                       ("pfunc", POINTER(CFUNCTYPE(None, c_int, c_int)))]
+
+Or simply to compute the fields offsets ::
+
+  $ ccrawl -b None -l test.db info 'struct S'
+  identifier: struct S
+  class     : cStruct
+  source    : simple.h
+  tag       : test0
+  size      : 40
+  offsets   : [(0, 1), (4, 4), (8, 2), (16, 16), (32, 8)]
+
+Now let's deal with a more tricky C++ example::
+
+  $ ccrawl -b None -l test.db -g 'c++' collect -a samples/shahar.cpp
+  [100%] shahar.cpp                                              [ 18]
+  --------------------------------------------------------------------
+  saving database...                                            [  18]
+
+We can show a *full* (recursive) definition of a class::
+  $ ccrawl -b None -l test.db show -r 'class Child'
+  class Grandparent {
+    public:
+      virtual void grandparent_foo();
+      int grandparent_data;
+  };
+  
+  class Parent1 : virtual public Grandparent {
+    public:
+      virtual void parent1_foo();
+      int parent1_data;
+  };
+  class Parent2 : virtual public Grandparent {
+    public:
+      virtual void parent2_foo();
+      int parent2_data;
+  };
+
+  class Child : public Parent1, public Parent2 {
+    public:
+      virtual void child_foo();
+      int child_data;
+  };
+
+And its ctypes_ memory layout::
+
+  $ ccrawl -b None -l test.db show -f ctypes 'class Child'
+  class_Child = type('class_Child',(Structure,),{})
+  
+  class_Child._fields_ = [("__vptr$Parent1", c_void_p),
+                          ("parent1_data", c_int),
+                          ("__vptr$Parent2", c_void_p),
+                          ("parent2_data", c_int),
+                          ("child_data", c_int),
+                          ("__vptr$Grandparent", c_void_p),
+                          ("grandparent_data", c_int)]
+
+See the documentation for more examples.
+
 Todo
 ====
 
