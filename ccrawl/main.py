@@ -221,21 +221,22 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
 #------------------------------------------------------------------------------
 
 @cli.command()
+@click.option('-i','--ignorecase',is_flag=True,default=False)
 @click.argument('rex',nargs=1,type=click.STRING)
 @click.pass_context
-def search(ctx,rex):
+def search(ctx,ignorecase,rex):
     """Search for documents in the remote database
     (or the local database if no remote is found) with either name
     or definition matching the provided regular expression. 
     """
     db = ctx.obj['db']
-    if db.rdb:
-        L = db.rdb.match(rex)
-    else:
-        cx = re.compile(rex)
-        look = (lambda v: cx.search(str(v)))
-        Q = (where('id').search(rex)) | (where('val').test(look))
-        L = db.search(Q)
+    cx = re.compile(rex)
+    look = (lambda v: cx.search(str(v)))
+    flg = re.MULTILINE
+    if ignorecase: flg |= re.IGNORECASE
+    Q = (where('id').matches(rex,flags=flg)) |\
+        (where('val').matches(rex,flags=flg))
+    L = db.search(Q)
     for l in L:
         click.echo('found ',nl=False)
         click.secho('%s '%l['cls'],nl=False,fg='cyan')
