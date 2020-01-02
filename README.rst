@@ -95,6 +95,7 @@ Now let's deal with a more tricky C++ example::
   saving database...                                            [  18]
 
 We can show a *full* (recursive) definition of a class::
+
   $ ccrawl -b None -l test.db show -r 'class Child'
   class Grandparent {
     public:
