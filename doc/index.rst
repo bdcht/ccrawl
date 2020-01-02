@@ -10,7 +10,7 @@ Search Engine for C/C++ data structures
 
 ccrawl allows to extract, collect and search features related to C/C++ data structures
 (more precisely everthing related to definitions of
-struct, union, class, enum, typedef, prototypes and macros).
+struct, union, class, templates, enum, typedef, prototypes and macros).
 
 Motivation
 ==========
