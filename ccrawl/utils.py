@@ -45,7 +45,7 @@ cvqual     = pp.Or((const,volatile,const+volatile,noexcept))
 T = [pp.Keyword(t) for t in struct_letters]
 rawtypes   = pp.Optional(prefix)+pp.Or(T)
 # define pointer indicators:
-pstars     = pp.Group(pp.Regex('\*+')+pp.Optional(const,default=''))
+pstars     = pp.Group(pp.Regex(r'\*+')+pp.Optional(const,default=''))
 ampers     = pp.Regex('&+')
 # define structured types (struct,union,enum):
 symbol     = pp.Regex(r'[?]?[A-Za-z_:<>][A-Za-z0-9_:<>]*')

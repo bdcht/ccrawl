@@ -170,7 +170,7 @@ def FuncTemplate(cur,cxx,errors=None):
             p.append('typename %s'%x.spelling)
         elif x.kind==CursorKind.TEMPLATE_NON_TYPE_PARAMETER:
             p.append('%s %s'%(x.type.spelling,x.spelling))
-    f = re.sub('__attribute__.*','',proto)
+    f = re.sub(r'__attribute__.*','',proto)
     return identifier,cTemplate(params=p,cFunc=cFunc(f))
 
 @declareHandler(CLASS_TPSPEC)
@@ -328,10 +328,10 @@ def get_uniq_typename(t):
     # we are creating a unique typename anyway
     if '::' in t:
         t = "%s %s"%(kind,t.split('::')[-1])
-    x = re.compile('\(anonymous .*\)')
+    x = re.compile(r'\(anonymous .*\)')
     s = x.search(t).group(0)
     h = hashlib.sha256(s.encode('ascii')).hexdigest()[:8]
-    return re.sub('\(anonymous .*\)','?_%s'%h,t,count=1)
+    return re.sub(r'\(anonymous .*\)','?_%s'%h,t,count=1)
 
 def fix_type_conversion(f,t,cxx,errs):
     if not errs: return t
@@ -348,24 +348,24 @@ def fix_type_conversion(f,t,cxx,errs):
     # The drawback was that we'd need several recompilations.
     # In this version we will detect which ints have been replaced
     # and switch them back to ut...
-    if re.search('(?<!\w)int(?!\w)',t):
+    if re.search(r'(?<!\w)int(?!\w)',t):
         #there is at least one int occurence in t...
         candidates = []
         for r in errs:
             if 'unknown type' in r.spelling:
-                candidates.append(re.findall("'(.*)'",r.spelling)[0])
+                candidates.append(re.findall(r"'(.*)'",r.spelling)[0])
             elif 'no type named' in r.spelling:
-                l = re.findall("'(\w+)'",r.spelling)
+                l = re.findall(r"'(\w+)'",r.spelling)
                 candidates.append('::'.join(reversed(l)))
             elif 'undeclared identifier' in r.spelling:
-                l = re.findall("'(\w+)'",r.spelling)
+                l = re.findall(r"'(\w+)'",r.spelling)
                 candidates.append('::'.join(reversed(l))+'~')
         if not candidates: return t
         marks = ['']
         if conf.DEBUG: secho("%s"%candidates,fg='magenta')
         # for every occurence of int type in t:
         T = [x for x in f.get_tokens()]
-        for m in re.finditer('(?<!\w)int(?!\w)',t):
+        for m in re.finditer(r'(?<!\w)int(?!\w)',t):
             # lets see if this was diag-ed has an 'unknown type' error:
             # now we only need to replace some 'int' token be ut in t...
             # to be extracting the missing types
@@ -391,7 +391,7 @@ def fix_type_conversion(f,t,cxx,errs):
                                     c += '::%s'%(x.spelling)
                             marks.append(c)
                             break
-        st = re.split('(?<!\w)int(?!\w)',t)
+        st = re.split(r'(?<!\w)int(?!\w)',t)
         d = len(st)-len(marks)
         if d>0: marks = marks+(['int']*d)
         ct = ''

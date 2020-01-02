@@ -22,7 +22,7 @@ VERBOSE = False
 DEBUG   = False
 QUIET   = False
 BANNER  = \
-"""
+r"""
                              _ 
   ___ ___ _ __ __ ___      _| |
  / __/ __| '__/ _` \ \ /\ / / |
