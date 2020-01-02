@@ -230,12 +230,15 @@ def search(ctx,ignorecase,rex):
     or definition matching the provided regular expression. 
     """
     db = ctx.obj['db']
-    cx = re.compile(rex)
-    look = (lambda v: cx.search(str(v)))
     flg = re.MULTILINE
     if ignorecase: flg |= re.IGNORECASE
-    Q = (where('id').matches(rex,flags=flg)) |\
-        (where('val').matches(rex,flags=flg))
+    cx = re.compile(rex,flags=flg)
+    look = (lambda v: cx.search(str(v)))
+    Q = (where('id').matches(rex,flags=flg))
+    if db.rdb:
+        Q |= (where('val').matches(rex,flags=flg))
+    else:
+        Q |= (where('val').test(look))
     L = db.search(Q)
     for l in L:
         click.echo('found ',nl=False)

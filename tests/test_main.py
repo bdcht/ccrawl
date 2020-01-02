@@ -13,7 +13,7 @@ def test_00_cmd_collect(configfile,dbfile):
 def test_01_cmd_search(configfile,dbfile):
     runner = CliRunner()
     result = runner.invoke(cli, ['-l',dbfile,'-b','None', '-c', configfile,
-                           'search', '\?_\w'])
+                           'search', r'.*\?_\w+'])
     assert result.exit_code == 0
     l = result.output.split('\n')
     assert len(l)==5
