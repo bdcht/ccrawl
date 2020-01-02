@@ -56,7 +56,7 @@ class Terminal(Configurable):
 
 class Database(Configurable):
     "configurable parameters related to the database"
-    local  = Unicode('ccrawl.db',config=True)                                  # local tiny database name is ccrawl.db
+    local  = Unicode('/tmp/ccrawl.db',config=True)                             # local tiny database name is ccrawl.db
     url    = Unicode('mongodb://localhost:27017',config=True)                  # use mongodb server
     user   = Unicode('',config=True)                                           # don't define a mongodb user
     verify = Bool(True,config=True)                                            # don't authenticate mongodb user
