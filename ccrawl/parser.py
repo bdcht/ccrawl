@@ -500,7 +500,7 @@ def parse(filename,
                     for x in cobj.to_db(ident, tag, cur.location.file.name):
                         defs[x['id']] = x
     if not conf.QUIET:
-        secho(('[%3d]'%len(defs)).rjust(12), fg='green')
+        secho(('[%3d]'%len(defs)).rjust(12), fg='green' if not cxx else 'cyan')
     return defs.values()
 
 def parse_string(s,args=None,options=0):
