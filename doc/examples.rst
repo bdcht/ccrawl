@@ -5,6 +5,8 @@ Examples
 A simple C case
 ---------------
 
+Make sure you have a *ccrawlrc* file as shown in installation_, (or remove `-c ccrawlrc`
+in commands below.)
 In a terminal, open file "ccrawl/tests/samples/header.h".
 Open another terminal and within your virtualenv do::
 
@@ -256,11 +258,11 @@ return type 'int' and first argument pointer-to 'EC_KEY' ::
 
   (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db
 
-                           _
-    ___ _ __ __ ___      _| |
-   / __| '__/ _` \ \ /\ / / |
-  | (__| | | (_| |\ V  V /| |
-   \___|_|  \__,_| \_/\_/ |_| v1.0.0
+                               _ 
+    ___ ___ _ __ __ ___      _| |
+   / __/ __| '__/ _` \ \ /\ / / |
+  | (_| (__| | | (_| |\ V  V /| |
+   \___\___|_|  \__,_| \_/\_/ |_| v1.0.0
 
 
   In [1]: ctx.invoke(prototype,proto=("0:int","1:EC_KEY *"))
