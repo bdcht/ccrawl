@@ -500,7 +500,7 @@ def info(ctx,identifier):
                 F = []
                 for i,f in enumerate(t._fields_):
                     field = getattr(t,f[0])
-                    F.append((field.offset,field.size,c_type(x[i][0]).show()))
+                    F.append((field.offset,field.size))
                 xsize = F[-1][0]+F[-1][1]
                 click.secho("size      : {}".format(xsize),fg='yellow')
                 click.secho("offsets   : {}".format([(f[0],f[1]) for f in F]),fg='yellow')
