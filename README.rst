@@ -66,14 +66,18 @@ First, collect the structure definition in a local database::
   --------------------------------------------------------------------
   saving database...                                            [   2]
 
-Then, its possible to translate the structure in ctypes_ ::
+Then, its possible to translate the full structure in ctypes_ ::
 
-  $ ccrawl -b None -l test.db show -f ctypes 'struct S'
+  $ ccrawl -b None -l test.db show -r -f ctypes 'struct S'
   struct_S = type('struct_S',(Structure,),{})
-  
+  union_b0eccf67 = type('union_b0eccf67',(Union,),{})
+  union_b0eccf67._fields_ = [("x", c_ubyte*2),
+                             ("s", c_ushort)]
+
+  struct_S._anonymous_ = ("u",)
   struct_S._fields_ = [("c", c_byte),
                        ("n", c_int),
-                       ("u", union_e196a9bd),
+                       ("u", union_b0eccf67),
                        ("PtrCharArrayOf3", POINTER(c_byte*3)*2),
                        ("pfunc", POINTER(CFUNCTYPE(None, c_int, c_int)))]
 

@@ -63,13 +63,18 @@ def build(obj,db,Types={}):
         if obj._is_union: parent = ctypes.Union
         Types[x] = type(x,(parent,),{})
         fmt = []
+        anon = []
         for t,n,c in obj:
             if not n: continue
             r = c_type(t)
+            if '?_' in r.lbase:
+                anon.append(n)
             bfw = r.lbfw
             r = mk_ctypes(r,Types)
             if bfw>0: fmt.append((str(n),r,bfw))
             else:     fmt.append((str(n),r))
+        if len(anon)>0:
+            Types[x]._anonymous_ = tuple(anon)
         Types[x]._fields_ = fmt
     elif obj._is_class:
         x = obj.as_cStruct(db)
