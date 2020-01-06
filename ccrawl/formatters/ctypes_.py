@@ -143,6 +143,7 @@ def cStruct_ctypes(obj,db,recursive):
                 else:
                     secho('identifier %s not found'%r.lbase,fg='red',err=True)
         t = id_ctypes(r)
+        if r.lbfw: t += ', %d'%r.lbfw
         S.append('("{}", {}),\n'.format(n,t)+pad)
         padded = True
     if padded: S.append(S.pop().strip()[:-1])
