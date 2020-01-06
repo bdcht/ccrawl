@@ -66,8 +66,10 @@ def build(obj,db,Types={}):
         for t,n,c in obj:
             if not n: continue
             r = c_type(t)
+            bfw = r.lbfw
             r = mk_ctypes(r,Types)
-            fmt.append((str(n),r))
+            if bfw>0: fmt.append((str(n),r,bfw))
+            else:     fmt.append((str(n),r))
         Types[x]._fields_ = fmt
     elif obj._is_class:
         x = obj.as_cStruct(db)
