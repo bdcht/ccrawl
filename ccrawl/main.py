@@ -633,3 +633,11 @@ def stats(ctx):
     click.echo('structures:')
     l,s = max(((len(s['val']),s['id']) for s in S))
     click.echo("  max fields: %d (in '%s')"%(l,s))
+
+@cli.command()
+@click.pass_context
+def server(ctx):
+    db = ctx.obj['db']
+    click.echo('starting server mode...')
+    from ccrawl.srv.main import run
+    run()
