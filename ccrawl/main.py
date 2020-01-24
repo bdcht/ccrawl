@@ -230,12 +230,15 @@ def search(ctx,ignorecase,rex):
     or definition matching the provided regular expression. 
     """
     db = ctx.obj['db']
-    cx = re.compile(rex)
-    look = (lambda v: cx.search(str(v)))
     flg = re.MULTILINE
     if ignorecase: flg |= re.IGNORECASE
-    Q = (where('id').matches(rex,flags=flg)) |\
-        (where('val').matches(rex,flags=flg))
+    cx = re.compile(rex,flags=flg)
+    look = (lambda v: cx.search(str(v)))
+    Q = (where('id').matches(rex,flags=flg))
+    if db.rdb:
+        Q |= (where('val').matches(rex,flags=flg))
+    else:
+        Q |= (where('val').test(look))
     L = db.search(Q)
     for l in L:
         click.echo('found ',nl=False)
@@ -497,7 +500,7 @@ def info(ctx,identifier):
                 F = []
                 for i,f in enumerate(t._fields_):
                     field = getattr(t,f[0])
-                    F.append((field.offset,field.size,c_type(x[i][0]).show()))
+                    F.append((field.offset,field.size))
                 xsize = F[-1][0]+F[-1][1]
                 click.secho("size      : {}".format(xsize),fg='yellow')
                 click.secho("offsets   : {}".format([(f[0],f[1]) for f in F]),fg='yellow')

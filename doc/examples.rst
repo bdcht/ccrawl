@@ -5,6 +5,8 @@ Examples
 A simple C case
 ---------------
 
+Make sure you have a *ccrawlrc* file as shown in installation_, (or remove `-c ccrawlrc`
+in commands below.)
 In a terminal, open file "ccrawl/tests/samples/header.h".
 Open another terminal and within your virtualenv do::
 
@@ -144,7 +146,7 @@ Select data structures with a type of length 8 at offset 88 (bytes)::
 A more realistic case
 ---------------------
 
-On utilise ccrawl maintenant sur un cas "réaliste"::
+We collect all definitions from */usr/include/openssl* ::
 
   (venv) user@machine:/tmp % time ccrawl -l test2.db collect /usr/include/openssl
   [  1%] /usr/include/openssl/crypto.h                                               [3400]
@@ -190,7 +192,9 @@ On utilise ccrawl maintenant sur un cas "réaliste"::
   ccrawl -c ccrawlrc -l test2.db collect /usr/include/openssl  44,55s user 0,48s system
   99% cpu 45,435 total
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db find -a cls=cStruct
+List all identifiers of type cStruct ::
+
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db select -a cls=cStruct
   found cStruct identifer "struct ?_02144907"
   found cStruct identifer "struct ASN1_AUX_st"
   found cStruct identifer "struct err_state_st"
@@ -204,9 +208,9 @@ On utilise ccrawl maintenant sur un cas "réaliste"::
   found cStruct identifer "struct ?_4dd5ee76"
   found cStruct identifer "struct NETSCAPE_X509_st"
 
-Quels éléments utilisent le type "AUTHORITY_KEYID" ? ::
+Search for all definitions matching a regular expression ::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db match 'AUTHORITY_KEYID'
+  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db search '.*AUTHORITY_KEYID.*'
   found cMacro identifer "X509V3_F_V2I_AUTHORITY_KEYID"
   found cStruct identifer "struct X509_crl_st" with matching value
   found cFunc identifer "X509_check_akid" with matching value
@@ -218,7 +222,7 @@ Quels éléments utilisent le type "AUTHORITY_KEYID" ? ::
   found cStruct identifer "struct AUTHORITY_KEYID_st"
   found cFunc identifer "d2i_AUTHORITY_KEYID" with matching value
 
-Interessons-nous à la structure 'struct x509_st' ::
+Let's focus on the definition of 'struct x509_st' ::
 
   (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db show 'struct x509_st'
   struct x509_st {
@@ -245,63 +249,40 @@ Interessons-nous à la structure 'struct x509_st' ::
     X509_CERT_AUX *aux;
   }
 
-Si vous êtes joueur, vous pouvez demander la version recursive...et être
-patient (~1.30min). Vous aurez également un message d'alerte
-"identifier 'struct ec_key_st' not found"
-indiquant que la sortie est incomplète. C'est lié au fait
-que l'API openssl dans /usr/include/openssl est incomplète ;)
-Pour bien faire il faudrait collecter les sources openssl directement,
-la définition étant dans "crypto/ec/ec_lcl.h".
+The recursive output of this structure takes approx. 30s to complete,
+with alerts (in red) about missing definition for various types.
 
-Pour finir, on va montrer le mode interactif, et chercher
-toutes les fonctions retournant un 'int' et dont le 1er argument est un
-pointeur sur EC_KEY* ::
+It is also possible to spawn an interactive console with ccrawl
+loaded and configured. For example lets find all prototypes with
+return type 'int' and first argument pointer-to 'EC_KEY' ::
 
   (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db
 
-                           _
-    ___ _ __ __ ___      _| |
-   / __| '__/ _` \ \ /\ / / |
-  | (__| | | (_| |\ V  V /| |
-   \___|_|  \__,_| \_/\_/ |_| v0.9.1
+                               _ 
+    ___ ___ _ __ __ ___      _| |
+   / __/ __| '__/ _` \ \ /\ / / |
+  | (_| (__| | | (_| |\ V  V /| |
+   \___\___|_|  \__,_| \_/\_/ |_| v1.0.0
 
 
   In [1]: ctx.invoke(prototype,proto=("0:int","1:EC_KEY *"))
 
-    [------------------------------------]    2%
-  int ECDSA_set_ex_data(EC_KEY *, int, void *);
-
-  int EC_KEY_set_public_key(EC_KEY *, const EC_POINT *);
-    [#-----------------------------------]    3%
-  int EC_KEY_set_group(EC_KEY *, const EC_GROUP *);
-    [###---------------------------------]   10%  00:00:26
-  int ECDSA_sign_setup(EC_KEY *, BN_CTX *, BIGNUM **, BIGNUM **);
-    [#######-----------------------------]   19%  00:00:23
   int ECDH_set_ex_data(EC_KEY *, int, void *);
-    [#########---------------------------]   27%  00:00:20
-  int i2d_ECPrivateKey(EC_KEY *, unsigned char **);
-    [##############----------------------]   40%  00:00:16
-  int EC_KEY_up_ref(EC_KEY *);
-    [#################-------------------]   49%  00:00:14
-  int i2d_ECParameters(EC_KEY *, unsigned char **);
-    [##################------------------]   52%  00:00:13
-  int i2d_EC_PUBKEY(EC_KEY *, unsigned char **);
-    [###################-----------------]   55%  00:00:12
-  int EC_KEY_set_private_key(EC_KEY *, const BIGNUM *);
-    [#####################---------------]   60%  00:00:11
-  int i2o_ECPublicKey(EC_KEY *, unsigned char **);
-    [#######################-------------]   65%  00:00:09
+  int EC_KEY_set_public_key(EC_KEY *, const EC_POINT *);
   int EC_KEY_precompute_mult(EC_KEY *, BN_CTX *);
-
-  int EC_KEY_generate_key(EC_KEY *);
-    [##########################----------]   72%  00:00:07
   int ECDSA_set_method(EC_KEY *, const ECDSA_METHOD *);
-    [###########################---------]   76%  00:00:06
+  int i2d_ECParameters(EC_KEY *, unsigned char **);
+  int EC_KEY_set_private_key(EC_KEY *, const BIGNUM *);
+  int EC_KEY_generate_key(EC_KEY *);
+  int ECDSA_set_ex_data(EC_KEY *, int, void *);
+  int i2d_ECPrivateKey(EC_KEY *, unsigned char **);
   int EC_KEY_set_public_key_affine_coordinates(EC_KEY *, BIGNUM *, BIGNUM *);
-    [################################----]   91%  00:00:02
+  int i2o_ECPublicKey(EC_KEY *, unsigned char **);
+  int EC_KEY_up_ref(EC_KEY *);
+  int ECDSA_sign_setup(EC_KEY *, BN_CTX *, BIGNUM **, BIGNUM **);
   int ECDH_set_method(EC_KEY *, const ECDH_METHOD *);
-    [####################################]  100%
+  int i2d_EC_PUBKEY(EC_KEY *, unsigned char **);
+  int EC_KEY_set_group(EC_KEY *, const EC_GROUP *);
 
 
 Et voilà.
-

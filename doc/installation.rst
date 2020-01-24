@@ -42,11 +42,11 @@ We recommend to install ccrawl in its own *virtualenv* with included ipython_ ::
 
   (venv) user@machine:/tmp % ccrawl -c ccrawlrc
 
-                           _
-    ___ _ __ __ ___      _| |
-   / __| '__/ _` \ \ /\ / / |
-  | (__| | | (_| |\ V  V /| |
-   \___|_|  \__,_| \_/\_/ |_| v1.0
+                               _ 
+    ___ ___ _ __ __ ___      _| |
+   / __/ __| '__/ _` \ \ /\ / / |
+  | (_| (__| | | (_| |\ V  V /| |
+   \___\___|_|  \__,_| \_/\_/ |_| v1.0.0
 
 
   In [1]: [^D]
@@ -59,3 +59,4 @@ We recommend to install ccrawl in its own *virtualenv* with included ipython_ ::
 .. _tinydb: https://tinydb.readthedocs.io/en/latest/intro.html
 .. _ujson: https://pypi.org/project/ujson/
 .. _pymongo: https://api.mongodb.com/python/current/
+.. _ipython: https://ipython.org

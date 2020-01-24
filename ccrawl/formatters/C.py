@@ -36,7 +36,7 @@ def cEnum_C(obj,db,recursive):
     for k,v in sorted(obj.items(),key=lambda t:t[1]):
         S.append('  {} = {:d}'.format(k,v))
     S = ',\n'.join(S)
-    name = re.sub('\?_.*','',obj.identifier)
+    name = re.sub(r'\?_.*','',obj.identifier)
     return u"%s {\n%s\n};"%(name,S)
 
 def cStruct_C(obj,db,recursive):

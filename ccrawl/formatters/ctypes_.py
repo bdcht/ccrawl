@@ -116,6 +116,7 @@ def cStruct_ctypes(obj,db,recursive):
     name = id_ctypes(c_type(obj.identifier))
     cls = 'Union' if obj._is_union else 'Structure'
     R = ["{0} = type('{0}',({1},),{{}})\n".format(name,cls)]
+    anon = []
     S = []
     fld = '%s._fields_ = ['%name
     S.append(fld)
@@ -131,6 +132,7 @@ def cStruct_ctypes(obj,db,recursive):
             else:
                 q = (where('id')==r.lbase)
                 if '?_' in r.lbase:
+                    anon.append('"%s"'%n)
                     q &= (where('src')==obj.identifier)
                 if db.contains(q):
                     x = obj.from_db(db.get(q)).show(db,recursive,form='ctypes')
@@ -143,10 +145,13 @@ def cStruct_ctypes(obj,db,recursive):
                 else:
                     secho('identifier %s not found'%r.lbase,fg='red',err=True)
         t = id_ctypes(r)
+        if r.lbfw: t += ', %d'%r.lbfw
         S.append('("{}", {}),\n'.format(n,t)+pad)
         padded = True
     if padded: S.append(S.pop().strip()[:-1])
     S.append(']')
+    if len(anon)>0:
+        S.insert(0,'%s._anonymous_ = (%s,)\n'%(name,','.join(anon)))
     return ''.join(R)+'\n'+''.join(S)
 
 cUnion_ctypes = cStruct_ctypes

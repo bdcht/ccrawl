@@ -98,18 +98,19 @@ For example::
 
     $ cd tests/
     $ ccrawl -b None -l test.db collect samples/
-    [  9%] samples/cxxabi.h                                            [ 13]
-    [ 18%] samples/derived.hpp                                         [  4]
-    [ 27%] samples/stru.h                                              [  0]
-    [ 36%] samples/c_linkage.hpp                                       [  1]
-    [ 45%] samples/00_empty.h                                          [  0]
-    [ 54%] samples/templates.hpp                                       [352]
-    [ 63%] samples/wonza.hpp                                           2326]
-    [ 81%] samples/header.h                                            [ 25]
-    [ 90%] samples/fwd_decl.hpp                                        [  2]
-    [100%] samples/xxx/yyy/somewhere.h                                 [ 10]
-    ------------------------------------------------------------------------
-    saving database...                                                 2393]
+    [  8%] samples/wonza.hpp                                       [ 17]
+    [ 25%] samples/stru.h                                          [  0]
+    [ 33%] samples/cxxabi.h                                        [ 17]
+    [ 41%] samples/simple.h                                        [  2]
+    [ 50%] samples/xxx/yyy/somewhere.h                             [ 10]
+    [ 58%] samples/header.h                                        [ 25]
+    [ 66%] samples/fwd_decl.hpp                                    [  2]
+    [ 75%] samples/derived.hpp                                     [  4]
+    [ 83%] samples/c_linkage.hpp                                   [  1]
+    [ 91%] samples/00_empty.h                                      [  0]
+    [100%] samples/templates.hpp                                   [352]
+    --------------------------------------------------------------------
+    saving database...                                            [ 430]
 
 
 Search
@@ -178,10 +179,10 @@ For example::
 
     $ ccrawl -b None -l test.db select constant -s "MY" 0x10
     MYCONST
-    $ ccrawl -b None -l test.db select struct -n "*:+104"
+    $ ccrawl -b None -l test.db select struct "*:+104"
     [####################################]  100%
     struct _mystruct
-
+    class S
 
 
 Show
@@ -240,7 +241,7 @@ For example::
     identifier: struct _mystruct
     class     : cStruct
     source    : samples/header.h
-    tag       : 1576426279.643788
+    tag       : xxx
     size      : 104
     offsets   : [(0, 1), (4, 48), (52, 16), (72, 8), (80, 8), (88, 8), (96, 8)]
 

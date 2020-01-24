@@ -1,0 +1,14 @@
+language: python
+python:
+  - '3.6'
+branches:
+  only:
+  - release
+before_install:
+  - apt install mongodb-server
+  - pip install pytest-runner
+  - pip install -r requirements.txt
+install:
+  - python setup.py install
+script:
+  - python setup.py pytest
