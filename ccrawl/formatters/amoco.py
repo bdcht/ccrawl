@@ -79,6 +79,7 @@ def cStruct_amoco(obj,db,recursive):
     if isinstance(recursive,set):
         Q = True
         recursive.update(tostruct)
+        recursive.add(obj.identifier)
     else:
         Q = None
     name = id_amoco(obj.identifier)
@@ -87,26 +88,24 @@ def cStruct_amoco(obj,db,recursive):
     S = ['@{}("""\n'.format(cls)]
     for i in obj:
         t,n,c = i
-        if not n: continue
         r = c_type(t)
+        if not n and not r.lbase.startswith('union '):
+            continue
         if Q and (r.lbase not in recursive):
-            if r.lbase == obj.identifier:
+            q = (where('id')==r.lbase)
+            if r.lbase.startswith('?_'):
+                q &= (where('src')==obj.identifier)
+            if db.contains(q):
+                x = obj.from_db(db.get(q))
+                if x._is_typedef:
+                    pass
+                x = x.show(db,recursive,form='amoco')
+                x = x.split('\n')
+                for xrl in x:
+                    if xrl: R.append(xrl+'\n')
                 recursive.add(r.lbase)
             else:
-                q = (where('id')==r.lbase)
-                if r.lbase.startswith('?_'):
-                    q &= (where('src')==obj.identifier)
-                if db.contains(q):
-                    x = obj.from_db(db.get(q))
-                    if x._is_typedef:
-                        pass
-                    x = x.show(db,recursive,form='amoco')
-                    x = x.split('\n')
-                    for xrl in x:
-                        if xrl: R.append(xrl+'\n')
-                    recursive.add(r.lbase)
-                else:
-                    secho('identifier %s not found'%r.lbase,fg='red',err=True)
+                secho('identifier %s not found'%r.lbase,fg='red',err=True)
         rt,t = fieldformat(r)
         if rt: t = rt
         S.append('{} : {} ;{}\n'.format(t,n,c or ''))

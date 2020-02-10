@@ -65,10 +65,11 @@ def build(obj,db,Types={}):
         fmt = []
         anon = []
         for t,n,c in obj:
-            if not n: continue
             r = c_type(t)
             if '?_' in r.lbase:
                 anon.append(n)
+            if not n and not r.lbase.startswith('union '):
+                continue
             bfw = r.lbfw
             r = mk_ctypes(r,Types)
             if bfw>0: fmt.append((str(n),r,bfw))

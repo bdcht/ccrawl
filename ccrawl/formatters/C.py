@@ -40,14 +40,15 @@ def cEnum_C(obj,db,recursive):
     return u"%s {\n%s\n};"%(name,S)
 
 def cStruct_C(obj,db,recursive):
+    #declare structure:
+    name = obj.identifier
     #prepare query if recursion is needed:
     if isinstance(recursive,set):
         Q = True
         recursive.update(struct_letters)
+        recursive.add(name)
     else:
         Q = None
-    #declare structure:
-    name = obj.identifier
     tn = 'union ' if obj._is_union else 'struct '
     #if anonymous, remove anonymous name:
     if '?_' in name:
@@ -60,47 +61,45 @@ def cStruct_C(obj,db,recursive):
     for i in obj:
         #get type, name, comment:
         t,n,c = i
-        if not n: continue
         #decompose C-type t into specific parts:
         r = c_type(t)
         #get "element base" part of type t:
         e = r.lbase
+        if not n and not e.startswith('union '):
+            # -> union field are allowed to have no name...
+            continue
         #query field element base type if recursive:
-        if Q and (r.lbase not in recursive):
-            # check if we are about to query the current struct type...
-            if r.lbase == obj.identifier:
-                #insert pre-declaration of struct
-                #R.insert(0,'%s;'%r.lbase)
-                R.append('%s;'%r.lbase)
-                recursive.add(r.lbase)
-            else:
-                #prepare query
-                #(deal with the case of querying an anonymous type)
-                q = (where('id')==r.lbase)
-                if '?_' in r.lbase:
-                    q &= (where('src')==obj.identifier)
-                #do the query and update R:
-                if db.contains(q):
-                    #retreive the field type:
-                    x = obj.from_db(db.get(q)).show(db,recursive,form='C')
-                    if not '?_' in r.lbase:
-                        #if not anonymous, insert it directly in R
-                        #R.insert(0,x)
-                        R.append(x)
-                        recursive.add(r.lbase)
-                    else:
-                        # anonymous struct/union: we need to transfer
-                        # any predefs into R
-                        x = x.split('\n\n')
-                        r.lbase = x.pop().replace('\n','\n  ').strip(';')
-                        if len(x):
-                            xr = x[0].split('\n')
-                            for xrl in xr:
-                                if xrl and xrl not in R:
-                                    #R.insert(0,xrl)
-                                    R.append(xrl)
+        # check if we are about to query the current struct type...
+        if Q and (r.lbase==obj.identifier):
+            R.append('%s;'%r.lbase)
+        elif Q and (r.lbase not in recursive):
+            #prepare query
+            #(deal with the case of querying an anonymous type)
+            q = (where('id')==r.lbase)
+            if '?_' in r.lbase:
+                q &= (where('src')==obj.identifier)
+            #do the query and update R:
+            if db.contains(q):
+                #retreive the field type:
+                x = obj.from_db(db.get(q)).show(db,recursive,form='C')
+                if not '?_' in r.lbase:
+                    #if not anonymous, insert it directly in R
+                    #R.insert(0,x)
+                    R.append(x)
+                    recursive.add(r.lbase)
                 else:
-                    secho('identifier %s not found'%r.lbase,fg='red',err=True)
+                    # anonymous struct/union: we need to transfer
+                    # any predefs into R
+                    x = x.split('\n\n')
+                    r.lbase = x.pop().replace('\n','\n  ').strip(';')
+                    if len(x):
+                        xr = x[0].split('\n')
+                        for xrl in xr:
+                            if xrl and xrl not in R:
+                                #R.insert(0,xrl)
+                                R.append(xrl)
+            else:
+                secho('identifier %s not found'%r.lbase,fg='red',err=True)
         #finally add field type and name to the structure lines:
         S.append(u'  {};'.format(r.show(n)))
     #join R and S:

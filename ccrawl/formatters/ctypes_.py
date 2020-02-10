@@ -111,6 +111,7 @@ def cStruct_ctypes(obj,db,recursive):
     if isinstance(recursive,set):
         Q = True
         recursive.update(struct_letters)
+        recursive.add(obj.identifier)
     else:
         Q = None
     name = id_ctypes(c_type(obj.identifier))
@@ -124,26 +125,24 @@ def cStruct_ctypes(obj,db,recursive):
     padded = False
     for i in obj:
         t,n,c = i
-        if not n: continue
         r = c_type(t)
+        if not n and not r.lbase.startswith('union '):
+            continue
         if Q and (r.lbase not in recursive):
-            if r.lbase == obj.identifier:
+            q = (where('id')==r.lbase)
+            if '?_' in r.lbase:
+                anon.append('"%s"'%n)
+                q &= (where('src')==obj.identifier)
+            if db.contains(q):
+                x = obj.from_db(db.get(q)).show(db,recursive,form='ctypes')
+                x = x.split('\n')
+                for xrl in x:
+                    if (xrl+'\n' in R) and not xrl.startswith(' '):
+                        continue
+                    if xrl: R.append(xrl+'\n')
                 recursive.add(r.lbase)
             else:
-                q = (where('id')==r.lbase)
-                if '?_' in r.lbase:
-                    anon.append('"%s"'%n)
-                    q &= (where('src')==obj.identifier)
-                if db.contains(q):
-                    x = obj.from_db(db.get(q)).show(db,recursive,form='ctypes')
-                    x = x.split('\n')
-                    for xrl in x:
-                        if (xrl+'\n' in R) and not xrl.startswith(' '):
-                            continue
-                        if xrl: R.append(xrl+'\n')
-                    recursive.add(r.lbase)
-                else:
-                    secho('identifier %s not found'%r.lbase,fg='red',err=True)
+                secho('identifier %s not found'%r.lbase,fg='red',err=True)
         t = id_ctypes(r)
         if r.lbfw: t += ', %d'%r.lbfw
         S.append('("{}", {}),\n'.format(n,t)+pad)
