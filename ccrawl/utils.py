@@ -56,7 +56,7 @@ objecttype = pp.Or([rawtypes,strucdecl])
 #define arrays:
 intp       = pp.Regex(r'[1-9][0-9]*')
 intp.setParseAction(lambda r: int(r[0]))
-bitfield   = rawtypes + pp.Suppress('#') + intp
+bitfield   = symbol + pp.Suppress('#') + intp
 arraydecl  = pp.Suppress('[')+intp+pp.Suppress(']')
 arrazdecl  = pp.Suppress('[')+pp.Or((intp,symbol))+pp.Suppress(']')
 pointer    = pp.Optional(pstars,default='')+pp.Optional(arraydecl,default=0)
