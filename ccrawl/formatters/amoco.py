@@ -1,8 +1,7 @@
 #from amoco.system import structs
-from ccrawl.utils import *
-from ccrawl import conf
+from ccrawl.utils import c_type
 from click import secho
-from tinydb import Query, where
+from tinydb import where
 
 tostruct = {
     'void'               : 'x',
@@ -63,7 +62,7 @@ def cMacro_amoco(obj,db,recursive):
         v = int(v,base=0)
         return '{} = 0x{:x}'.format(obj.identifier,v)
     except ValueError:
-        v = v
+        pass
     return "{} = '{}'".format(obj.identifier,v)
 
 def cFunc_amoco(obj,db,recursive):

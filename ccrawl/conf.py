@@ -3,9 +3,9 @@ import clang.cindex
 
 from traitlets.config import Configurable
 from traitlets.config import PyFileConfigLoader
-from traitlets import Integer, Unicode, Bool, observe
+from traitlets import Unicode, Bool, observe
 
-__version__ = "1.0.0"
+__version__ = "1.2.0"
 
 # default clang library file:
 if os.name == 'posix':
@@ -84,7 +84,7 @@ class Config(object):
         cl = PyFileConfigLoader(filename=f,path=('.',os.getenv('HOME')))
         try:
             c = cl.load_config()
-        except:
+        except Exception:
             c = None
         self.Terminal = Terminal(config=c)
         self.Database = Database(config=c)

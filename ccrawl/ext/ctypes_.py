@@ -1,5 +1,3 @@
-from click import echo,secho
-from ccrawl import conf
 from ccrawl.formatters.ctypes_ import toCTypes
 from ccrawl.utils import c_type,fargs
 import ctypes
@@ -22,7 +20,7 @@ def mk_ctypes(t,Types):
     while P:
         p = P.pop(0)
         if p.is_ptr:
-            for x in p.p:
+            for _ in p.p:
                 r = ctypes.POINTER(r)
         elif isinstance(p,fargs):
             r = formatproto(r,p,Types)
@@ -51,7 +49,7 @@ def build(obj,db,Types={}):
         try:
             v = int(v,base=0)
         except ValueError:
-            v = v
+            pass
         globals()[obj.identifier] = v
         return v
     x = str(obj.identifier.replace('?_','').replace(' ','_'))

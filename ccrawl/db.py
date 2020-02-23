@@ -1,5 +1,4 @@
 import requests
-import ctypes
 import click
 from tinydb.storages import JSONStorage,MemoryStorage
 from tinydb.middlewares import CachingMiddleware
@@ -16,7 +15,7 @@ class Proxy(object):
             try:
                 self.ldb = TinyDB(config.local,
                                   storage=CachingMiddleware(JSONStorage))
-            except:
+            except Exception:
                 self.ldb = TinyDB(storage=MemoryStorage)
         else:
             self.ldb = TinyDB(storage=MemoryStorage)
@@ -30,7 +29,7 @@ class Proxy(object):
                 dbclass = MongoDB
             try:
                 self.rdb = dbclass(config.url,auth=auth,verify=config.verify)
-            except:
+            except Exception:
                 self.rdb = None
 
     def set_tag(self,tag=None):

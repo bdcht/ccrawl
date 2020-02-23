@@ -1,6 +1,7 @@
 from click import secho
-from ccrawl.utils import *
+from ccrawl.utils import struct_letters,c_type,cxx_type
 from tinydb import where
+import re
 
 # C formatters:
 #------------------------------------------------------------------------------
@@ -210,10 +211,10 @@ def cTemplate_C(obj,db,recursive):
     template = obj.get_template()
     # get the cxx type object, for namespaces:
     tn = cxx_type(identifier)
-    namespace = tn.show_base(kw=False,ns=False)
+    #namespace = tn.show_base(kw=False,ns=False)
     #prepare query if recursion is needed:
     if isinstance(recursive,set):
-        Q = True
+        #Q = True
         recursive.update(struct_letters)
         recursive.add(tn.lbase)
         for t in obj['params']:
@@ -221,7 +222,8 @@ def cTemplate_C(obj,db,recursive):
                 t = t.replace('typename ','')
                 recursive.add(t)
     else:
-        Q = None
+        #Q = None
+        pass
     R = []
     #S holds template output lines:
     S = [u'template%s'%template]

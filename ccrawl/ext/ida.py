@@ -1,7 +1,6 @@
-from click import echo,secho
-from ccrawl import conf
+from click import secho
 try:
-    from idc import parse_decls
+    from idc import parse_decls,Til2Idb
 except ImportError:
     secho("IDAPython IDC package not found",fg="red")
     def build(obj):

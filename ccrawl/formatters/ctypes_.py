@@ -1,13 +1,10 @@
-from collections import OrderedDict
-from ccrawl.utils import *
-from ccrawl import conf
+from ccrawl.utils import struct_letters,c_type,cxx_type,fargs
 from click import secho
-from tinydb import Query, where
+from tinydb import where
 
 toCTypes = {
     'void'               : 'c_void',
     '_Bool'              : 'c_bool',
-    'char'               : 'c_char',
     'wchar_t'            : 'c_wchar',
     'char'               : 'c_byte',
     'unsigned char'      : 'c_ubyte',
@@ -39,7 +36,7 @@ def id_ctypes(t):
     while P:
         p = P.pop(0)
         if p.is_ptr:
-            for x in p.p:
+            for _ in p.p:
                 r = 'POINTER(%s)'%r
         elif isinstance(p,fargs):
             r = formatproto(r,p)
@@ -76,7 +73,7 @@ def cMacro_ctypes(obj,db,recursive):
     try:
         v = int(v,base=0)
     except ValueError:
-        v = v
+        pass
     return '{} = {}'.format(obj.identifier,v)
 
 def cFunc_ctypes(obj,db,recursive):

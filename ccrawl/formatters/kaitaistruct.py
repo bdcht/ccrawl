@@ -1,6 +1,4 @@
-from ccrawl.utils import *
 from ccrawl.ext.ctypes_ import build
-from ctypes import sizeof
 
 # kaitaistruct formatters:
 #------------------------------------------------------------------------------

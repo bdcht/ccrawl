@@ -1,4 +1,5 @@
 import pytest
+from ccrawl.core import ccore
 from ccrawl.parser import *
 
 def test_clang_cindex(configfile):

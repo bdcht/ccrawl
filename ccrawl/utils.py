@@ -1,5 +1,5 @@
 import pyparsing as pp
-import re
+
 
 # ccrawl low-level utilities:
 #------------------------------------------------------------------------------
@@ -107,7 +107,7 @@ class c_type(object):
         if self.lunsigned: s.append('unsigned ')
         s.append('{0.lbase}>'.format(self))
         return ' '.join(s)
-    def show_base(self):
+    def show_base(self,kw=False,ns=False):
         s = [self.lbase]
         if self.lunsigned: s.insert(0,'unsigned')
         if self.lconst: s.insert(0,'const')

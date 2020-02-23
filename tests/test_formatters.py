@@ -1,5 +1,7 @@
 import pytest
-from ccrawl.parser import ccore,parse
+from ccrawl import conf
+from ccrawl.parser import parse
+from ccrawl.core import ccore
 from ccrawl.formatters import *
 
 def test_format_C(configfile,c_header):
