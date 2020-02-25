@@ -3,6 +3,13 @@ from ccrawl.utils import c_type
 from click import secho
 from tinydb import where
 
+__all__ = ['cTypedef_amoco',
+           'cMacro_amoco',
+           'cFunc_amoco',
+           'cEnum_amoco',
+           'cStruct_amoco',
+           'cUnion_amoco']
+
 tostruct = {
     'void'               : 'x',
     '_Bool'              : '?',

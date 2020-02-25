@@ -1,6 +1,15 @@
-from ccrawl.utils import struct_letters,c_type,cxx_type,fargs
+from ccrawl.utils import struct_letters,c_type,fargs
 from click import secho
 from tinydb import where
+
+__all__ = ['cTypedef_ctypes',
+           'cMacro_ctypes',
+           'cFunc_ctypes',
+           'cEnum_ctypes',
+           'cStruct_ctypes',
+           'cUnion_ctypes',
+           'cClass_ctypes',
+]
 
 toCTypes = {
     'void'               : 'c_void',

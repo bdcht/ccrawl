@@ -1,6 +1,14 @@
-from ccrawl.utils import *
+from ccrawl.utils import struct_letters
 from ccrawl.ext.ctypes_ import build
 from ctypes import sizeof
+
+__all__ = ['cMacro_volatility',
+           'cFunc_volatility',
+           'cTypedef_volatility',
+           'cEnum_volatility',
+           'cStruct_volatility',
+           'cUnion_volatility'
+]
 
 # volatility VTypes formatters:
 #------------------------------------------------------------------------------
@@ -9,7 +17,7 @@ def cMacro_volatility(obj,db,recursive):
     return u'{} = {}'.format(obj.identifier,obj)
 
 def cFunc_volatility(obj,db,recursive):
-    pass
+    raise NotImplementedError
 
 def ctype_to_volatility(t):
     b = t.lbase

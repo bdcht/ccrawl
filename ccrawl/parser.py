@@ -470,7 +470,7 @@ def parse(filename,
                 # we keep it here just in case.
                 if conf.VERBOSE: secho(err.format(),bg='red',err=True)
                 raise StandardError
-    except:
+    except Exception:
         if not conf.QUIET:
             secho('[err]',fg='red')
             if conf.VERBOSE:

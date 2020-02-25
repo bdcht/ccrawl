@@ -1,10 +1,10 @@
 from click import secho
 from ccrawl.formatters.amoco import id_amoco,c_type,fieldformat
 try:
-    from amoco.system.structs import Consts,
+    from amoco.system.structs import (Consts,
                                      TypeDefine,
                                      StructDefine,UnionDefine,
-                                     StructFormatter
+                                     StructFormatter)
 except ImportError:
     secho("amoco package not found",fg="red")
     def build(t,db):

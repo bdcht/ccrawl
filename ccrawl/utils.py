@@ -26,7 +26,7 @@ struct_letters = {
 # difficult and this was precisely why I'd use clang. Still, libclang's AST
 # only provides the C type string. I first tought it was going to be easy to
 # correctly parse this "simple" subpart of C...well, its not. And for C++ its
-# even worse! Try playing with cdecl.org and see how funny this can be ;) 
+# even worse! Try playing with cdecl.org and see how funny this can be ;)
 #
 # ccrawl C type parser is implemented with below 'nested_c' pyparsing object.
 # It captures nested parenthesis expressions that allows to define complex C
@@ -72,7 +72,7 @@ nested_c   = pp.OneOrMore(nested_par)
 
 class c_type(object):
     """The c_type object parses a C type string and decomposes it into
-       several parts 
+       several parts
     """
     def __init__(self,decl):
         # get final element type:
@@ -88,7 +88,10 @@ class c_type(object):
         self.lunsigned = (x[0] =='unsigned') and x.pop(0)
         self.lbase = ' '.join(x)
         r = '(%s)'%r
-        nest = nested_c.parseString(r).asList()[0]
+        self.__r = r
+        self.getpstack()
+    def getpstack(self):
+        nest = nested_c.parseString(self.__r).asList()[0]
         self.pstack = pstack(nest)
     @property
     def is_ptr(self):
@@ -101,7 +104,7 @@ class c_type(object):
                 return p.a
         return 0
     def __repr__(self):
-        s = ['<c_type']
+        s = ['<%s'%self.__class__.__name__]
         s.extend(reversed([str(p) for p in self.pstack]))
         if self.lconst: s.append('const ')
         if self.lunsigned: s.append('unsigned ')
@@ -131,24 +134,11 @@ class c_type(object):
 
 # C++ type declaration parser:
 #------------------------------------------------------------------------------
-# extends c_type essentially with extracting the namespace parts of the fully
+# cxx_type essentially with extracting the namespace parts of the fully
 # qualified name of the C++ type.
 class cxx_type(c_type):
     def __init__(self,decl):
-        bf = decl.rfind('#')
-        if bf>0:
-            x = bitfield.parseString(decl)
-            self.lbfw = x.pop()
-            r = ''
-        else:
-            x,r = (pp.Group(objecttype)+pp.restOfLine).parseString(decl)
-            self.lbfw = 0
-        self.lconst    = (x[0] =='const') and x.pop(0)
-        self.lunsigned = (x[0] =='unsigned') and x.pop(0)
-        self.lbase = ' '.join(x)
-        r = '(%s)'%r
-        nest = nested_c.parseString(r).asList()[0]
-        self.pstack = pstack(nest,cxx=True)
+        super().__init__(decl)
         # get namespaces:
         self.kw = ''
         self.ns = ''
@@ -158,6 +148,9 @@ class cxx_type(c_type):
         x = self.lbase.rfind('::')
         if x>0:
             self.ns = self.lbase[k+1:x+2]
+    def getpstack(self):
+        nest = nested_c.parseString(self.__r).asList()[0]
+        self.pstack = pstack(nest,cxx=True)
     @property
     def is_method(self):
         return (fargs in [type(p) for p in self.pstack])

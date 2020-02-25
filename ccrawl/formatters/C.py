@@ -3,6 +3,16 @@ from ccrawl.utils import struct_letters,c_type,cxx_type
 from tinydb import where
 import re
 
+__all__ = ['cTypedef_C',
+           'cMacro_C',
+           'cFunc_C',
+           'cEnum_C',
+           'cStruct_C',
+           'cUnion_C',
+           'cClass_C',
+           'cTemplate_C',
+]
+
 # C formatters:
 #------------------------------------------------------------------------------
 
