@@ -149,7 +149,7 @@ class cxx_type(c_type):
         if x>0:
             self.ns = self.lbase[k+1:x+2]
     def getpstack(self):
-        nest = nested_c.parseString(self.__r).asList()[0]
+        nest = nested_c.parseString(self._c_type__r).asList()[0]
         self.pstack = pstack(nest,cxx=True)
     @property
     def is_method(self):
