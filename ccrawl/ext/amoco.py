@@ -36,7 +36,7 @@ else:
             if obj._is_union: define = UnionDefine
             cls = type(x,(StructFormatter,),{})
             fmt = []
-            for t,n,c in obj:
+            for t,n,c in iter(obj):
                 r = c_type(t)
                 rt,t = fieldformat(r)
                 fmt.append('{} : {} ;{}'.format(rt or t,n,c or ''))

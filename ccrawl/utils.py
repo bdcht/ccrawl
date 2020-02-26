@@ -24,7 +24,7 @@ struct_letters = {
 # notes:
 # this part of ccrawl was a coding nightmare...I was aware that parsing C is
 # difficult and this was precisely why I'd use clang. Still, libclang's AST
-# only provides the C type string. I first tought it was going to be easy to
+# only provides the C type string. I first thought it was going to be easy to
 # correctly parse this "simple" subpart of C...well, its not. And for C++ its
 # even worse! Try playing with cdecl.org and see how funny this can be ;)
 #
@@ -88,11 +88,8 @@ class c_type(object):
         self.lunsigned = (x[0] =='unsigned') and x.pop(0)
         self.lbase = ' '.join(x)
         r = '(%s)'%r
-        self.__r = r
-        self.getpstack()
-    def getpstack(self):
-        nest = nested_c.parseString(self.__r).asList()[0]
-        self.pstack = pstack(nest)
+        nest = nested_c.parseString(r).asList()[0]
+        self.pstack = pstack(nest,self.__class__)
     @property
     def is_ptr(self):
         return (ptr in [type(p) for p in self.pstack])
@@ -134,7 +131,7 @@ class c_type(object):
 
 # C++ type declaration parser:
 #------------------------------------------------------------------------------
-# cxx_type essentially with extracting the namespace parts of the fully
+# cxx_type extends c_type with extracting the namespace parts of the fully
 # qualified name of the C++ type.
 class cxx_type(c_type):
     def __init__(self,decl):
@@ -148,9 +145,6 @@ class cxx_type(c_type):
         x = self.lbase.rfind('::')
         if x>0:
             self.ns = self.lbase[k+1:x+2]
-    def getpstack(self):
-        nest = nested_c.parseString(self._c_type__r).asList()[0]
-        self.pstack = pstack(nest,cxx=True)
     @property
     def is_method(self):
         return (fargs in [type(p) for p in self.pstack])
@@ -218,9 +212,10 @@ class fargs(object):
             return "%s %s"%(self.f,self.cvr)
         return self.f
 
-def pstack(plist,cxx=False):
+def pstack(plist,cls=c_type):
     """returns the 'stack' of pointers-to array-N-of pointer-to
        function() returning pointer to function() returning ..."""
+    cxx = (cls == cxx_type)
     S = []
     cvr = ''
     if plist:

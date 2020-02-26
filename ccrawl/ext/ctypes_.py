@@ -62,7 +62,7 @@ def build(obj,db,Types={}):
         Types[x] = type(x,(parent,),{})
         fmt = []
         anon = []
-        for t,n,c in obj:
+        for t,n,c in iter(obj):
             r = c_type(t)
             if '?_' in r.lbase:
                 anon.append(n)
