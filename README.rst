@@ -10,6 +10,10 @@ Ccrawl
     :target: https://lgtm.com/projects/g/bdcht/ccrawl/context:python
     :alt: Code Quality
 
+.. image:: https://badge.fury.io/py/ccrawl.svg
+    :target: https://badge.fury.io/py/ccrawl
+
+
 +-----------+--------------------------------------------------+
 | Status:   | Under Development                                |
 +-----------+--------------------------------------------------+
