@@ -1,8 +1,10 @@
-from click import echo,secho
-from ccrawl import conf
-from ccrawl.formatters.amoco import *
+from click import secho
+from ccrawl.formatters.amoco import id_amoco,c_type,fieldformat
 try:
-    from amoco.system.structs import *
+    from amoco.system.structs import (Consts,
+                                     TypeDefine,
+                                     StructDefine,UnionDefine,
+                                     StructFormatter)
 except ImportError:
     secho("amoco package not found",fg="red")
     def build(t,db):
@@ -22,7 +24,7 @@ else:
             try:
                 v = int(v,base=0)
             except ValueError:
-                v = v
+                pass
             globals()[obj.identifier] = v
             return v
         x = id_amoco(obj.identifier)
@@ -34,7 +36,7 @@ else:
             if obj._is_union: define = UnionDefine
             cls = type(x,(StructFormatter,),{})
             fmt = []
-            for t,n,c in obj:
+            for t,n,c in iter(obj):
                 r = c_type(t)
                 rt,t = fieldformat(r)
                 fmt.append('{} : {} ;{}'.format(rt or t,n,c or ''))

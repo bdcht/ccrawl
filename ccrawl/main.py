@@ -6,7 +6,9 @@ from ccrawl import conf
 from ccrawl.formatters import formats
 from ccrawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL
 from ccrawl.parser import FUNCTION_DECL, MACRO_DEF
-from ccrawl.parser import parse,ccore,c_type
+-from ccrawl.parser import parse
+-from ccrawl.core import ccore
+-from ccrawl.utils import c_type
 from ccrawl.db import Proxy,Query,where
 
 # ccrawl commands utilities:
@@ -87,7 +89,7 @@ def cli(ctx,verbose,quiet,db,local,configfile,tag):
     try:
         ctx.obj['db'] = Proxy(c.Database)
         if tag: ctx.obj['db'].set_tag(tag)
-    except:
+    except Exception:
         click.secho('failed',fg='red',err=True)
         exit(1)
     if conf.VERBOSE:
@@ -270,7 +272,7 @@ def select(ctx,ands,ors):
         for x in ors:
             k,v = x.split('=')
             Q |= (where(k).search(v))
-    except:
+    except Exception:
         click.secho('invalid options (ignored)',fg='yellow',err=True)
     ctx.obj['select'] = Q
     if ctx.invoked_subcommand is None:
@@ -300,7 +302,7 @@ def prototype(ctx,proto):
             pos,t = p.split(':')
             pos = int(pos)
             reqs[pos] = c_type(t).show()
-    except:
+    except Exception:
         click.secho('invalid arguments',fg='red',err=True)
         return
     db = ctx.obj['db']
@@ -344,7 +346,7 @@ def constant(ctx,mask,symbol,val):
                     continue
                 try:
                     v = int(x,0)
-                except:
+                except Exception:
                     continue
                 else:
                     if v==value:
@@ -389,7 +391,7 @@ def struct(ctx,pdef,conds):
                     reqs[off] = t
                 else:
                     reqs[off] = c_type(t)
-    except:
+    except Exception:
        click.secho('invalid arguments',fg='red',err=True)
        return
     db = ctx.obj['db']

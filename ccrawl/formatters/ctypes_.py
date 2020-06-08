@@ -1,13 +1,19 @@
-from collections import OrderedDict
-from ccrawl.utils import *
-from ccrawl import conf
+from ccrawl.utils import struct_letters,c_type,fargs
 from click import secho
-from tinydb import Query, where
+from tinydb import where
+
+__all__ = ['cTypedef_ctypes',
+           'cMacro_ctypes',
+           'cFunc_ctypes',
+           'cEnum_ctypes',
+           'cStruct_ctypes',
+           'cUnion_ctypes',
+           'cClass_ctypes',
+]
 
 toCTypes = {
     'void'               : 'c_void',
     '_Bool'              : 'c_bool',
-    'char'               : 'c_char',
     'wchar_t'            : 'c_wchar',
     'char'               : 'c_byte',
     'unsigned char'      : 'c_ubyte',
@@ -39,7 +45,7 @@ def id_ctypes(t):
     while P:
         p = P.pop(0)
         if p.is_ptr:
-            for x in p.p:
+            for _ in p.p:
                 r = 'POINTER(%s)'%r
         elif isinstance(p,fargs):
             r = formatproto(r,p)
@@ -76,7 +82,7 @@ def cMacro_ctypes(obj,db,recursive):
     try:
         v = int(v,base=0)
     except ValueError:
-        v = v
+        pass
     return '{} = {}'.format(obj.identifier,v)
 
 def cFunc_ctypes(obj,db,recursive):
@@ -111,6 +117,7 @@ def cStruct_ctypes(obj,db,recursive):
     if isinstance(recursive,set):
         Q = True
         recursive.update(struct_letters)
+        recursive.add(obj.identifier)
     else:
         Q = None
     name = id_ctypes(c_type(obj.identifier))
@@ -124,26 +131,24 @@ def cStruct_ctypes(obj,db,recursive):
     padded = False
     for i in obj:
         t,n,c = i
-        if not n: continue
         r = c_type(t)
+        if not n and not r.lbase.startswith('union '):
+            continue
         if Q and (r.lbase not in recursive):
-            if r.lbase == obj.identifier:
+            q = (where('id')==r.lbase)
+            if '?_' in r.lbase:
+                anon.append('"%s"'%n)
+                q &= (where('src')==obj.identifier)
+            if db.contains(q):
+                x = obj.from_db(db.get(q)).show(db,recursive,form='ctypes')
+                x = x.split('\n')
+                for xrl in x:
+                    if (xrl+'\n' in R) and not xrl.startswith(' '):
+                        continue
+                    if xrl: R.append(xrl+'\n')
                 recursive.add(r.lbase)
             else:
-                q = (where('id')==r.lbase)
-                if '?_' in r.lbase:
-                    anon.append('"%s"'%n)
-                    q &= (where('src')==obj.identifier)
-                if db.contains(q):
-                    x = obj.from_db(db.get(q)).show(db,recursive,form='ctypes')
-                    x = x.split('\n')
-                    for xrl in x:
-                        if (xrl+'\n' in R) and not xrl.startswith(' '):
-                            continue
-                        if xrl: R.append(xrl+'\n')
-                    recursive.add(r.lbase)
-                else:
-                    secho('identifier %s not found'%r.lbase,fg='red',err=True)
+                secho('identifier %s not found'%r.lbase,fg='red',err=True)
         t = id_ctypes(r)
         if r.lbfw: t += ', %d'%r.lbfw
         S.append('("{}", {}),\n'.format(n,t)+pad)

@@ -1,4 +1,3 @@
-import pdb
 import os
 import re
 from click import echo,secho
@@ -8,7 +7,15 @@ import tempfile
 import hashlib
 from collections import OrderedDict,defaultdict
 from ccrawl import conf
-from ccrawl.core import *
+from ccrawl.core import (cFunc,
+                        cMacro,
+                        cTypedef,
+                        cStruct,
+                        cUnion,
+                        cClass,
+                        cTemplate,
+                        cEnum,
+                        cNamespace)
 
 g_indent = 0
 
@@ -118,12 +125,12 @@ def EnumDecl(cur,cxx,errors=None):
     if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cEnum()
     S._in = str(cur.extent.start.file)
-    a = 0
+    #a = 0
     g_indent += 1
     for f in cur.get_children():
         if conf.DEBUG: echo('\t'*g_indent + "%s: "%(f.kind),nl=False)
-        if not f.is_definition():
-            if a: raise ValueError
+        #if not f.is_definition():
+        #    if a: raise ValueError
         if f.kind is CursorKind.ENUM_CONSTANT_DECL:
             S[f.spelling] = f.enum_value
             if conf.DEBUG: echo(str(f.enum_value),nl=False)
@@ -365,7 +372,7 @@ def fix_type_conversion(f,t,cxx,errs):
         if conf.DEBUG: secho("%s"%candidates,fg='magenta')
         # for every occurence of int type in t:
         T = [x for x in f.get_tokens()]
-        for m in re.finditer(r'(?<!\w)int(?!\w)',t):
+        for _ in re.finditer(r'(?<!\w)int(?!\w)',t):
             # lets see if this was diag-ed has an 'unknown type' error:
             # now we only need to replace some 'int' token be ut in t...
             # to be extracting the missing types
@@ -463,7 +470,7 @@ def parse(filename,
                 # we keep it here just in case.
                 if conf.VERBOSE: secho(err.format(),bg='red',err=True)
                 raise StandardError
-    except:
+    except Exception:
         if not conf.QUIET:
             secho('[err]',fg='red')
             if conf.VERBOSE:

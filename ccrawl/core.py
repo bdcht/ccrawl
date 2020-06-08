@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from ccrawl import formatters
-from ccrawl.utils import *
+from ccrawl.utils import struct_letters,c_type,cxx_type
 
 class ccore(object):
     """ Generic class dedicated to a collected object
@@ -98,6 +98,8 @@ class cTypedef(str,ccore):
                 if limit: limit-=1
                 self.add_subtype(db,elt,limit)
         return self
+    def __eq__(self,other):
+        return str(self)==str(other)
 #------------------------------------------------------------------------------
 
 class cStruct(list,ccore):
@@ -118,6 +120,8 @@ class cStruct(list,ccore):
                     if limit: limit-=1
                     self.add_subtype(db,elt,limit)
         return self
+    def __eq__(self,other):
+        return list(self)==list(other)
 #------------------------------------------------------------------------------
 
 class cClass(list,ccore):
@@ -127,10 +131,9 @@ class cClass(list,ccore):
             self.subtypes = OrderedDict()
             T = list(struct_letters.keys())
             T.append(self.identifier)
-            for (x,y,z) in self:
+            for (x,y,_) in self:
                 qal, t = x
                 mn, n  = y
-                p, c   = z
                 if qal == 'parent':
                     elt = n
                 else:
@@ -153,10 +156,9 @@ class cClass(list,ccore):
         self.unfold(db)
         M,V = [], OrderedDict()
         vptr = 0
-        for (x,y,z) in self:
+        for (x,y,_) in self:
             qal, t = x
             mn, n  = y
-            p, c   = z
             if qal == 'parent':
                 n = cxx_type(n)
                 nn = n.show_base()
@@ -165,7 +167,7 @@ class cClass(list,ccore):
                 try:
                     if x._is_typedef:
                         x = ccore._cache_.get(x,None)
-                except: pass
+                except Exception: pass
                 if x is None:
                     raise TypeError("unkown type '%s'"%n)
                 assert x._is_class
@@ -213,8 +215,7 @@ class cClass(list,ccore):
         return x
 
     def has_virtual_members(self):
-        n = 0
-        for x,y,z in self:
+        for x,_,_ in self:
             qal,t = x
             if 'virtual' in qal:
                 return True
@@ -227,7 +228,7 @@ class cClass(list,ccore):
             if 'parent' in qal:
                 mn, n = y
                 n = cxx_type(n)
-                p , c = z
+                p , _ = z
                 s = ''
                 if t:
                     s += ' virtual'
@@ -237,6 +238,8 @@ class cClass(list,ccore):
             return ' :'+(','.join(spe))
         else:
             return ''
+    def __eq__(self,other):
+        return list(self)==list(other)
 #------------------------------------------------------------------------------
 
 class cUnion(list,ccore):
@@ -257,6 +260,8 @@ class cUnion(list,ccore):
                     if limit: limit-=1
                     self.add_subtype(db,elt,limit)
         return self
+    def __eq__(self,other):
+        return list(self)==list(other)
 #------------------------------------------------------------------------------
 
 class cEnum(dict,ccore):
@@ -289,6 +294,8 @@ class cFunc(str,ccore):
                     T.append(elt)
                     self.add_subtype(db,elt)
         return self
+    def __eq__(self,other):
+        return str(self)==str(other)
 #------------------------------------------------------------------------------
 
 class cTemplate(dict,ccore):
@@ -314,4 +321,6 @@ class cNamespace(list,ccore):
             for elt in self:
                 self.add_subtype(db,elt)
         return self
+    def __eq__(self,other):
+        return list(self)==list(other)
 

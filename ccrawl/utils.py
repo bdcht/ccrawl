@@ -1,5 +1,5 @@
 import pyparsing as pp
-import re
+
 
 # ccrawl low-level utilities:
 #------------------------------------------------------------------------------
@@ -24,9 +24,9 @@ struct_letters = {
 # notes:
 # this part of ccrawl was a coding nightmare...I was aware that parsing C is
 # difficult and this was precisely why I'd use clang. Still, libclang's AST
-# only provides the C type string. I first tought it was going to be easy to
+# only provides the C type string. I first thought it was going to be easy to
 # correctly parse this "simple" subpart of C...well, its not. And for C++ its
-# even worse! Try playing with cdecl.org and see how funny this can be ;) 
+# even worse! Try playing with cdecl.org and see how funny this can be ;)
 #
 # ccrawl C type parser is implemented with below 'nested_c' pyparsing object.
 # It captures nested parenthesis expressions that allows to define complex C
@@ -56,7 +56,7 @@ objecttype = pp.Or([rawtypes,strucdecl])
 #define arrays:
 intp       = pp.Regex(r'[1-9][0-9]*')
 intp.setParseAction(lambda r: int(r[0]))
-bitfield   = rawtypes + pp.Suppress('#') + intp
+bitfield   = symbol + pp.Suppress('#') + intp
 arraydecl  = pp.Suppress('[')+intp+pp.Suppress(']')
 arrazdecl  = pp.Suppress('[')+pp.Or((intp,symbol))+pp.Suppress(']')
 pointer    = pp.Optional(pstars,default='')+pp.Optional(arraydecl,default=0)
@@ -72,7 +72,7 @@ nested_c   = pp.OneOrMore(nested_par)
 
 class c_type(object):
     """The c_type object parses a C type string and decomposes it into
-       several parts 
+       several parts
     """
     def __init__(self,decl):
         # get final element type:
@@ -89,7 +89,7 @@ class c_type(object):
         self.lbase = ' '.join(x)
         r = '(%s)'%r
         nest = nested_c.parseString(r).asList()[0]
-        self.pstack = pstack(nest)
+        self.pstack = pstack(nest,self.__class__)
     @property
     def is_ptr(self):
         return (ptr in [type(p) for p in self.pstack])
@@ -101,13 +101,13 @@ class c_type(object):
                 return p.a
         return 0
     def __repr__(self):
-        s = ['<c_type']
+        s = ['<%s'%self.__class__.__name__]
         s.extend(reversed([str(p) for p in self.pstack]))
         if self.lconst: s.append('const ')
         if self.lunsigned: s.append('unsigned ')
         s.append('{0.lbase}>'.format(self))
         return ' '.join(s)
-    def show_base(self):
+    def show_base(self,kw=False,ns=False):
         s = [self.lbase]
         if self.lunsigned: s.insert(0,'unsigned')
         if self.lconst: s.insert(0,'const')
@@ -131,24 +131,11 @@ class c_type(object):
 
 # C++ type declaration parser:
 #------------------------------------------------------------------------------
-# extends c_type essentially with extracting the namespace parts of the fully
+# cxx_type extends c_type with extracting the namespace parts of the fully
 # qualified name of the C++ type.
 class cxx_type(c_type):
     def __init__(self,decl):
-        bf = decl.rfind('#')
-        if bf>0:
-            x = bitfield.parseString(decl)
-            self.lbfw = x.pop()
-            r = ''
-        else:
-            x,r = (pp.Group(objecttype)+pp.restOfLine).parseString(decl)
-            self.lbfw = 0
-        self.lconst    = (x[0] =='const') and x.pop(0)
-        self.lunsigned = (x[0] =='unsigned') and x.pop(0)
-        self.lbase = ' '.join(x)
-        r = '(%s)'%r
-        nest = nested_c.parseString(r).asList()[0]
-        self.pstack = pstack(nest,cxx=True)
+        super().__init__(decl)
         # get namespaces:
         self.kw = ''
         self.ns = ''
@@ -225,9 +212,10 @@ class fargs(object):
             return "%s %s"%(self.f,self.cvr)
         return self.f
 
-def pstack(plist,cxx=False):
+def pstack(plist,cls=c_type):
     """returns the 'stack' of pointers-to array-N-of pointer-to
        function() returning pointer to function() returning ..."""
+    cxx = (cls == cxx_type)
     S = []
     cvr = ''
     if plist:

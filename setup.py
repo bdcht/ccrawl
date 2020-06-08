@@ -5,7 +5,7 @@ filtered Structures/Unions, Enums, Macros and Functions prototypes.'''
 
 setup(
     name = 'ccrawl',
-    version = '1.0',
+    version = '1.2',
     description = 'C source code crawler that creates a database of C-structures, prototypes and macros',
     long_description = long_descr,
     # Metadata
@@ -34,14 +34,7 @@ setup(
                         'ujson',
                         'requests',
                         'pymongo'],
-    zip_safe=False,
     package_data = {
-      'ccrawl':  ['srv/templates/*.html',
-                  'srv/static/css/*.css',
-                  'srv/static/fonts/*',
-                  'srv/static/js/*.js',
-                  'srv/static/img/*',
-                  'srv/static/locales/*',]
     },
     data_files = [],
     entry_points={
