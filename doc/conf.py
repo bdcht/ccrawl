@@ -24,9 +24,9 @@ copyright = '2019, bdcht'
 author = 'bdcht'
 
 # The short X.Y version
-version = '1.2'
+version = '1.3'
 # The full version, including alpha/beta/rc tags
-release = 'v1.2'
+release = 'v1.3'
 
 
 # -- General configuration ---------------------------------------------------

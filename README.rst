@@ -159,8 +159,9 @@ Todo
 Changelog
 =========
 
-- `v1.0`_
+- `v1.3`_
 
+  * add Flask-based REST API and server command
   * support for mongodb database backend
   * support for local tinydb databases
   * c_type and cxx_type parsers for C/C++ types
