@@ -229,7 +229,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
 def search(ctx,ignorecase,rex):
     """Search for documents in the remote database
     (or the local database if no remote is found) with either name
-    or definition matching the provided regular expression. 
+    or definition matching the provided regular expression.
     """
     db = ctx.obj['db']
     flg = re.MULTILINE
@@ -261,8 +261,8 @@ def search(ctx,ignorecase,rex):
 @click.pass_context
 def select(ctx,ands,ors):
     """Get document(s) from the remote database
-    (or the local database if no remote is found) matching  
-    multiple constraints. 
+    (or the local database if no remote is found) matching
+    multiple constraints.
     """
     Q = Query()
     try:
@@ -274,7 +274,7 @@ def select(ctx,ands,ors):
             Q |= (where(k).search(v))
     except Exception:
         click.secho('invalid options (ignored)',fg='yellow',err=True)
-    ctx.obj['find'] = Q
+    ctx.obj['select'] = Q
     if ctx.invoked_subcommand is None:
         db = ctx.obj['db']
         L = db.search(Q)
@@ -292,9 +292,9 @@ def select(ctx,ands,ors):
 @click.pass_context
 def prototype(ctx,proto):
     """Get prototype definitions from the remote database
-    (or the local database if no remote is found) matching  
+    (or the local database if no remote is found) matching
     constraints on name of its return type or specific
-    arguments. 
+    arguments.
     """
     reqs = {}
     try:
@@ -328,9 +328,9 @@ def prototype(ctx,proto):
 @click.pass_context
 def constant(ctx,mask,symbol,val):
     """Get constant definitions (macros or enums)
-    from the remote database (or the local database if no remote is found) matching  
+    from the remote database (or the local database if no remote is found) matching
     constraints on value (possibly representing a mask of several symbols) and
-    symbol prefix. 
+    symbol prefix.
     """
     value = int(val,0)
     db = ctx.obj['db']
@@ -372,7 +372,7 @@ def constant(ctx,mask,symbol,val):
 @click.pass_context
 def struct(ctx,pdef,conds):
     """Get structured definitions (struct, union or class)
-    from the remote database (or the local database if no remote is found) matching  
+    from the remote database (or the local database if no remote is found) matching
     constraints on total size or specific type name or size at given offset within
     the structure.
     """
@@ -519,7 +519,7 @@ def info(ctx,identifier):
 @click.pass_context
 def store(ctx,update):
     """Update the remote database with definitions from the current local database.
-    If the update option flag is set, the dependency graph of local definitions 
+    If the update option flag is set, the dependency graph of local definitions
     is computed before pushing definitions to the remote database.
     """
     db = ctx.obj['db']
@@ -638,3 +638,11 @@ def stats(ctx):
     click.echo('structures:')
     l,s = max(((len(s['val']),s['id']) for s in S))
     click.echo("  max fields: %d (in '%s')"%(l,s))
+
+@cli.command()
+@click.pass_context
+def server(ctx):
+    db = ctx.obj['db']
+    click.echo('starting server mode...')
+    from ccrawl.srv.main import run
+    run(ctx)
