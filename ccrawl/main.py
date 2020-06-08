@@ -6,9 +6,9 @@ from ccrawl import conf
 from ccrawl.formatters import formats
 from ccrawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL
 from ccrawl.parser import FUNCTION_DECL, MACRO_DEF
--from ccrawl.parser import parse
--from ccrawl.core import ccore
--from ccrawl.utils import c_type
+from ccrawl.parser import parse
+from ccrawl.core import ccore
+from ccrawl.utils import c_type
 from ccrawl.db import Proxy,Query,where
 
 # ccrawl commands utilities:
