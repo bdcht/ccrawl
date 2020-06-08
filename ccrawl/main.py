@@ -272,7 +272,7 @@ def select(ctx,ands,ors):
             Q |= (where(k).search(v))
     except:
         click.secho('invalid options (ignored)',fg='yellow',err=True)
-    ctx.obj['find'] = Q
+    ctx.obj['select'] = Q
     if ctx.invoked_subcommand is None:
         db = ctx.obj['db']
         L = db.search(Q)
