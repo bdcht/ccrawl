@@ -47,6 +47,11 @@ def fieldformat(r):
             rt = '{} * {:d}'.format(rt,r.dim)
         else:
             t = '{} * {:d}'.format(t,r.dim)
+    elif r.lbfw>0:
+        if rt:
+            rt = '{} *#{:d}'.format(rt,r.lbfw)
+        else:
+            t = '{} *#{:d}'.format(t,r.lbfw)
     return rt,t
 
 def cTypedef_amoco(obj,db,recursive):

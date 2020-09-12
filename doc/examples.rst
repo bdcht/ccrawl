@@ -262,7 +262,7 @@ return type 'int' and first argument pointer-to 'EC_KEY' ::
     ___ ___ _ __ __ ___      _| |
    / __/ __| '__/ _` \ \ /\ / / |
   | (_| (__| | | (_| |\ V  V /| |
-   \___\___|_|  \__,_| \_/\_/ |_| v1.2.0
+   \___\___|_|  \__,_| \_/\_/ |_| v1.4.0
 
 
   In [1]: ctx.invoke(prototype,proto=("0:int","1:EC_KEY *"))
