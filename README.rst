@@ -159,6 +159,11 @@ Todo
 Changelog
 =========
 
+- `v1.4`_
+
+  * update code for libclang-10 (using python3-clang)
+  * improve bitfield support
+
 - `v1.3`_
 
   * add Flask-based REST API and server command
@@ -174,5 +179,6 @@ Changelog
 .. _clang: https://pypi.org/project/clang/
 .. _ctypes: https://docs.python.org/3.7/library/ctypes.html
 .. _amoco: https://github.com/bdcht/amoco
-.. _v1.0: https://github.com/bdcht/ccrawl/releases/tag/v1.0
+.. _v1.4: https://github.com/bdcht/ccrawl/releases/tag/v1.4
+.. _v1.3: https://github.com/bdcht/ccrawl/releases/tag/v1.3
 
