@@ -29,7 +29,7 @@ setup(
                         'click',
                         'traitlets',
                         'pyparsing',
-                        'tinydb',
+                        'tinydb < 4.0.0',
                         'python-rapidjson',
                         'requests',
                         'pymongo'],
