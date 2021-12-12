@@ -9,7 +9,7 @@ class Proxy(object):
         self.c = config
         self.ldb = None
         self.rdb = None
-        self.tag = Query()
+        self.tag = Query().noop()
         self.req = None
         if config.local:
             try:
@@ -33,7 +33,7 @@ class Proxy(object):
                 self.rdb = None
 
     def set_tag(self,tag=None):
-        self.tag = (where('tag').search(tag)) if tag else Query()
+        self.tag = (where('tag').search(tag)) if tag else Query().noop()
 
     def insert_multiple(self,docs):
         self.ldb.insert_multiple(docs)
@@ -43,7 +43,7 @@ class Proxy(object):
         for k in kargs:
             q &= (where(k)==kargs[k])
         if self.rdb:
-            return self.rdb.contains(q.hashval,**kargs)
+            return self.rdb.contains(q._hash,**kargs)
         return self.ldb.contains(q)
 
     def search(self,q=None,**kargs):
@@ -51,7 +51,7 @@ class Proxy(object):
         for k in kargs:
             q &= (where(k)==kargs[k])
         if self.rdb:
-            return list(self.rdb.search(q.hashval,**kargs))
+            return list(self.rdb.search(q._hash,**kargs))
         return self.ldb.search(q)
 
     def get(self,q=None,**kargs):
@@ -59,7 +59,7 @@ class Proxy(object):
         for k in kargs:
             q &= (where(k)==kargs[k])
         if self.rdb:
-            return self.rdb.get(q.hashval,**kargs)
+            return self.rdb.get(q._hash,**kargs)
         return self.ldb.get(q)
 
     def close(self):

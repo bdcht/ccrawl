@@ -155,7 +155,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
         if types: K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL]
         if functions: K += [FUNCTION_DECL]
         if macros: K += [MACRO_DEF]
-    tag = ctx.obj['db'].tag.hashval[-1] or None
+    tag = ctx.obj['db'].tag._hash[-1] or None
     if tag is None:
         tag = str(time.time())
     # filters:
