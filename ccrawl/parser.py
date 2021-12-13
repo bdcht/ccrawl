@@ -85,10 +85,10 @@ def StructDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
     if cxx:
         typename = cur.type.get_canonical().spelling
+    if not typename.startswith('struct '):
         typename = 'struct '+typename
-    else:
-        typename = get_uniq_typename(typename)
-        if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
+    typename = get_uniq_typename(typename)
+    if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cClass() if cxx else cStruct()
     SetStructured(cur,S,errors)
     return typename,S
@@ -98,10 +98,10 @@ def UnionDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
     if cxx:
         typename = cur.type.get_canonical().spelling
+    if not typename.startswith('union '):
         typename = 'union '+typename
-    else:
-        typename = get_uniq_typename(typename)
-        if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
+    typename = get_uniq_typename(typename)
+    if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
     S = cClass() if cxx else cUnion()
     SetStructured(cur,S,errors)
     return typename,S
@@ -120,6 +120,7 @@ def EnumDecl(cur,cxx,errors=None):
     typename = cur.type.spelling
     if cxx:
         typename = cur.type.get_canonical().spelling
+    if not typename.startswith('enum '):
         typename = 'enum '+typename
     typename = get_uniq_typename(typename)
     if conf.DEBUG: echo('\t'*g_indent+'make unique: %s'%typename)
