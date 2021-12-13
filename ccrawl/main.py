@@ -155,7 +155,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
         if types: K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL]
         if functions: K += [FUNCTION_DECL]
         if macros: K += [MACRO_DEF]
-    tag = ctx.obj['db'].tag._hash[-1] or None
+    tag = ctx.obj['db'].tag._hash or None
     if tag is None:
         tag = str(time.time())
     # filters:
@@ -194,7 +194,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
         if not c.Terminal.quiet:
             p = (((total-len(FILES))*100.)/total)
             click.echo(('[%3d%%] %s '%(p,filename)).ljust(W),nl=False)
-        l = parse(filename,args,kind=K,tag=tag)
+        l = parse(filename,args,kind=K,tag=tag[-1])
         t1 = time.time()
         if c.Terminal.timer:
             click.secho('(%.2f+'%(t1-t0),nl=False,fg='cyan')
