@@ -5,7 +5,7 @@ filtered Structures/Unions, Enums, Macros and Functions prototypes.'''
 
 setup(
     name = 'ccrawl',
-    version = '1.4',
+    version = '1.5',
     description = 'C source code crawler that creates a database of C-structures, prototypes and macros',
     long_description = long_descr,
     # Metadata
@@ -25,7 +25,7 @@ setup(
     url = 'https://github.com/bdcht/ccrawl',
     setup_requires=['pytest-runner',],
     tests_require=['pytest',],
-    install_requires = ['clang',
+    install_requires = ['libclang',
                         'click',
                         'traitlets',
                         'pyparsing',
