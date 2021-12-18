@@ -258,7 +258,7 @@ def SetStructured(cur,S,errors=None):
             try:
                 comment = f.brief_comment or f.raw_comment
             except UnicodeDecodeError:
-                comment = f.raw_comment
+                comment = ""
             # type spelling is our member type only if this type is defined already,
             # otherwise clang takes the default 'int' type here and we can't access
             # the wanted type unless we access f's tokens.
