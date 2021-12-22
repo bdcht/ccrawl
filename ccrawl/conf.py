@@ -7,11 +7,11 @@ from traitlets import Unicode, Bool, observe
 
 __version__ = "1.4.0"
 
-# default clang library file:
-if os.name == 'posix':
-    clang_library_file = '/usr/lib/llvm-10/lib/libclang-10.so.1'
-else:
-    clang_library_file = 'libclang-10.dll'
+# default clang library file: NOT REQUIRED for libclang-12
+#if os.name == 'posix':
+#    clang_library_file = '/usr/lib/llvm-10/lib/libclang-10.so.1'
+#else:
+#    clang_library_file = 'libclang-10.dll'
 
 # ccrawl globals:
 #------------------------------------------------------------------------------
@@ -66,7 +66,7 @@ class Collect(Configurable):
     strict = Bool(False,config=True)                                           # don't block on missing headers/types
     cxx = Bool(True,config=True)                                               # try detecting c++ inputs
     tmp = Unicode()                                                            # don't change temp directory
-    lib = Unicode(clang_library_file,config=True)                              # assume clang_library_file is libclang-6.0.so
+    lib = Unicode(clang_library_file,config=True)                              # allow to choose clang_library_file
     @observe('lib')
     def _lib_changed(self,change):
         clang.cindex.Config.library_file = change['new']
