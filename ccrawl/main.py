@@ -234,7 +234,11 @@ def search(ctx,ignorecase,rex):
     db = ctx.obj['db']
     flg = re.MULTILINE
     if ignorecase: flg |= re.IGNORECASE
-    cx = re.compile(rex,flags=flg)
+    try:
+        cx = re.compile(rex,flags=flg)
+    except re.error as err:
+        click.secho(f'bad regular expression: {err=}',fg='red')
+        return None
     look = (lambda v: cx.search(str(v)))
     Q = (where('id').matches(rex,flags=flg))
     if db.rdb:
