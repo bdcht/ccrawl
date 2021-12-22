@@ -9,7 +9,6 @@ def test_clang_cindex(configfile):
     c.Collect.strict = False
     c.Collect.cxx    = False
     conf.config = c
-    assert clang.cindex.Config.library_file is not None
     try:
         index = Index.create()
     except:

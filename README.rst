@@ -159,6 +159,11 @@ Todo
 Changelog
 =========
 
+- `v1.5`_
+
+  * update code for libclang-12 (using python3-clang)
+  * update to tinydb v4.x
+
 - `v1.4`_
 
   * update code for libclang-10 (using python3-clang)
@@ -179,6 +184,7 @@ Changelog
 .. _clang: https://pypi.org/project/clang/
 .. _ctypes: https://docs.python.org/3.7/library/ctypes.html
 .. _amoco: https://github.com/bdcht/amoco
+.. _v1.5: https://github.com/bdcht/ccrawl/releases/tag/v1.5
 .. _v1.4: https://github.com/bdcht/ccrawl/releases/tag/v1.4
 .. _v1.3: https://github.com/bdcht/ccrawl/releases/tag/v1.3
 

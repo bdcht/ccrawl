@@ -268,7 +268,7 @@ def select(ctx,ands,ors):
     (or the local database if no remote is found) matching
     multiple constraints.
     """
-    Q = Query()
+    Q = Query().noop()
     try:
         for x in ands:
             k,v = x.split('=')
@@ -310,7 +310,7 @@ def prototype(ctx,proto):
         click.secho('invalid arguments',fg='red',err=True)
         return
     db = ctx.obj['db']
-    Q  = ctx.obj.get('select',Query())
+    Q  = ctx.obj.get('select',Query().noop())
     L = db.search(Q,cls='cFunc')
     R = []
     with click.progressbar(L) as pL:
@@ -338,7 +338,7 @@ def constant(ctx,mask,symbol,val):
     """
     value = int(val,0)
     db = ctx.obj['db']
-    Q  = ctx.obj.get('select',Query())
+    Q  = ctx.obj.get('select',Query().noop())
     Q &= ((where('cls')=='cMacro')|(where('cls')=='cEnum'))
     L = db.search(Q)
     R = []
@@ -399,7 +399,7 @@ def struct(ctx,pdef,conds):
        click.secho('invalid arguments',fg='red',err=True)
        return
     db = ctx.obj['db']
-    Q  = ctx.obj.get('select',Query())
+    Q  = ctx.obj.get('select',Query().noop())
     L = db.search(Q & ((where('cls')=='cStruct') | (where('cls')=='cClass')))
     R = []
     fails = []

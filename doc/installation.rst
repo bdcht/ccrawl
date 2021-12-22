@@ -1,7 +1,7 @@
 Installation
 ============
 
-ccrawl is written in Python, it supports versions >=3.5.
+ccrawl is written in Python, it supports versions >=3.8.
 It depends on:
 
  - libclang_
@@ -22,23 +22,16 @@ We recommend to install ccrawl in its own *virtualenv* with included ipython_ ::
   Also creating executable in /home/user/lib/python-envs/venv/bin/python
   Installing setuptools, pkg_resources, pip, wheel...done.
 
-  (venv) user@machine:~/ccrawl % sudo apt install libclang1-10
-
   (venv) user@machine:~/ccrawl % pip install ipython
   [...]
 
-  (venv) user@machine:~/ccrawl % python setup.py install
+  (venv) user@machine:~/ccrawl % pip install .
   [...]
 
   (venv) user@machine:~/ccrawl % cd /tmp
 
-  (venv) user@machine:~/ccrawl % locate libclang-10.so
-  /usr/lib/llvm-10/lib/libclang-10.so.1
-  /usr/lib/x86_64-linux-gnu/libclang-10.so.1
-
   (venv) user@machine:/tmp % cat > ccrawlrc
   c.Terminal.console = 'ipython'
-  c.Collect.lib = '/usr/lib/llvm-10/lib/libclang-10.so.1'
 
   (venv) user@machine:/tmp % ccrawl -c ccrawlrc
 
@@ -46,7 +39,7 @@ We recommend to install ccrawl in its own *virtualenv* with included ipython_ ::
     ___ ___ _ __ __ ___      _| |
    / __/ __| '__/ _` \ \ /\ / / |
   | (_| (__| | | (_| |\ V  V /| |
-   \___\___|_|  \__,_| \_/\_/ |_| v1.4.0
+   \___\___|_|  \__,_| \_/\_/ |_| v1.5.0
 
 
   In [1]: [^D]
