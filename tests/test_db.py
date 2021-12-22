@@ -9,7 +9,7 @@ def test_Proxy_tinydb(configfile,db_doc1,db_doc2):
     db = Proxy(c.Database)
     assert db.c == c.Database
     assert type(db.ldb).__name__ == 'TinyDB'
-    assert db.ldb.storage_proxy_class.__name__ == 'StorageProxy'
+    assert db.ldb.storage.__class__.__name__ == 'MemoryStorage'
     assert db.rdb is None
     assert len(list(db.ldb))==0
     db.ldb.insert(db_doc1)

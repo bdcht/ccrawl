@@ -155,7 +155,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
         if types: K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL]
         if functions: K += [FUNCTION_DECL]
         if macros: K += [MACRO_DEF]
-    tag = ctx.obj['db'].tag.hashval[-1] or None
+    tag = ctx.obj['db'].tag._hash or None
     if tag is None:
         tag = str(time.time())
     # filters:
@@ -194,7 +194,7 @@ def collect(ctx,allc,types,functions,macros,strict,xclang,src):
         if not c.Terminal.quiet:
             p = (((total-len(FILES))*100.)/total)
             click.echo(('[%3d%%] %s '%(p,filename)).ljust(W),nl=False)
-        l = parse(filename,args,kind=K,tag=tag)
+        l = parse(filename,args,kind=K,tag=tag[-1])
         t1 = time.time()
         if c.Terminal.timer:
             click.secho('(%.2f+'%(t1-t0),nl=False,fg='cyan')
@@ -234,7 +234,11 @@ def search(ctx,ignorecase,rex):
     db = ctx.obj['db']
     flg = re.MULTILINE
     if ignorecase: flg |= re.IGNORECASE
-    cx = re.compile(rex,flags=flg)
+    try:
+        cx = re.compile(rex,flags=flg)
+    except re.error as err:
+        click.secho(f'bad regular expression: {err=}',fg='red')
+        return None
     look = (lambda v: cx.search(str(v)))
     Q = (where('id').matches(rex,flags=flg))
     if db.rdb:
@@ -264,7 +268,7 @@ def select(ctx,ands,ors):
     (or the local database if no remote is found) matching
     multiple constraints.
     """
-    Q = Query()
+    Q = Query().noop()
     try:
         for x in ands:
             k,v = x.split('=')
@@ -306,7 +310,7 @@ def prototype(ctx,proto):
         click.secho('invalid arguments',fg='red',err=True)
         return
     db = ctx.obj['db']
-    Q  = ctx.obj.get('select',Query())
+    Q  = ctx.obj.get('select',Query().noop())
     L = db.search(Q,cls='cFunc')
     R = []
     with click.progressbar(L) as pL:
@@ -334,7 +338,7 @@ def constant(ctx,mask,symbol,val):
     """
     value = int(val,0)
     db = ctx.obj['db']
-    Q  = ctx.obj.get('select',Query())
+    Q  = ctx.obj.get('select',Query().noop())
     Q &= ((where('cls')=='cMacro')|(where('cls')=='cEnum'))
     L = db.search(Q)
     R = []
@@ -395,7 +399,7 @@ def struct(ctx,pdef,conds):
        click.secho('invalid arguments',fg='red',err=True)
        return
     db = ctx.obj['db']
-    Q  = ctx.obj.get('select',Query())
+    Q  = ctx.obj.get('select',Query().noop())
     L = db.search(Q & ((where('cls')=='cStruct') | (where('cls')=='cClass')))
     R = []
     fails = []

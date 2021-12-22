@@ -26,7 +26,7 @@ def cTypedef_C(obj,db,recursive):
             pre = x.show(db,recursive,form='C')+'\n'
         else:
             secho('identifier %s not found'%t.lbase,fg='red',err=True)
-    # if t base is an anonymous type, we replace is anon name
+    # if t base is an anonymous type, we replace its anon name
     # by its struct/union definition in t:
     if recursive and '?_' in t.lbase:
         pre = pre.split('\n\n')
