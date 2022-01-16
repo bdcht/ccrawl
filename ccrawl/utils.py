@@ -89,8 +89,13 @@ class c_type(object):
         self.lconst = (x[0] == "const") and x.pop(0)
         self.lunsigned = (x[0] == "unsigned") and x.pop(0)
         self.lbase = " ".join(x)
+        r = r.replace('[]','*')
         r = "(%s)" % r
-        nest = nested_c.parseString(r).asList()[0]
+        try:
+            nest = nested_c.parseString(r).asList()[0]
+        except Exception as e:
+            print("c_type: error while parsing '%s'"%r)
+            raise e
         self.pstack = pstack(nest, self.__class__)
 
     @property
