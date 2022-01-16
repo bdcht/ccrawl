@@ -50,13 +50,24 @@ except AttributeError:
 except ConnectionRefusedError:
     secho("ghidra_bridge connection error", fg="red")
 else:
-    # dtm = ghidra.program.model.data.StandAloneDataTypeManager("ccrawl")
-    dtm = currentProgram.getDataTypeManager()
+    if conf.config.Ghidra.manager=='program':
+        dtm = currentProgram.getDataTypeManager()
+        if conf.VERBOSE:
+            secho("ghidra_bridge connection with data type manager %s"%dtm, fg="blue")
+        tr = dtm.startTransaction("ccrawl")
+        root = dtm.getRootCategory()
+        catp = root.createCategory(conf.config.Ghidra.category)
+        dtm.endTransaction(tr, True)
+        if conf.VERBOSE:
+            secho("importing types in ccrawl category...", fg="blue")
+    else:
+        dtm = ghidra.program.model.data.StandAloneDataTypeManager(conf.config.Ghidra.category)
+        if conf.VERBOSE:
+            secho("ghidra_bridge connection with standalone data type manager", fg="blue")
+        catp = dtm.getRootCategory()
+
     eqt = currentProgram.getEquateTable()
-    tr = dtm.startTransaction("ccrawl")
-    root = dtm.getRootCategory()
-    catp = root.createCategory("ccrawl")
-    dtm.endTransaction(tr, True)
+
     GhidraHandlers = {}
 
     def declareGhidraHandler(kind, *alt):
@@ -91,7 +102,8 @@ else:
         if x is not None:
             secho("Data type %s already imported" % n, fg="cyan")
             return x
-        secho("building data type %s..." % n)
+        if conf.VERBOSE:
+            secho("building data type %s..." % n,nl=False)
         tr = dtm.startTransaction("build")
         try:
             if obj._is_enum:
@@ -101,7 +113,7 @@ else:
                 dt = catp.addDataType(dt, None)
             else:
                 x = obj.build(db)
-                dt = ctype_to_ghidra(x, dtm)
+                dt = ctype_to_ghidra(x, catp)
                 if obj._is_func:
                     dt.setName(n)
                 if obj._is_typedef:
@@ -110,7 +122,12 @@ else:
                     dt = ghidra.program.model.data.TypedefDataType(n, dt)
                     dt = catp.addDataType(dt, None)
         except Exception as e:
-            secho("ghidra.build exception: %s"%e,fg='red')
+            if conf.VERBOSE:
+                secho("ghidra.build exception: %s"%e,fg='red')
+            dt = None
+        else:
+            if conf.VERBOSE:
+                secho("done.",fg="green")
         finally:
             dtm.endTransaction(tr, True)
         return dt
@@ -168,7 +185,7 @@ else:
         if conf.DEBUG:
             secho("conversion of %s" % cx, fg="cyan")
         l = sizeof(cx)
-        sdt = ghidra.program.model.data.UnionDataType(cx.__name__, 0)
+        sdt = ghidra.program.model.data.UnionDataType(cx.__name__)
         sdt = catp.addDataType(sdt, None)
         for n, t in cx._fields_:
             dt = ctype_to_ghidra(t, dtm)

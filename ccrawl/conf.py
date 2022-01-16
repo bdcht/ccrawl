@@ -90,6 +90,11 @@ class Formats(Configurable):
     default = Unicode("C", config=True)  # show results formatted as C code
     callcon = Unicode("cdecl", config=True)  # assume cdecl calling convention
 
+class Ghidra(Configurable):
+    "configurable parameters related to ghidra"
+    manager = Unicode("program", config=True)  # use ghidra_bridge on currentProgram
+    category = Unicode("ccrawl", config=True)  # import types into ccrawl category
+
 
 class Config(object):
     def __init__(self, f=None):
@@ -105,6 +110,7 @@ class Config(object):
         self.Database = Database(config=c)
         self.Collect = Collect(config=c)
         self.Formats = Formats(config=c)
+        self.Ghidra = Ghidra(config=c)
         self.src = c
         if self.Collect.lib:
             clang.cindex.Config.library_file = self.Collect.lib
