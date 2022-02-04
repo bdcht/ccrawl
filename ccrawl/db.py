@@ -65,6 +65,9 @@ class Proxy(object):
             return self.rdb.get(q._hash, **kargs)
         return self.ldb.get(q)
 
+    def cleanup(self):
+        self.rdb.cleanup(self)
+
     def close(self):
         self.ldb.close()
 
@@ -134,3 +137,60 @@ class MongoDB(object):
     def get(self, q, **kargs):
         col = self.db.get_collection("nodes")
         return col.find_one(self._where(q))
+
+    def cleanup(self,proxy):
+        from pymongo import TEXT
+        click.echo("removing duplicates...",nl=False)
+        self.remove_duplicates()
+        click.echo("done.")
+        click.echo("updating collections of offsets/size for structs...",nl=False)
+        self.update_structs(proxy)
+        click.echo("done.")
+        col = self.db.get_collection("nodes")
+        click.echo("indexing 'id' and 'val' fields...",nl=False)
+        col.create_index([("id",TEXT), ("val",TEXT)])
+        click.echo("done.")
+
+    def update_structs(self,proxydb):
+        from ccrawl.core import ccore
+        from ccrawl.ext import amoco
+        col = self.db.get_collection("nodes")
+        s_32 = self.db["structs_ptr32"]
+        s_64 = self.db["structs_ptr64"]
+        for s in col.find({"cls": "cStruct"}):
+            click.echo("updating {}".format(s["id"]))
+            i = s["_id"]
+            x = ccore.from_db(s)
+            try:
+                ax = amoco.build(x,proxydb)()
+                off32 = ax.offsets(psize=4)
+                tot32 = ax.size(psize=4)
+                off64 = ax.offsets(psize=8)
+                tot64 = ax.size(psize=8)
+            except:
+                continue
+            s_32.update_one({"_id": i}, {"$set": {"_id": i,
+                                                  "size": tot32,
+                                                  "offsets": off32}},
+                            upsert=True)
+            s_64.update_one({"_id": i}, {"$set": {"_id": i,
+                                                  "size": tot64,
+                                                  "offsets": off64}},
+                            upsert=True)
+
+    def remove_duplicates(self, **kargs):
+        col = self.db.get_collection("nodes")
+        L = [{"$match": kargs}] if kargs else []
+        L += [
+             {"$group": {"_id": {"id":"$id", "val":"$val"},
+                         "count": {"$sum":1},
+                         "tbd": { "$push": "$$ROOT._id" }
+                        }
+             },
+             {"$match": {"count": {"$gt": 1}}},
+             ]
+        res = col.aggregate(L)
+        for x in res:
+            #click.echo("found {} occurences for {}".format(x["count"],
+            #                                               x["_id"]))
+            col.delete_many({"_id": {"$in" : x["tbd"][1:]}})
