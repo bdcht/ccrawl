@@ -568,7 +568,10 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
     for cur, errs in pool:
         if cur.location.file is None:
             continue
-        for l in range(cur.extent.start.line, cur.extent.end.line + 1):
+        span = range(cur.extent.start.line, cur.extent.end.line + 1)
+        if cur.location.line not in span:
+            span = range(cur.location.line, cur.location.line+1)
+        for l in span:
             errs.extend(diag[l])
     # now finally call the handlers:
     for cur, errs in pool:
