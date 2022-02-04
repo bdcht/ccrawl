@@ -36,11 +36,11 @@ struct_letters = {
 # definitions for objecttype --------------------------------------------------
 # the elementary type related to the parsed string.
 # define 'raw' types:
-unsigned = pp.Keyword("unsigned")
+unsigned = pp.Keyword("unsigned")|pp.Keyword("signed")
 const = pp.Keyword("const")
 volatile = pp.Keyword("volatile")
 noexcept = pp.Keyword("noexcept")
-prefix = pp.Or((const, unsigned, const + unsigned))
+prefix = pp.ZeroOrMore(pp.Or((const,volatile,unsigned)))
 cvqual = pp.Or((const, volatile, const + volatile, noexcept))
 T = [pp.Keyword(t) for t in struct_letters]
 rawtypes = pp.Optional(prefix) + pp.Or(T)
@@ -86,9 +86,20 @@ class c_type(object):
         else:
             x, r = (pp.Group(objecttype) + pp.restOfLine).parseString(decl)
             self.lbfw = 0
-        self.lconst = (x[0] == "const") and x.pop(0)
-        self.lunsigned = (x[0] == "unsigned") and x.pop(0)
-        self.lbase = " ".join(x)
+        lbase = []
+        self.lconst = self.lunsigned = self.lvolatile = False
+        for w in x:
+            if w=="const":
+                self.lconst = True
+            elif w=="unsigned":
+                self.lunsigned = True
+            elif w=="signed":
+                pass
+            elif w=="volatile":
+                self.lvolatile = True
+            else:
+                lbase.append(w)
+        self.lbase = " ".join(lbase)
         r = r.replace('[]','*')
         r = "(%s)" % r
         try:
