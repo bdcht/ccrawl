@@ -209,6 +209,7 @@ else:
             dt = ctype_to_ghidra(p, dtm)
             p = ghidra.program.model.data.ParameterDefinitionImpl("p%d" % i, dt, "")
             params.append(p)
+            i+=1
         fdt.setArguments(params)
         if cx._restype_ is not None:
             res = ctype_to_ghidra(cx._restype_, dtm)
@@ -291,3 +292,108 @@ else:
     @declareGhidraHandler("c_longdouble")
     def dt_longdouble(cx, dtm):
         return ghidra.program.model.data.LongDoubleDataType()
+
+
+    def find_matching_types(f,db):
+        if isinstance(f,str):
+            try:
+                f = getGlobalFunctions(f)[0]
+            except:
+                secho("error: function '%s' not found."%f,fg="red")
+                return None
+        opt = ghidra.app.decompiler.DecompileOptions()
+        ifc = ghidra.app.decompiler.DecompInterface()
+        dut = ghidra.app.decompiler.component.DecompilerUtils
+        ifc.setOptions(opt)
+        ifc.openProgram(f.getProgram())
+        res = ifc.decompileFunction(f, 1000, monitor)
+        hf = res.getHighFunction()
+        lsm = hf.getLocalSymbolMap()
+        Locs = {}
+        for n,s in lsm.getNameToSymbolMap().items():
+            S = []
+            t = s.getDataType()
+            if conf.DEBUG:
+                secho("\nVariable name & type: '{}' : '{}'".format(n,t),fg='magenta')
+            if t.getDescription().startswith('pointer'):
+                hv = s.getHighVariable()
+                vn0 = hv.getRepresentative()
+                todo = [(vn0,0)]
+                done = list(hv.getInstances())
+                for vn in done:
+                    if vn != vn0:
+                        todo.append((vn,0))
+                while(len(todo)>0):
+                    if conf.DEBUG:
+                        secho("todo: {}".format(todo),fg='green')
+                        secho("done: {}".format(done),fg='blue')
+                    cur,off0 = todo.pop(0)
+                    if cur is None: continue
+                    for p in cur.getDescendants():
+                        off = off0
+                        if conf.DEBUG: secho("  pcode: {}".format(p),fg='magenta')
+                        if p.opcode == p.INT_ADD:
+                            if p.inputs[1].isConstant():
+                               off += getSigned(p.inputs[1])
+                               if p.output not in done:
+                                   todo.append((p.output,off))
+                                   done.append(p.output)
+                        elif p.opcode == p.INT_SUB:
+                            if p.inputs[1].isConstant():
+                               off -= getSigned(p.inputs[1])
+                               if p.output not in done:
+                                   todo.append((p.output,off))
+                                   done.append(p.output)
+                        elif p.opcode == p.PTRADD:
+                            if p.inputs[1].isConstant() and p.inputs[2].isConstant():
+                                off += getSigned(p.inputs[1])*(p.inputs[2].getOffset())
+                                if p.output not in done:
+                                    todo.append((p.output,off))
+                                    done.append(p.output)
+                        elif p.opcode == p.PTRSUB:
+                            if p.inputs[1].isConstant():
+                                off += getSigned(p.inputs[1])
+                                if p.output not in done:
+                                    todo.append((p.output,off))
+                                    done.append(p.output)
+                        elif p.opcode == p.LOAD:
+                            outdt = getDataTypeTraceForward(p.output)
+                            S.append((off,outdt))
+                        elif p.opcode == p.STORE:
+                            if p.getSlot(cur)==1:
+                                outdt = getDataTypeTraceBackward(p.inputs[2])
+                                S.append((off,outdt))
+                        elif p.opcode in (p.CAST,p.MULTIEQUAL,p.COPY):
+                            if p.output not in done:
+                                todo.append((p.output,off))
+                                done.append(p.output)
+                        if conf.DEBUG:
+                            secho("S = {}".format(S),fg='cyan')
+                Locs[n] = S
+            return Locs
+
+    def getSigned(v):
+        mask = 0x80<<((v.getSize()-1)*8)
+        value = v.getOffset()
+        if value&mask:
+            value -= 1 << (v.getSize()*8)
+        return value
+
+    def getDataTypeTraceBackward(v):
+        res = v.getHigh().getDataType()
+        p = v.getDef()
+        if (p is not None) and (p.opcode == p.CAST):
+            vn = p.getInput(0)
+            f = ghidra.program.model.data.MetaDataType.getMostSpecificDataType
+            res = f(res, vn.getHigh().getDataType())
+        return res
+
+    def getDataTypeTraceForward(v):
+        res = v.getHigh().getDataType()
+        p = v.getLoneDescend()
+        if (p is not None) and (p.opcode == p.CAST):
+            vn = p.output
+            f = ghidra.program.model.data.MetaDataType.getMostSpecificDataType
+            res = f(res, vn.getHigh().getDataType())
+        return res
+
