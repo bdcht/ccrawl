@@ -85,6 +85,8 @@ def TypeDef(cur, cxx, errors=None):
     dt = cur.underlying_typedef_type
     if "(anonymous" in dt.spelling:
         dt = dt.get_canonical()
+    if "(unnamed" in dt.spelling:
+        dt = dt.get_canonical()
     t = fix_type_conversion(cur, dt.spelling, cxx, errors)
     t = get_uniq_typename(t)
     if conf.DEBUG:
@@ -244,10 +246,19 @@ def SetStructured(cur, S, errors=None):
     global g_indent
     S._in = str(cur.extent.start.file)
     local = {}
+    alltoks = [(t.kind,t.spelling,t.location) for t in cur._tu.get_tokens(extent=cur.extent)]
     attr_x = False
     if errors is None:
         errors = []
     g_indent += 1
+    bitfield_error = False
+    if errors:
+        for (k,s,l) in alltoks:
+            if k==TokenKind.PUNCTUATION and s==":":
+                if conf.DEBUG:
+                    secho("bitfield structure with errors...",fg='yellow')
+                bitfield_error = True
+                break
     for f in cur.get_children():
         if conf.DEBUG:
             echo("\t" * g_indent + str(f.kind) + "=" + str(f.spelling))
@@ -258,6 +269,24 @@ def SetStructured(cur, S, errors=None):
                     f.extent.start.column <= r.location.column <= f.extent.end.column
                 ):
                     errs.append(r)
+        if errs and bitfield_error:
+            # fixing the extent. Clang is buggy and has forgotten the bitfield tokens...
+            T = [(t.kind, t.spelling, t.location) for t in f.get_tokens()]
+            off = alltoks.index(T[0])
+            fix = None
+            lit = None
+            for k,s,l in alltoks[off:]:
+                if k==TokenKind.LITERAL:
+                    lit = int(s)
+                if k==TokenKind.PUNCTUATION and s==";":
+                    if l.offset>T[-1][2].offset:
+                        fix = l.offset
+                        break
+            if fix is not None:
+                x = f._extent
+                e = clang.cindex.SourceLocation.from_offset(f._tu, x.end.file, fix)
+                x = clang.cindex.SourceRange.from_locations(x.start,e)
+                f._extent = x
         # nested type definition of another structured type:
         if f.kind in (
             STRUCT_DECL,
@@ -319,6 +348,9 @@ def SetStructured(cur, S, errors=None):
             ):
                 t = f.type.spelling
                 if "(anonymous" in t:
+                    if not S._is_class:
+                        t = f.type.get_canonical().spelling
+                elif "(unnamed" in t:
                     if not S._is_class:
                         t = f.type.get_canonical().spelling
                 else:
@@ -393,7 +425,7 @@ def get_kind_type(t):
 
 
 def get_uniq_typename(t):
-    if not "(anonymous" in t:
+    if not (("(anonymous" in t) or ("(unnamed" in t)):
         return t
     kind = get_kind_type(t)
     # anon types inside *named* struct/union are prefixed by
@@ -401,10 +433,10 @@ def get_uniq_typename(t):
     # we are creating a unique typename anyway
     if "::" in t:
         t = "%s %s" % (kind, t.split("::")[-1])
-    x = re.compile(r"\(anonymous .*\)")
+    x = re.compile(r"\((anonymous|unnamed) .*\)")
     s = x.search(t).group(0)
     h = hashlib.sha256(s.encode("ascii")).hexdigest()[:8]
-    return re.sub(r"\(anonymous .*\)", "?_%s" % h, t, count=1)
+    return re.sub(r"\((anonymous|unnamed) .*\)", "?_%s" % h, t, count=1)
 
 
 def fix_type_conversion(f, t, cxx, errs):
@@ -423,6 +455,8 @@ def fix_type_conversion(f, t, cxx, errs):
     # The drawback was that we'd need several recompilations.
     # In this version we will detect which ints have been replaced
     # and switch them back to ut...
+    if conf.DEBUG:
+        secho("fix_type_conversion:",fg='yellow')
     if re.search(r"(?<!\w)int(?!\w)", t):
         # there is at least one int occurence in t...
         candidates = []
@@ -439,9 +473,10 @@ def fix_type_conversion(f, t, cxx, errs):
             return t
         marks = [""]
         if conf.DEBUG:
-            secho("%s" % candidates, fg="magenta")
+            secho("candidates: %s" % candidates, fg="magenta")
         # for every occurence of int type in t:
         T = [x for x in f.get_tokens()]
+        fixbitfield = ""
         for _ in re.finditer(r"(?<!\w)int(?!\w)", t):
             # lets see if this was diag-ed has an 'unknown type' error:
             # now we only need to replace some 'int' token be ut in t...
@@ -469,6 +504,8 @@ def fix_type_conversion(f, t, cxx, errs):
                                     c += "::%s" % (x.spelling)
                             marks.append(c)
                             break
+                elif x.kind == TokenKind.PUNCTUATION and x.spelling == ":":
+                    fixbitfield = "#{}".format(T[0].spelling)
         st = re.split(r"(?<!\w)int(?!\w)", t)
         d = len(st) - len(marks)
         if d > 0:
@@ -476,7 +513,7 @@ def fix_type_conversion(f, t, cxx, errs):
         ct = ""
         for m, s in zip(marks, st):
             ct = ct + m + s
-        t = ct
+        t = ct+fixbitfield
     if conf.DEBUG:
         echo("\t" * g_indent + "type: %s" % t)
     return t
@@ -560,19 +597,21 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
     # walk down all AST to get all cursors:
     pool = [(c, []) for c in tu.cursor.get_children()]
     name = str(tu.cursor.extent.start.file.name)
-    diag = defaultdict(list)
+    diag = {}
     for r in tu.diagnostics:
-        if str(r.location.file) == name and selected_errs(r):
-            diag[r.location.line].append(r)
+        if selected_errs(r):
+            if not r.location.file.name in diag:
+                diag[r.location.file.name] = defaultdict(list)
+            diag[r.location.file.name][r.location.line].append(r)
     # map diagnostics to cursors:
     for cur, errs in pool:
-        if cur.location.file is None:
+        if cur.location.file is None or (cur.location.file.name not in diag):
             continue
         span = range(cur.extent.start.line, cur.extent.end.line + 1)
         if cur.location.line not in span:
             span = range(cur.location.line, cur.location.line+1)
         for l in span:
-            errs.extend(diag[l])
+            errs.extend(diag.get(cur.location.file.name,None)[l])
     # now finally call the handlers:
     for cur, errs in pool:
         if conf.DEBUG and cur.location.file:

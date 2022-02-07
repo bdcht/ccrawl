@@ -1,3 +1,5 @@
+#include "std.h"
+
 typedef enum
 {
     WDGIF_OFF_MODE,
