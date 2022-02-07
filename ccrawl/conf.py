@@ -5,9 +5,9 @@ from traitlets.config import Configurable
 from traitlets.config import PyFileConfigLoader
 from traitlets import Unicode, Bool, observe
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
-# default clang library file: NOT REQUIRED for libclang-12
+# default clang library file: NOT REQUIRED for >libclang-12
 # if os.name == 'posix':
 #    clang_library_file = '/usr/lib/llvm-10/lib/libclang-12.so.1'
 # else:
