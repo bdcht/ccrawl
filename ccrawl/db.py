@@ -151,13 +151,15 @@ class MongoDB(object):
         col.create_index([("id",TEXT), ("val",TEXT)])
         click.echo("done.")
 
-    def update_structs(self,proxydb):
+    def update_structs(self,proxydb,req=None):
         from ccrawl.core import ccore
         from ccrawl.ext import amoco
         col = self.db.get_collection("nodes")
+        req = req or {}
+        req.update({"cls": "cStruct"})
         s_32 = self.db["structs_ptr32"]
         s_64 = self.db["structs_ptr64"]
-        for s in col.find({"cls": "cStruct"}):
+        for s in col.find(req):
             click.echo("updating {}".format(s["id"]))
             i = s["_id"]
             x = ccore.from_db(s)
