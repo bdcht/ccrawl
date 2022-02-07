@@ -153,6 +153,8 @@ def do_collect(ctx, src):
 @click.option("-f", "--functions", is_flag=True, help="collect functions")
 @click.option("-m", "--macros", is_flag=True, help="collect macros")
 @click.option("-s", "--strict", is_flag=True, help="strict mode")
+@click.option("--auto-include", "autoinclude", is_flag=True,
+        help="try to guess -I path(s) for each input file")
 @click.option("--clang", "xclang", help="parameters passed to clang")
 @click.argument(
     "src",
@@ -161,7 +163,7 @@ def do_collect(ctx, src):
     # help='directory/files with definitions to collect',
 )
 @click.pass_context
-def collect(ctx, allc, types, functions, macros, strict, xclang, src):
+def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, src):
     """Collects types (struct,union,class,...) definitions,
     functions prototypes and/or macro definitions from SRC files/directory.
     Collected definitions are stored in a local database,
@@ -174,7 +176,7 @@ def collect(ctx, allc, types, functions, macros, strict, xclang, src):
 
     In strict mode, the clang options need to conform to the makefile
     that lead to the compilation of all input source (i.e. clang diagnostics
-    errors are not bypassed with fake types).
+    errors are not bypassed).
     """
     c = conf.config
     cxx = c.Collect.cxx
@@ -214,10 +216,12 @@ def collect(ctx, allc, types, functions, macros, strict, xclang, src):
         args = xclang.split(" ")
     # count source files:
     FILES = set()
+    INCLUDES = set()
     for D in src:
         if os.path.isdir(D):
             for dirname, subdirs, files in os.walk(D.rstrip("/")):
-                for f in filter(F, files):
+                INCLUDES.add("-I%s/"%dirname)
+                for f in filter(F,files):
                     filename = "%s/%s" % (dirname, f)
                     FILES.add(filename)
         elif os.path.isfile(D) and F(D):
@@ -225,6 +229,8 @@ def collect(ctx, allc, types, functions, macros, strict, xclang, src):
     total = len(FILES)
     W = c.Terminal.width - 12
     # parse and collect all sources:
+    if autoinclude:
+        args.extend(list(INCLUDES))
     while len(FILES) > 0:
         t0 = time.time()
         filename = FILES.pop()
