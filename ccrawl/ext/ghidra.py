@@ -294,7 +294,7 @@ else:
         return ghidra.program.model.data.LongDoubleDataType()
 
 
-    def find_matching_types(f,db):
+    def find_auto_structs(f):
         if isinstance(f,str):
             try:
                 f = getGlobalFunctions(f)[0]
@@ -358,11 +358,11 @@ else:
                                     done.append(p.output)
                         elif p.opcode == p.LOAD:
                             outdt = getDataTypeTraceForward(p.output)
-                            S.append((off,outdt))
+                            S.append((off,outdt.getLength()))
                         elif p.opcode == p.STORE:
                             if p.getSlot(cur)==1:
                                 outdt = getDataTypeTraceBackward(p.inputs[2])
-                                S.append((off,outdt))
+                                S.append((off,outdt.getLength()))
                         elif p.opcode in (p.CAST,p.MULTIEQUAL,p.COPY):
                             if p.output not in done:
                                 todo.append((p.output,off))
@@ -370,7 +370,37 @@ else:
                         if conf.DEBUG:
                             secho("S = {}".format(S),fg='cyan')
                 Locs[n] = S
-            return Locs
+        return Locs
+
+    def find_matching_types(Locs,db,req=None,psize=0):
+        if db.rdb is not None:
+            psize = psize//8 or psize
+            if psize==0:
+                L = find_matching_types(Locs,db,req,psize=4)
+                L.update(find_matching_types(Locs,db,req,psize=8))
+                return L
+            col = db.rdb.db['structs_ptr%d'%(psize*8)]
+            L.append({
+            res = col.aggregate(L)
+        else:
+            from ccrawl.ext.amoco import build
+            for s in db.get(where("cls")=="cStruct"):
+                x = ccore.from_db(x)
+                if len(x)<len(S):
+                    continue
+                try:
+                    ax = build(x,db)()
+                    offsets = ax.offsets(psize)
+                except:
+                    continue
+                found = True
+                for y,t in S:
+                    if (y,t.getLength()) not in offsets:
+                        found = False
+                        break
+                if found:
+                    matching.append(s['id'])
+        return Locs
 
     def getSigned(v):
         mask = 0x80<<((v.getSize()-1)*8)
