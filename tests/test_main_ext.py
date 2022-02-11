@@ -74,7 +74,7 @@ def test_amoco_01(dbfile):
     ax = cx()
     assert isinstance(ax,StructCore)
     assert ax.offset_of('p')==52
-    assert cx.size()==ax.size()==104
+    assert cx.size(psize=8)==ax.size(psize=8)==104
     assert ax.fields[2].name == 'p'
-    assert ax.fields[2].size() == 16
+    assert ax.fields[2].size(psize=8) == 16
 

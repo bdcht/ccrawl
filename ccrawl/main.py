@@ -83,9 +83,11 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     c = conf.config = conf.Config(configfile)
     if quiet:
         verbose = False
+    if verbose:
+        quiet = False
     debug = c.Terminal.debug
     c.Terminal.verbose = verbose | debug
-    c.Terminal.quiet = quiet
+    c.Terminal.quiet |= quiet
     c.Terminal.width = click.get_terminal_size()[0]
     if conf.VERBOSE:
         if c.src:

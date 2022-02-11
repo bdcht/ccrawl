@@ -40,7 +40,7 @@ class Terminal(Configurable):
     "configurable parameters related to ui/output"
     debug = Bool(DEBUG, config=True)  # don't show debug output
     verbose = Bool(VERBOSE, config=True)  # don't show verbose output
-    quiet = Bool(False, config=True)  # don't show no output
+    quiet = Bool(QUIET, config=True)  # don't show no output
     console = Unicode(
         "python", config=True
     )  # use python interpreter is interactive mode

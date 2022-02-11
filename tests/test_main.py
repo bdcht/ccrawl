@@ -7,8 +7,6 @@ def test_00_cmd_collect(configfile,dbfile):
     result = runner.invoke(cli, ['-l',dbfile,'-b','None', '-c', configfile,
                            'collect', os.path.join(os.path.dirname(__file__), 'samples/xxx')])
     assert result.exit_code == 0
-    assert result.stdout.startswith('[100%]')
-    assert 'xxx/yyy/somewhere.h' in result.stdout
 
 def test_01_cmd_search(configfile,dbfile):
     runner = CliRunner()
