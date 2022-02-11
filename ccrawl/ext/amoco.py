@@ -48,12 +48,22 @@ else:
                 define = UnionDefine
             cls = type(x, (StructFormatter,), {})
             fmt = []
+            # if the structure is a bitfield, we
+            # gather fields as long as they are part of
+            # the bitfield...
+            bfmt = []
             for t, n, c in iter(obj):
                 r = c_type(t)
+                if r.lbfw>0:
+                    bfmt.append((r,n))
+                    continue
+                else:
+                    fmt.extend(format_bitfield(bfmt))
                 if not n and not r.lbase.startswith("union "):
                     continue
                 rt, t = fieldformat(r)
                 fmt.append("{} : {} ;{}".format(rt or t, n, c or ""))
+            fmt.extend(format_bitfield(bfmt))
             fmt = "\n".join(fmt)
             define(fmt)(cls)
         elif obj._is_class:
@@ -63,3 +73,26 @@ else:
         else:
             raise NotImplementedError
         return Alltypes[x]
+
+    def format_bitfield(bfmt):
+        fmt = []
+        while bfmt:
+            cur = [bfmt.pop(0)]
+            sz = Alltypes[cur[0][0].lbase].size()*8
+            tot = cur[0][0].lbfw
+            while bfmt:
+                if bfmt[0][0].lbase==cur[0][0].lbase:
+                    if (tot+(bfmt[0][0].lbfw))<=sz:
+                        tot += bfmt[0][0].lbfw
+                        cur.append(bfmt.pop(0))
+                    else:
+                        break
+                else:
+                    break
+            lt,ln = list(zip(*cur))
+            r = lt[0]
+            rt, t = fieldformat(r)
+            n = "/".join(ln)
+            t += "".join(["/%d"%x.lbfw for x in lt[1:]])
+            fmt.append("{} : {} ;{}".format(t, n, ""))
+        return fmt

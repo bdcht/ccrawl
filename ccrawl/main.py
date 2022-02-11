@@ -557,6 +557,7 @@ def info(ctx, identifier):
     db = ctx.obj["db"]
     Q = where("id") == identifier
     if db.contains(Q):
+        from ctypes import sizeof
         for l in db.search(Q):
             x = ccore.from_db(l)
             click.echo("identifier: {}".format(identifier))
@@ -578,8 +579,15 @@ def info(ctx, identifier):
                 F = []
                 for i, f in enumerate(t._fields_):
                     field = getattr(t, f[0])
-                    F.append((field.offset, field.size))
-                xsize = F[-1][0] + F[-1][1]
+                    if (field.size>>16):
+                        o = float("%d.%d"%(field.offset,field.size&0xffff))
+                        s = float(".%d"%(field.size>>16))
+                        F.append((o,s))
+                        o,s = field.offset,sizeof(f[1])
+                    else:
+                        o,s = field.offset,field.size
+                        F.append((o,s))
+                xsize = o+s
                 click.secho("size      : {}".format(xsize), fg="yellow")
                 click.secho(
                     "offsets   : {}".format([(f[0], f[1]) for f in F]), fg="yellow"
@@ -614,7 +622,7 @@ def store(ctx, update):
             click.echo("unfolding '%s'..." % x.identifier, nl=False)
         try:
             l["use"] = list(x.unfold(db).subtypes.keys())
-        except Exception:
+        except:
             if not conf.QUIET:
                 click.secho("failed.", fg="red")
         else:
