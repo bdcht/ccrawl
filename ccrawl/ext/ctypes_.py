@@ -1,3 +1,4 @@
+from ccrawl import conf
 from ccrawl.formatters.ctypes_ import toCTypes
 from ccrawl.utils import c_type, fargs
 from click import secho
@@ -22,7 +23,8 @@ def mk_ctypes(t, Types):
         try:
             r = Types[r]
         except KeyError:
-            secho("type {} not in database ? (replaced by int)".format(r), fg="red")
+            if not conf.QUIET:
+                secho("type {} not in database ? (replaced by int)".format(r), fg="red")
             r = ctypes.c_int
     while P:
         p = P.pop(0)
