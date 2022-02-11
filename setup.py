@@ -25,7 +25,7 @@ setup(
     url = 'https://github.com/bdcht/ccrawl',
     setup_requires=['pytest-runner',],
     tests_require=['pytest',],
-    install_requires = ['libclang',
+    install_requires = ['libclang==13',
                         'click',
                         'traitlets',
                         'pyparsing',
