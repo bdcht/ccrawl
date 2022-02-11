@@ -68,6 +68,11 @@ class Proxy(object):
     def cleanup(self):
         self.rdb.cleanup(self)
 
+    def find_matching_types(self,Locs,req=None,psize=0):
+        if db.rdb is not None:
+            db.rdb.find_matching_types(Locs,req,psize)
+        return Locs
+
     def close(self):
         self.ldb.close()
 
@@ -196,3 +201,28 @@ class MongoDB(object):
             #click.echo("found {} occurences for {}".format(x["count"],
             #                                               x["_id"]))
             col.delete_many({"_id": {"$in" : x["tbd"][1:]}})
+
+    def find_matching_types(self,Locs,req=None,psize=0):
+        if req is None:
+            req = {}
+        psize = psize//8 or psize
+        if psize==0:
+            self.find_matching_types(Locs,db,req,psize=4)
+            self.find_matching_types(Locs,db,req,psize=8)
+            return
+        col = db.rdb.db['structs_ptr%2d'%(psize*8)]
+        for n,S in Locs.items():
+            res = col.aggregate([
+                    {"$match": {"offsets": {"$all": S}}},
+                    {"$lookup": {"from": "nodes",
+                                 "localField": "_id",
+                                 "foreignField": "_id",
+                                 "as": "node"}},
+                    {'$replaceRoot': { 'newRoot': {
+                                         '$mergeObjects': [{ '$arrayElemAt': ["$node", 0 ] }, "$$ROOT" ]
+                                         }
+                                     }},
+                    {'$project': { 'node': 0 }},
+                    {'$match': req}
+                  ])
+            Locs[n] = (S,[x["id"] for x in res])

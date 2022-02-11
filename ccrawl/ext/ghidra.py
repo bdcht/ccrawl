@@ -372,36 +372,6 @@ else:
                 Locs[n] = S
         return Locs
 
-    def find_matching_types(Locs,db,req=None,psize=0):
-        if db.rdb is not None:
-            psize = psize//8 or psize
-            if psize==0:
-                L = find_matching_types(Locs,db,req,psize=4)
-                L.update(find_matching_types(Locs,db,req,psize=8))
-                return L
-            col = db.rdb.db['structs_ptr%d'%(psize*8)]
-            L.append({
-            res = col.aggregate(L)
-        else:
-            from ccrawl.ext.amoco import build
-            for s in db.get(where("cls")=="cStruct"):
-                x = ccore.from_db(x)
-                if len(x)<len(S):
-                    continue
-                try:
-                    ax = build(x,db)()
-                    offsets = ax.offsets(psize)
-                except:
-                    continue
-                found = True
-                for y,t in S:
-                    if (y,t.getLength()) not in offsets:
-                        found = False
-                        break
-                if found:
-                    matching.append(s['id'])
-        return Locs
-
     def getSigned(v):
         mask = 0x80<<((v.getSize()-1)*8)
         value = v.getOffset()
