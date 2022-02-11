@@ -104,6 +104,7 @@ def configfile():
     fd,fname = tempfile.mkstemp('.conf',prefix='ccrawl-test-')
     S = \
 u"""c.Terminal.debug = False
+c.Terminal.quiet = True
 c.Collect.strict = False
 c.Collect.cxx    = True
 c.Terminal.console = 'ipython'

@@ -1,5 +1,5 @@
 future
-clang
+libclang==13
 click
 traitlets
 pyparsing
