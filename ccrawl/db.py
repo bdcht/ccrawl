@@ -210,7 +210,7 @@ class MongoDB(object):
             self.find_matching_types(Locs,req,psize=4)
             self.find_matching_types(Locs,req,psize=8)
             return
-        col = db.rdb.db['structs_ptr%2d'%(psize*8)]
+        col = self.db['structs_ptr%2d'%(psize*8)]
         for n,S in Locs.items():
             res = col.aggregate([
                     {"$match": {"offsets": {"$all": S}}},
