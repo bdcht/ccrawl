@@ -69,8 +69,8 @@ class Proxy(object):
         self.rdb.cleanup(self)
 
     def find_matching_types(self,Locs,req=None,psize=0):
-        if db.rdb is not None:
-            db.rdb.find_matching_types(Locs,req,psize)
+        if self.rdb is not None:
+            self.rdb.find_matching_types(Locs,req,psize)
         return Locs
 
     def close(self):
