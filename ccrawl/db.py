@@ -207,8 +207,8 @@ class MongoDB(object):
             req = {}
         psize = psize//8 or psize
         if psize==0:
-            self.find_matching_types(Locs,db,req,psize=4)
-            self.find_matching_types(Locs,db,req,psize=8)
+            self.find_matching_types(Locs,req,psize=4)
+            self.find_matching_types(Locs,req,psize=8)
             return
         col = db.rdb.db['structs_ptr%2d'%(psize*8)]
         for n,S in Locs.items():
