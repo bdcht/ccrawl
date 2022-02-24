@@ -358,17 +358,22 @@ else:
                                     done.append(p.output)
                         elif p.opcode == p.LOAD:
                             outdt = getDataTypeTraceForward(p.output)
-                            S.append((off,outdt.getLength()))
+                            el = (off,outdt.getLength())
+                            if el not in S:
+                                S.append(el)
                         elif p.opcode == p.STORE:
                             if p.getSlot(cur)==1:
                                 outdt = getDataTypeTraceBackward(p.inputs[2])
-                                S.append((off,outdt.getLength()))
+                                el = (off,outdt.getLength())
+                                if el not in S:
+                                    S.append(el)
                         elif p.opcode in (p.CAST,p.MULTIEQUAL,p.COPY):
                             if p.output not in done:
                                 todo.append((p.output,off))
                                 done.append(p.output)
                         if conf.DEBUG:
                             secho("S = {}".format(S),fg='cyan')
+                S.sort()
                 Locs[n] = S
         return Locs
 
