@@ -436,6 +436,8 @@ def get_uniq_typename(t):
     x = re.compile(r"\((anonymous|unnamed) .*\)")
     s = x.search(t).group(0)
     h = hashlib.sha256(s.encode("ascii")).hexdigest()[:8]
+    if not t.startswith(kind):
+        t = "%s %s"%(kind,t)
     return re.sub(r"\((anonymous|unnamed) .*\)", "?_%s" % h, t, count=1)
 
 
