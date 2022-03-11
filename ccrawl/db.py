@@ -149,12 +149,35 @@ class MongoDB(object):
         self.remove_duplicates()
         click.echo("done.")
         click.echo("updating collections of offsets/size for structs...",nl=False)
+        self.cleanup_structs()
         self.update_structs(proxy)
         click.echo("done.")
         col = self.db.get_collection("nodes")
         click.echo("indexing 'id' and 'val' fields...",nl=False)
         col.create_index([("id",TEXT), ("val",TEXT)])
         click.echo("done.")
+
+    def cleanup_structs(self,**kargs):
+        for col in (self.db["structs_ptr32"], self.db["structs_ptr64"]):
+            L = []
+            for s in col.find():
+                o = self.db['nodes'].find_one({"_id": s["_id"]})
+                if (o is None) or all((o[k]==v for (k,v) in kargs.items())):
+                    L.append(s["_id"])
+            col.delete_many({"_id": {"$in" : L}})
+
+    def cleanup_selected(self,**kargs):
+        L = []
+        S = []
+        for s in self.db["nodes"].find(kargs):
+            L.append(s["_id"])
+            if s["cls"]=="cStruct":
+                S.append(s["_id"])
+        if len(S)>0:
+            self.db["structs_ptr32"].delete_many({"_id": {"$in" : S}})
+            self.db["structs_ptr64"].delete_many({"_id": {"$in" : S}})
+        if len(L)>0:
+            self.db["nodes"].delete_many({"_id": {"$in" : L}})
 
     def update_structs(self,proxydb,req=None):
         from ccrawl.core import ccore
