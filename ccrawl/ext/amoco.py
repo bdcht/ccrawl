@@ -1,5 +1,6 @@
 from click import secho
 from ccrawl.formatters.amoco import id_amoco, c_type, fieldformat
+from pyparsing import ParseException
 
 try:
     from amoco.system.structs import (
@@ -35,6 +36,13 @@ else:
             try:
                 v = int(v, base=0)
             except ValueError:
+                pass
+            try:
+                t = c_type(v)
+                rn, n = fieldformat(t)
+                TypeDefine(obj.identifier, rn or n)
+                return Alltypes[obj.identifier]
+            except ParseException:
                 pass
             globals()[obj.identifier] = v
             return v
@@ -78,6 +86,7 @@ else:
         fmt = []
         while bfmt:
             cur = [bfmt.pop(0)]
+            basetype = cur[0][0].lbase
             sz = Alltypes[cur[0][0].lbase].size()*8
             tot = cur[0][0].lbfw
             while bfmt:

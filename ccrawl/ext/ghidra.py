@@ -160,14 +160,17 @@ else:
 
     @declareGhidraHandler("Structure")
     def dt_Structure(cx, dtm):
-        from ctypes import sizeof
-
         if conf.DEBUG:
             secho("conversion of %s" % cx, fg="cyan")
-        l = sizeof(cx)
         sdt = ghidra.program.model.data.StructureDataType(cx.__name__, 0)
         sdt = catp.addDataType(sdt, None)
-        for n, t in cx._fields_:
+        for f in cx._fields_:
+            if len(f)==3:
+                n,t,bfw = f
+                sdt.setPackingEnabled(True)
+            else:
+                n,t = f
+                bfw = 0
             dt = ctype_to_ghidra(t, dtm)
             if t.__name__ == "LP_CFunctionType":
                 try:
@@ -175,16 +178,16 @@ else:
                 except:
                     proto = catp.getDataType("proto_%s" % n)
                     dt =  ghidra.program.model.data.PointerDataType(proto)
-            sdt.add(dt, -1, n, "")
+            if bfw>0:
+                sdt.addBitField(dt,bfw,n,"")
+            else:
+                sdt.add(dt, -1, n, "")
         return sdt
 
     @declareGhidraHandler("Union")
     def dt_Union(cx, dtm):
-        from ctypes import sizeof
-
         if conf.DEBUG:
             secho("conversion of %s" % cx, fg="cyan")
-        l = sizeof(cx)
         sdt = ghidra.program.model.data.UnionDataType(cx.__name__)
         sdt = catp.addDataType(sdt, None)
         for n, t in cx._fields_:

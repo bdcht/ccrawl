@@ -1,6 +1,6 @@
 from ccrawl import conf
 from ccrawl.formatters.ctypes_ import toCTypes
-from ccrawl.utils import c_type, fargs
+from ccrawl.utils import c_type, fargs, pp
 from click import secho
 import ctypes
 
@@ -62,6 +62,12 @@ def build(obj, db, Types={}):
         try:
             v = int(v, base=0)
         except ValueError:
+            pass
+        try:
+            t = c_type(v)
+            Types[obj.identifier] = mk_ctypes(t, Types)
+            return Types[obj.identifier]
+        except pp.ParseException:
             pass
         globals()[obj.identifier] = v
         return v
