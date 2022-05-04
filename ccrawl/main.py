@@ -138,7 +138,7 @@ def do_collect(ctx, src):
         functions=False,
         macros=False,
         strict=False,
-        xclang="",
+        xclang=None,
         src=src,
     )
 
@@ -552,12 +552,17 @@ def show(ctx, form, recursive, identifier):
 
 
 @cli.command()
+@click.option(
+    "-p", "pointer", is_flag=False, default=0, help="size of pointers (4 or 8)"
+)
 @click.argument("identifier", nargs=1, type=click.STRING)
 @click.pass_context
-def info(ctx, identifier):
+def info(ctx, pointer, identifier):
     """Get database internal informations about a definition."""
     db = ctx.obj["db"]
     Q = where("id") == identifier
+    if pointer not in (4,8):
+        pointer=0
     if db.contains(Q):
         from ctypes import sizeof
         for l in db.search(Q):
@@ -567,8 +572,9 @@ def info(ctx, identifier):
             click.echo("source    : {}".format(l["src"]))
             click.secho("tag       : {}".format(l["tag"]), fg="magenta")
             if x._is_struct or x._is_union or x._is_class:
+                from ccrawl.ext import amoco
                 try:
-                    t = x.build(db)
+                    t = amoco.build(x,db)()
                 except (TypeError, KeyError) as e:
                     what = e.args[0]
                     click.secho(
@@ -578,22 +584,18 @@ def info(ctx, identifier):
                     )
                     click.echo("", err=True)
                     continue
-                F = []
-                for i, f in enumerate(t._fields_):
-                    field = getattr(t, f[0])
-                    if (field.size>>16):
-                        o = float("%d.%d"%(field.offset,field.size&0xffff))
-                        s = float(".%d"%(field.size>>16))
-                        F.append((o,s))
-                        o,s = field.offset,sizeof(f[1])
-                    else:
-                        o,s = field.offset,field.size
-                        F.append((o,s))
-                xsize = o+s
+                F = t.offsets(psize=pointer)
+                xsize = t.size(psize=pointer)
                 click.secho("size      : {}".format(xsize), fg="yellow")
                 click.secho(
                     "offsets   : {}".format([(f[0], f[1]) for f in F]), fg="yellow"
                 )
+                psize="native"
+                if pointer==4:
+                    psize="32 bits"
+                elif pointer==8:
+                    psize="64 bits"
+                click.secho("[using %s pointer size]"%psize)
 
     else:
         click.secho("identifier '%s' not found" % identifier, fg="red", err=True)
