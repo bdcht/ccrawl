@@ -50,6 +50,8 @@ except AttributeError:
 except ConnectionRefusedError:
     secho("ghidra_bridge connection error", fg="red")
 else:
+    if conf.config is None:
+        conf.config = conf.Config()
     if conf.config.Ghidra.manager=='program':
         dtm = currentProgram.getDataTypeManager()
         if conf.VERBOSE:
