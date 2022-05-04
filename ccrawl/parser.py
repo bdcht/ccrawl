@@ -274,10 +274,7 @@ def SetStructured(cur, S, errors=None):
             T = [(t.kind, t.spelling, t.location) for t in f.get_tokens()]
             off = alltoks.index(T[0])
             fix = None
-            lit = None
             for k,s,l in alltoks[off:]:
-                if k==TokenKind.LITERAL:
-                    lit = int(s)
                 if k==TokenKind.PUNCTUATION and s==";":
                     if l.offset>T[-1][2].offset:
                         fix = l.offset
@@ -543,6 +540,8 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
         ]
     else:
         _args = args[:]
+    if conf.config is None:
+        conf.config = conf.Config()
     if conf.config.Collect.cxx:
         if filename.endswith(".hpp") or filename.endswith(".cpp"):
             _args.extend(["-x", "c++", "-std=c++11", "-fno-delayed-template-parsing"])
@@ -551,7 +550,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
         # in non strict mode, we allow missing includes
         fd, depf = tempfile.mkstemp(prefix="ccrawl-")
         os.close(fd)
-        _args += ["-M", "-MG", "-MF%s" % depf]
+        _args += ["-M", "-MM", "-MG", "-MF%s" % depf, "-dD", "-dI", "-dM"]
     if conf.DEBUG:
         echo("\nfilename: %s, args: %s" % (filename, _args))
     if unsaved_files is None:
