@@ -65,6 +65,18 @@ class Proxy(object):
             return self.rdb.get(q._hash, **kargs)
         return self.ldb.get(q)
 
+    def cleanup_local(self):
+        D = {}
+        for e in self.ldb.search(self.tag):
+            k = "%s := %s"%(e['id'],e['val'])
+            if not k in D:
+                D[k] = [e.doc_id]
+            else:
+                D[k].append(e.doc_id)
+        for v in D.values():
+            if len(v)>1:
+                self.ldb.remove(doc_ids=v[1:])
+
     def cleanup(self):
         self.rdb.cleanup(self)
 
