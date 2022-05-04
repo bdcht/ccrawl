@@ -33,7 +33,7 @@ class Proxy(object):
                 self.rdb = None
 
     def set_tag(self, tag=None):
-        self.tag = (where("tag").search(tag)) if tag else Query().noop()
+        self.tag = (where("tag")==tag) if (tag is not None) else Query().noop()
 
     def insert_multiple(self, docs):
         self.ldb.insert_multiple(docs)
