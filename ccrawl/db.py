@@ -128,7 +128,10 @@ class MongoDB(object):
                 res[l] = r
             elif op == "matches":
                 l, r = q[1][0], q[2]
-                res[l] = {"$regex": r}
+                if l in ("val", "use"):
+                    res[l] = {"$all": [r]}
+                else:
+                    res[l] = {"$regex": r}
             elif op == "search":
                 l, r = q[1][0], q[2]
                 res[l] = {"$regex": r}
