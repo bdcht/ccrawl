@@ -142,6 +142,27 @@ def do_collect(ctx, src):
         src=src,
     )
 
+def files_and_includes(src,F):
+    # count source files:
+    FILES = set()
+    HDIRS = set()
+    for D in src:
+        if os.path.isdir(D):
+            for dirname, subdirs, files in os.walk(D.rstrip("/")):
+                has_headers = False
+                for f in filter(F,files):
+                    filename = "%s/%s" % (dirname, f)
+                    FILES.add(filename)
+                    has_headers = True
+                if has_headers:
+                    HDIRS.add("-I%s/"%dirname)
+        elif os.path.isfile(D) and F(D):
+            FILES.add(D)
+    # preprocess files to detect all #include directives
+    # and update or re-order the INCLUDES set:
+    INCLUDES = []
+    return FILES, INCLUDES
+
 
 @cli.command()
 @click.option(
@@ -155,7 +176,7 @@ def do_collect(ctx, src):
 @click.option("-f", "--functions", is_flag=True, help="collect functions")
 @click.option("-m", "--macros", is_flag=True, help="collect macros")
 @click.option("-s", "--strict", is_flag=True, help="strict mode")
-@click.option("--auto-include", "autoinclude", is_flag=True,
+@click.option("--auto-include", "autoinclude", default=True, is_flag=True,
         help="try to guess -I path(s) for each input file")
 @click.option("--clang", "xclang", help="parameters passed to clang")
 @click.argument(
@@ -217,22 +238,12 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
     else:
         args = xclang.split(" ")
     # count source files:
-    FILES = set()
-    INCLUDES = set()
-    for D in src:
-        if os.path.isdir(D):
-            for dirname, subdirs, files in os.walk(D.rstrip("/")):
-                INCLUDES.add("-I%s/"%dirname)
-                for f in filter(F,files):
-                    filename = "%s/%s" % (dirname, f)
-                    FILES.add(filename)
-        elif os.path.isfile(D) and F(D):
-            FILES.add(D)
+    FILES, INCLUDES = files_and_includes(src,F)
     total = len(FILES)
     W = c.Terminal.width - 12
     # parse and collect all sources:
     if autoinclude:
-        args.extend(list(INCLUDES))
+        args.extend(INCLUDES)
     while len(FILES) > 0:
         t0 = time.time()
         filename = FILES.pop()
@@ -247,7 +258,8 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
             return -1
         if len(l) > 0:
             # remove already processed/included files
-            FILES.difference_update([el["src"] for el in l])
+            already_done = set([el["src"] for el in l])
+            FILES.difference_update(already_done)
             # remove duplicates into dbo:
             for x in l:
                 dbo[x["id"] + x["src"]] = x
