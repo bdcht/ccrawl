@@ -84,16 +84,20 @@ else:
     def build(obj, db):
         n = str(obj.identifier.replace("?_", "").replace(" ", "_"))
         if obj._is_macro:
-            s = obj.replace(" ", "")
             e = eqt.getEquate(obj.identifier)
             if e is None:
+                s = obj.replace(" ", "")
+                if s[0]=="(" and s[-1]==")":
+                    s = s[1:-1]
                 if s[-1] == "u":
                     try:
                         value = int(s[:-1], 0)
                     except ValueError:
                         secho("macro conversion error for '%s'" % s[:-1], fg="red")
                     else:
+                        tr = dtm.startTransaction("equate %s"%obj.identifier)
                         e = eqt.createEquate(obj.identifier, value)
+                        dtm.endTransaction(tr, True)
             if e is None:
                 secho(
                     "macro definition not supported (#define %s '%s')" % (n, s),

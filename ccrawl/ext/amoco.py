@@ -19,13 +19,17 @@ except ImportError:
 
 else:
 
-    def build(obj, db):
+    def build(obj, db, _bstack=[]):
+        if obj.identifier in _bstack:
+            return Alltypes.get(obj.identifier,None)
+        else:
+            _bstack.append(obj.identifier)
         if obj.subtypes is None:
             obj.unfold(db)
         for subtype in obj.subtypes.values() or []:
             if subtype is None:
                 continue
-            build(subtype, db)
+            build(subtype, db, _bstack)
         if obj._is_typedef:
             t = c_type(obj)
             rn, n = fieldformat(t)
