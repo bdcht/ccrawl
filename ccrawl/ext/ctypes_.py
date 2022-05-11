@@ -43,9 +43,8 @@ def mk_ctypes(t, Types):
 
 
 def formatproto(res, proto, Types):
-    params = [mk_ctypes(c_type(x), Types) for x in proto.args]
-    params.insert(0, res)
-    return ctypes.CFUNCTYPE(*params)
+    params = filter(None,[mk_ctypes(c_type(x), Types) for x in proto.args])
+    return ctypes.CFUNCTYPE(res,*params)
 
 
 def build(obj, db, Types={}):
