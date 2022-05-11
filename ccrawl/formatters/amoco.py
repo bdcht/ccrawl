@@ -132,6 +132,8 @@ def cStruct_amoco(obj, db, recursive):
         rt, t = fieldformat(r)
         if rt:
             t = rt
+        if c and c.count('\n')>0:
+            c=None
         S.append("{} : {} ;{}\n".format(t, n, c or ""))
     if len(R) > 0:
         R.append("\n")

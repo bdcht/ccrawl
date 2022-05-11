@@ -61,6 +61,8 @@ else:
             # the bitfield...
             bfmt = []
             for t, n, c in iter(obj):
+                if c and c.count('\n')>0:
+                    c=None
                 r = c_type(t)
                 if r.lbfw>0:
                     bfmt.append((r,n))
