@@ -306,7 +306,7 @@ def search(ctx, ignorecase, rex):
         Q |= where("val").matches(rex, flags=flg)
     else:
         Q |= where("val").test(look)
-    L = db.search(Q)
+    L = db.search(db.tag & Q)
     for l in L:
         click.echo("found ", nl=False)
         click.secho("%s " % l["cls"], nl=False, fg="cyan")
@@ -344,7 +344,7 @@ def select(ctx, ands, ors):
     ctx.obj["select"] = Q
     if ctx.invoked_subcommand is None:
         db = ctx.obj["db"]
-        L = db.search(Q)
+        L = db.search(db.tag & Q)
         for l in L:
             click.echo("found ", nl=False)
             click.secho("%s " % l["cls"], nl=False, fg="cyan")
@@ -375,7 +375,7 @@ def prototype(ctx, proto):
         return
     db = ctx.obj["db"]
     Q = ctx.obj.get("select", Query().noop())
-    L = db.search(Q, cls="cFunc")
+    L = db.search(db.tag & Q, cls="cFunc")
     R = []
     with click.progressbar(L) as pL:
         for l in L:
@@ -406,7 +406,7 @@ def constant(ctx, mask, symbol, val):
     db = ctx.obj["db"]
     Q = ctx.obj.get("select", Query().noop())
     Q &= (where("cls") == "cMacro") | (where("cls") == "cEnum")
-    L = db.search(Q)
+    L = db.search(db.tag & Q)
     R = []
     with click.progressbar(L) as pL:
         for l in pL:
@@ -467,7 +467,7 @@ def struct(ctx, pdef, conds):
         return
     db = ctx.obj["db"]
     Q = ctx.obj.get("select", Query().noop())
-    L = db.search(Q & ((where("cls") == "cStruct") | (where("cls") == "cClass")))
+    L = db.search(db.tag & Q & ((where("cls") == "cStruct") | (where("cls") == "cClass")))
     R = []
     fails = []
     with click.progressbar(L) as pL:
@@ -551,8 +551,8 @@ def show(ctx, form, recursive, identifier):
     if recursive is True:
         recursive = set()
     Q = where("id") == identifier
-    if db.contains(Q):
-        for l in db.search(Q):
+    if db.contains(db.tag & Q):
+        for l in db.search(db.tag & Q):
             x = ccore.from_db(l)
             click.echo(x.show(db, recursive, form=form))
     else:
@@ -575,9 +575,9 @@ def info(ctx, pointer, identifier):
     Q = where("id") == identifier
     if pointer not in (4,8):
         pointer=0
-    if db.contains(Q):
+    if db.contains(db.tag & Q):
         from ctypes import sizeof
-        for l in db.search(Q):
+        for l in db.search(db.tag & Q):
             x = ccore.from_db(l)
             click.echo("identifier: {}".format(identifier))
             click.secho("class     : {}".format(l["cls"]), fg="cyan")
@@ -736,21 +736,21 @@ def stats(ctx):
     click.echo("       .local     : %s" % str(db.ldb))
     click.echo("       .url       : %s" % str(db.rdb))
     click.echo("documents:")
-    F = db.search(where("cls") == "cFunc")
+    F = db.search(db.tag & (where("cls") == "cFunc"))
     click.echo("       .cFunc     : %d" % len(F))
-    C = db.search(where("cls") == "cClass")
+    C = db.search(db.tag & (where("cls") == "cClass"))
     click.echo("       .cClass    : %d" % len(C))
-    S = db.search(where("cls") == "cStruct")
+    S = db.search(db.tag & (where("cls") == "cStruct"))
     click.echo("       .cStruct   : %d" % len(S))
-    U = db.search(where("cls") == "cUnion")
+    U = db.search(db.tag & (where("cls") == "cUnion"))
     click.echo("       .cUnion    : %d" % len(U))
-    E = db.search(where("cls") == "cEnum")
+    E = db.search(db.tag & (where("cls") == "cEnum"))
     click.echo("       .cEnum     : %d" % len(E))
-    T = db.search(where("cls") == "cTypedef")
+    T = db.search(db.tag & (where("cls") == "cTypedef"))
     click.echo("       .cTypedef  : %d" % len(T))
-    M = db.search(where("cls") == "cMacro")
+    M = db.search(db.tag & (where("cls") == "cMacro"))
     click.echo("       .cMacro    : %d" % len(M))
-    P = db.search(where("cls") == "cTemplate")
+    P = db.search(db.tag & (where("cls") == "cTemplate"))
     click.echo("       .cTemplate : %d" % len(P))
     click.echo("structures:")
     l, s = max(((len(s["val"]), s["id"]) for s in S))
