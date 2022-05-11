@@ -1,5 +1,5 @@
 future
-libclang==13
+libclang==14.0.1
 click
 traitlets
 pyparsing
