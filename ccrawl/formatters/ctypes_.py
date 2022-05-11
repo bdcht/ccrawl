@@ -75,7 +75,7 @@ def cTypedef_ctypes(obj, db, recursive):
     pre = ""
     t = c_type(obj)
     if isinstance(recursive, set) and (t.lbase not in struct_letters):
-        Q = where("id") == t.lbase
+        Q = db.tag & (where("id") == t.lbase)
         if db.contains(Q):
             x = obj.from_db(db.get(Q))
             pre = x.show(db, recursive, form="ctypes")
@@ -103,7 +103,7 @@ def cFunc_ctypes(obj, db, recursive):
         for t in [res] + args:
             t = c_type(t)
             if t.lbase not in struct_letters:
-                Q = where("id") == t.lbase
+                Q = db.tag & (where("id") == t.lbase)
                 if db.contains(Q):
                     x = obj.from_db(db.get(Q))
                     pre = x.show(db, recursive, form="ctypes")
@@ -126,15 +126,17 @@ def cEnum_ctypes(obj, db, recursive):
 
 
 def cStruct_ctypes(obj, db, recursive):
+    name = id_ctypes(c_type(obj.identifier))
+    cls = "Union" if obj._is_union else "Structure"
+    R = ["{0} = type('{0}',({1},),{{}})\n".format(name, cls)]
     if isinstance(recursive, set):
+        if obj.identifier in recursive:
+            return R[0]
         Q = True
         recursive.update(struct_letters)
         recursive.add(obj.identifier)
     else:
         Q = None
-    name = id_ctypes(c_type(obj.identifier))
-    cls = "Union" if obj._is_union else "Structure"
-    R = ["{0} = type('{0}',({1},),{{}})\n".format(name, cls)]
     anon = []
     S = []
     fld = "%s._fields_ = [" % name
@@ -147,7 +149,7 @@ def cStruct_ctypes(obj, db, recursive):
         if not n and not r.lbase.startswith("union "):
             continue
         if Q and (r.lbase not in recursive):
-            q = where("id") == r.lbase
+            q = db.tag & (where("id") == r.lbase)
             if "?_" in r.lbase:
                 anon.append('"%s"' % n)
                 q &= where("src") == obj.identifier

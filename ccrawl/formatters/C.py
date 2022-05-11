@@ -22,7 +22,8 @@ def cTypedef_C(obj, db, recursive):
     pre = ""
     t = c_type(obj)
     if isinstance(recursive, set) and (t.lbase not in struct_letters):
-        Q = where("id") == t.lbase
+        recursive.add(obj.identifier)
+        Q = db.tag & (where("id") == t.lbase)
         if db.contains(Q):
             x = obj.from_db(db.get(Q))
             pre = x.show(db, recursive, form="C") + "\n"
@@ -61,6 +62,9 @@ def cStruct_C(obj, db, recursive):
     name = obj.identifier
     # prepare query if recursion is needed:
     if isinstance(recursive, set):
+        # if we are on a loop, just declare the struct name:
+        if name in recursive:
+            return "%s;"%name
         Q = True
         recursive.update(struct_letters)
         recursive.add(name)
@@ -92,7 +96,7 @@ def cStruct_C(obj, db, recursive):
         elif Q and (r.lbase not in recursive):
             # prepare query
             # (deal with the case of querying an anonymous type)
-            q = where("id") == r.lbase
+            q = db.tag & (where("id") == r.lbase)
             if "?_" in r.lbase:
                 q &= where("src") == obj.identifier
             # do the query and update R:
@@ -158,7 +162,7 @@ def cClass_C(obj, db, recursive):
             r = cxx_type(n)
             e = r.lbase
             if Q and (e not in recursive):
-                q = where("id") == e
+                q = db.tag & (where("id") == e)
                 x = obj.from_db(db.get(q)).show(db, recursive, form="C")
                 R.append(x)
                 recursive.add(e)
@@ -183,10 +187,10 @@ def cClass_C(obj, db, recursive):
         # query field element raw base type if needed:
         if Q and ((e not in recursive) or nested):
             # prepare query
-            q = where("id") == e
+            q = db.tag & (where("id") == e)
             # deal with nested type:
             if nested:
-                q &= where("src") == tn.lbase
+                q &= (where("src") == tn.lbase)
             if db.contains(q):
                 # retreive the field type:
                 x = obj.from_db(db.get(q))
