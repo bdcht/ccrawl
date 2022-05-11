@@ -304,6 +304,7 @@ def search(ctx, ignorecase, rex):
     Q = where("id").matches(rex, flags=flg)
     if db.rdb:
         Q |= where("val").matches(rex, flags=flg)
+        Q |= where("use").matches(rex, flags=flg)
     else:
         Q |= where("val").test(look)
     L = db.search(db.tag & Q)
