@@ -170,10 +170,12 @@ else:
             secho("conversion of %s" % cx, fg="cyan")
         sdt = ghidra.program.model.data.StructureDataType(cx.__name__, 0)
         sdt = catp.addDataType(sdt, None)
+        sdt.setToDefaultPacking()
         for f in cx._fields_:
             if len(f)==3:
                 n,t,bfw = f
-                sdt.setPackingEnabled(True)
+                # actual "pack" the structure:
+                sdt.setExplicitPackingValue(1)
             else:
                 n,t = f
                 bfw = 0
@@ -188,6 +190,7 @@ else:
                 sdt.addBitField(dt,bfw,n,"")
             else:
                 sdt.add(dt, -1, n, "")
+        sdt.repack(True)
         return sdt
 
     @declareGhidraHandler("Union")
