@@ -38,7 +38,6 @@ def build_gdt(folder_item):
     length = len(archive.getbuffer())
     return header + struct.pack(">Q", length) + archive.getvalue()
 
-
 try:
     import ghidra_bridge
 
@@ -113,7 +112,14 @@ else:
         tr = dtm.startTransaction("build")
         try:
             if obj._is_enum:
-                dt = ghidra.program.model.data.EnumDataType(n, 4)
+                I = list(obj.items())
+                if len(I)<256:
+                    sz = 1
+                elif len(I)<(1<<16):
+                    sz = 2
+                else:
+                    sz = 4
+                dt = ghidra.program.model.data.EnumDataType(n, sz)
                 for k, v in obj.items():
                     dt.add(k, v)
                 dt = catp.addDataType(dt, None)

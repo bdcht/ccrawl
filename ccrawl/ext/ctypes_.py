@@ -83,7 +83,12 @@ def build(obj, db, Types={}, _bstack=[]):
             Types[obj.identifier] = mk_ctypes(t, Types)
             return Types[obj.identifier]
     if obj._is_enum:
-        Types[x] = ctypes.c_int
+        if len(obj)<256:
+            Types[x] = ctypes.c_byte
+        elif len(obj)<(1<<16):
+            Types[x] = ctypes.c_short
+        else:
+            Types[x] = ctypes.c_int
         globals()[x] = {}.update(obj)
     elif obj._is_func:
         Types[x] = mk_ctypes(c_type(obj), Types)

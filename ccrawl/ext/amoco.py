@@ -52,7 +52,13 @@ else:
             return v
         x = id_amoco(obj.identifier)
         if obj._is_enum:
-            TypeDefine(x, "i")
+            if len(obj)<256:
+                sz = 'b'
+            elif len(obj)<(1<<16):
+                sz = 'h'
+            else:
+                sz = 'i'
+            TypeDefine(x, sz)
             Consts.All[x] = {}.update(obj)
         elif obj._is_struct or obj._is_union:
             define = StructDefine
