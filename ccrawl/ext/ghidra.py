@@ -420,3 +420,46 @@ else:
             res = f(res, vn.getHigh().getDataType())
         return res
 
+
+    def do_commit_dtm(t,atm):
+        h = ghidra.program.model.data.DataTypeConflictHandler.DEFAULT_HANDLER
+        dtm = t.getDataTypeManager()
+        atr = atm.startTransaction("commit to archive")
+        dtr = dtm.startTransaction("update dt synch time")
+        try:
+            print("commit '%s' "%(t.getName()),end="")
+            at = atm.resolve(t,h)
+            if at.name != t.name:
+                at.setName(t.name)
+            if at.getDescription() != t.getDescription():
+                at.setDescrption(t.getDescription())
+        except:
+            secho("error!",fg="red")
+        else:
+            secho("✔️",fg="green")
+        dtm.endTransaction(dtr,True)
+        atm.endTransaction(atr,True)
+
+    def commit_local_to_gdt(name):
+        dtmservice = ghidra.app.services.DataTypeManagerService
+        dtm = currentProgram.getDataTypeManager()
+        Alldtm = {}
+        for adtm in state.getTool().getService(dtmservice).getDataTypeManagers():
+            Alldtm[adtm.name] = adtm
+        sadtm = None
+        sa = None
+        for a in dtm.sourceArchives:
+            if a.name == name:
+                sa = a
+                sadtm = Alldtm.get(name,None)
+                break
+        if sa and sadtm:
+            for dt in dtm.getDataTypes(sa):
+                info = ghidra.app.plugin.core.datamgr.DataTypeSyncInfo(dt, sadtm)
+                if info.canCommit():
+                    do_commit_dtm(dt,sadtm)
+
+    def dt_apply_recursive(dt,address):
+            dtm.findDataTypes
+
+
