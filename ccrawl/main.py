@@ -228,7 +228,7 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
     if ctx.obj["tag"] is None:
         tag = str(time.time())
     else:
-        tag = ctx.obj["db"].tag._hash
+        tag = ctx.obj["db"].tag._hash[-1]
     # filters:
     ctx.obj["F"] = F
     # selected kinds of cursors to collect:
@@ -261,7 +261,7 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
         if not c.Terminal.quiet:
             p = ((total - len(FILES)) * 100.0) / total
             click.echo(("[%3d%%] %s " % (p, filename)).ljust(W), nl=False)
-        l = parse(filename, args, kind=K, tag=tag[-1])
+        l = parse(filename, args, kind=K, tag=tag)
         t1 = time.time()
         if c.Terminal.timer:
             click.secho("(%.2f+" % (t1 - t0), nl=False, fg="cyan")
