@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from ccrawl import formatters
 from ccrawl.utils import struct_letters, c_type, cxx_type
+from ccrawl.db import where
 
 
 class ccore(object):
