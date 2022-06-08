@@ -159,10 +159,21 @@ Todo
 Changelog
 =========
 
+- `v1.7`_
+
+  * optionally parse functions' bodies and update 'cFunc' descriptions with parsed infos
+  * add sync command to update mongodb remote database from a rebuilt local database
+  * improve Ghidra's interface to detect structures
+  * add pointer size option to compute structures' fields offsets
+  * fix: adjust enum size to its minimal needed size
+  * fix: apply global tag filter to all queries to the ProxyDB
+  * update to libclang-14
+
 - `v1.6`_
 
-  * xxx
-  * xxx
+  * add external interface to export types into Ghidra's data type manager
+  * add find_matching_types to replicate the Ghidra's "auto_struct" command
+  * add database(s) cleanup methods
 
 - `v1.5`_
 
