@@ -64,7 +64,7 @@ def cStruct_C(obj, db, recursive):
     if isinstance(recursive, set):
         # if we are on a loop, just declare the struct name:
         if name in recursive:
-            return "%s;"%name
+            return "%s;" % name
         Q = True
         recursive.update(struct_letters)
         recursive.add(name)
@@ -190,7 +190,7 @@ def cClass_C(obj, db, recursive):
             q = db.tag & (where("id") == e)
             # deal with nested type:
             if nested:
-                q &= (where("src") == tn.lbase)
+                q &= where("src") == tn.lbase
             if db.contains(q):
                 # retreive the field type:
                 x = obj.from_db(db.get(q))

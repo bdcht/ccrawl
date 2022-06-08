@@ -33,7 +33,7 @@ class Proxy(object):
                 self.rdb = None
 
     def set_tag(self, tag=None):
-        self.tag = (where("tag")==tag) if (tag is not None) else Query().noop()
+        self.tag = (where("tag") == tag) if (tag is not None) else Query().noop()
 
     def insert_multiple(self, docs):
         self.ldb.insert_multiple(docs)
@@ -70,21 +70,21 @@ class Proxy(object):
     def cleanup_local(self):
         D = {}
         for e in self.ldb.search(self.tag):
-            k = "%s := %s"%(e['id'],e['val'])
+            k = "%s := %s" % (e["id"], e["val"])
             if not k in D:
                 D[k] = [e.doc_id]
             else:
                 D[k].append(e.doc_id)
         for v in D.values():
-            if len(v)>1:
+            if len(v) > 1:
                 self.ldb.remove(doc_ids=v[1:])
 
     def cleanup(self):
         self.rdb.cleanup(self)
 
-    def find_matching_types(self,Locs,req=None,psize=0):
+    def find_matching_types(self, Locs, req=None, psize=0):
         if self.rdb is not None:
-            self.rdb.find_matching_types(Locs,req,psize)
+            self.rdb.find_matching_types(Locs, req, psize)
         return Locs
 
     def close(self):
@@ -160,45 +160,47 @@ class MongoDB(object):
         col = self.db.get_collection("nodes")
         return col.find_one(self._where(q))
 
-    def cleanup(self,proxy):
+    def cleanup(self, proxy):
         from pymongo import TEXT
-        click.echo("removing duplicates...",nl=False)
+
+        click.echo("removing duplicates...", nl=False)
         self.remove_duplicates()
         click.echo("done.")
-        click.echo("updating collections of offsets/size for structs...",nl=False)
+        click.echo("updating collections of offsets/size for structs...", nl=False)
         self.cleanup_structs()
         self.update_structs(proxy)
         click.echo("done.")
         col = self.db.get_collection("nodes")
-        click.echo("indexing 'id' and 'val' fields...",nl=False)
-        col.create_index([("id",TEXT), ("val",TEXT)])
+        click.echo("indexing 'id' and 'val' fields...", nl=False)
+        col.create_index([("id", TEXT), ("val", TEXT)])
         click.echo("done.")
 
-    def cleanup_structs(self,**kargs):
+    def cleanup_structs(self, **kargs):
         for col in (self.db["structs_ptr32"], self.db["structs_ptr64"]):
             L = []
             for s in col.find():
-                o = self.db['nodes'].find_one({"_id": s["_id"]})
-                if (o is None) or all((o[k]==v for (k,v) in kargs.items())):
+                o = self.db["nodes"].find_one({"_id": s["_id"]})
+                if (o is None) or all((o[k] == v for (k, v) in kargs.items())):
                     L.append(s["_id"])
-            col.delete_many({"_id": {"$in" : L}})
+            col.delete_many({"_id": {"$in": L}})
 
-    def cleanup_selected(self,**kargs):
+    def cleanup_selected(self, **kargs):
         L = []
         S = []
         for s in self.db["nodes"].find(kargs):
             L.append(s["_id"])
-            if s["cls"]=="cStruct":
+            if s["cls"] == "cStruct":
                 S.append(s["_id"])
-        if len(S)>0:
-            self.db["structs_ptr32"].delete_many({"_id": {"$in" : S}})
-            self.db["structs_ptr64"].delete_many({"_id": {"$in" : S}})
-        if len(L)>0:
-            self.db["nodes"].delete_many({"_id": {"$in" : L}})
+        if len(S) > 0:
+            self.db["structs_ptr32"].delete_many({"_id": {"$in": S}})
+            self.db["structs_ptr64"].delete_many({"_id": {"$in": S}})
+        if len(L) > 0:
+            self.db["nodes"].delete_many({"_id": {"$in": L}})
 
-    def update_structs(self,proxydb,req=None):
+    def update_structs(self, proxydb, req=None):
         from ccrawl.core import ccore
         from ccrawl.ext import amoco
+
         col = self.db.get_collection("nodes")
         req = req or {}
         req.update({"cls": "cStruct"})
@@ -209,60 +211,76 @@ class MongoDB(object):
             i = s["_id"]
             x = ccore.from_db(s)
             try:
-                ax = amoco.build(x,proxydb)()
+                ax = amoco.build(x, proxydb)()
                 off32 = ax.offsets(psize=4)
                 tot32 = ax.size(psize=4)
                 off64 = ax.offsets(psize=8)
                 tot64 = ax.size(psize=8)
             except:
                 continue
-            s_32.update_one({"_id": i}, {"$set": {"_id": i,
-                                                  "size": tot32,
-                                                  "offsets": off32}},
-                            upsert=True)
-            s_64.update_one({"_id": i}, {"$set": {"_id": i,
-                                                  "size": tot64,
-                                                  "offsets": off64}},
-                            upsert=True)
+            s_32.update_one(
+                {"_id": i},
+                {"$set": {"_id": i, "size": tot32, "offsets": off32}},
+                upsert=True,
+            )
+            s_64.update_one(
+                {"_id": i},
+                {"$set": {"_id": i, "size": tot64, "offsets": off64}},
+                upsert=True,
+            )
 
     def remove_duplicates(self, **kargs):
         col = self.db.get_collection("nodes")
         L = [{"$match": kargs}] if kargs else []
         L += [
-             {"$group": {"_id": {"id":"$id", "val":"$val"},
-                         "count": {"$sum":1},
-                         "tbd": { "$push": "$$ROOT._id" }
-                        }
-             },
-             {"$match": {"count": {"$gt": 1}}},
-             ]
+            {
+                "$group": {
+                    "_id": {"id": "$id", "val": "$val"},
+                    "count": {"$sum": 1},
+                    "tbd": {"$push": "$$ROOT._id"},
+                }
+            },
+            {"$match": {"count": {"$gt": 1}}},
+        ]
         res = col.aggregate(L)
         for x in res:
-            #click.echo("found {} occurences for {}".format(x["count"],
+            # click.echo("found {} occurences for {}".format(x["count"],
             #                                               x["_id"]))
-            col.delete_many({"_id": {"$in" : x["tbd"][1:]}})
+            col.delete_many({"_id": {"$in": x["tbd"][1:]}})
 
-    def find_matching_types(self,Locs,req=None,psize=0):
+    def find_matching_types(self, Locs, req=None, psize=0):
         if req is None:
             req = {}
-        psize = psize//8 or psize
-        if psize==0:
-            self.find_matching_types(Locs,req,psize=4)
-            self.find_matching_types(Locs,req,psize=8)
+        psize = psize // 8 or psize
+        if psize == 0:
+            self.find_matching_types(Locs, req, psize=4)
+            self.find_matching_types(Locs, req, psize=8)
             return
-        col = self.db['structs_ptr%2d'%(psize*8)]
-        for n,S in Locs.items():
-            res = col.aggregate([
+        col = self.db["structs_ptr%2d" % (psize * 8)]
+        for n, S in Locs.items():
+            res = col.aggregate(
+                [
                     {"$match": {"offsets": {"$all": S}}},
-                    {"$lookup": {"from": "nodes",
-                                 "localField": "_id",
-                                 "foreignField": "_id",
-                                 "as": "node"}},
-                    {'$replaceRoot': { 'newRoot': {
-                                         '$mergeObjects': [{ '$arrayElemAt': ["$node", 0 ] }, "$$ROOT" ]
-                                         }
-                                     }},
-                    {'$project': { 'node': 0 }},
-                    {'$match': req}
-                  ])
-            Locs[n] = (S,[x["id"] for x in res])
+                    {
+                        "$lookup": {
+                            "from": "nodes",
+                            "localField": "_id",
+                            "foreignField": "_id",
+                            "as": "node",
+                        }
+                    },
+                    {
+                        "$replaceRoot": {
+                            "newRoot": {
+                                "$mergeObjects": [
+                                    {"$arrayElemAt": ["$node", 0]},
+                                    "$$ROOT",
+                                ]
+                            }
+                        }
+                    },
+                    {"$project": {"node": 0}},
+                    {"$match": req},
+                ]
+            )
+            Locs[n] = (S, [x["id"] for x in res])

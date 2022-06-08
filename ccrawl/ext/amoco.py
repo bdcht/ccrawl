@@ -21,7 +21,7 @@ else:
 
     def build(obj, db, _bstack=[]):
         if obj.identifier in _bstack:
-            return Alltypes.get(obj.identifier,None)
+            return Alltypes.get(obj.identifier, None)
         else:
             _bstack.append(obj.identifier)
         if obj.subtypes is None:
@@ -52,12 +52,12 @@ else:
             return v
         x = id_amoco(obj.identifier)
         if obj._is_enum:
-            if len(obj)<256:
-                sz = 'b'
-            elif len(obj)<(1<<16):
-                sz = 'h'
+            if len(obj) < 256:
+                sz = "b"
+            elif len(obj) < (1 << 16):
+                sz = "h"
             else:
-                sz = 'i'
+                sz = "i"
             TypeDefine(x, sz)
             Consts.All[x] = {}.update(obj)
         elif obj._is_struct or obj._is_union:
@@ -71,11 +71,11 @@ else:
             # the bitfield...
             bfmt = []
             for t, n, c in iter(obj):
-                if c and c.count('\n')>0:
-                    c=None
+                if c and c.count("\n") > 0:
+                    c = None
                 r = c_type(t)
-                if r.lbfw>0:
-                    bfmt.append((r,n))
+                if r.lbfw > 0:
+                    bfmt.append((r, n))
                     continue
                 else:
                     fmt.extend(format_bitfield(bfmt))
@@ -99,21 +99,21 @@ else:
         while bfmt:
             cur = [bfmt.pop(0)]
             basetype = cur[0][0].lbase
-            sz = Alltypes[cur[0][0].lbase].size()*8
+            sz = Alltypes[cur[0][0].lbase].size() * 8
             tot = cur[0][0].lbfw
             while bfmt:
-                if bfmt[0][0].lbase==cur[0][0].lbase:
-                    if (tot+(bfmt[0][0].lbfw))<=sz:
+                if bfmt[0][0].lbase == cur[0][0].lbase:
+                    if (tot + (bfmt[0][0].lbfw)) <= sz:
                         tot += bfmt[0][0].lbfw
                         cur.append(bfmt.pop(0))
                     else:
                         break
                 else:
                     break
-            lt,ln = list(zip(*cur))
+            lt, ln = list(zip(*cur))
             r = lt[0]
             rt, t = fieldformat(r)
             n = "/".join(ln)
-            t += "".join(["/%d"%x.lbfw for x in lt[1:]])
+            t += "".join(["/%d" % x.lbfw for x in lt[1:]])
             fmt.append("{} : {} ;{}".format(t, n, ""))
         return fmt

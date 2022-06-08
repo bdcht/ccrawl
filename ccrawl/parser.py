@@ -71,16 +71,16 @@ def FuncDecl(cur, cxx, errors=None):
     f = cFunc(prototype=proto)
     for e in cur.get_children():
         if conf.DEBUG:
-            echo("%s: %s"%(e.kind, e.spelling))
-        if e.kind==CursorKind.PARM_DECL:
+            echo("%s: %s" % (e.kind, e.spelling))
+        if e.kind == CursorKind.PARM_DECL:
             params.append(e.spelling)
-        elif e.kind==CursorKind.COMPOUND_STMT:
-            locs,calls = CodeDef(e, cxx, errors)
+        elif e.kind == CursorKind.COMPOUND_STMT:
+            locs, calls = CodeDef(e, cxx, errors)
     f["params"] = params
     f["locs"] = locs
     f["calls"] = calls
     if conf.VERBOSE:
-        secho("  cFunc: %s"%identifier)
+        secho("  cFunc: %s" % identifier)
     return identifier, f
 
 
@@ -94,7 +94,7 @@ def MacroDef(cur, cxx, errors=None):
             toks.append(pre + t.spelling)
         s = "".join(toks)
         if conf.VERBOSE:
-            secho("  cMacro: %s"%identifier)
+            secho("  cMacro: %s" % identifier)
         return identifier, cMacro(s.replace("( ", "("))
 
 
@@ -111,12 +111,13 @@ def TypeDef(cur, cxx, errors=None):
     if conf.DEBUG:
         echo("\t" * g_indent + "make unique: %s" % t)
     if conf.VERBOSE:
-        secho("  cTypedef: %s"%identifier)
+        secho("  cTypedef: %s" % identifier)
     return identifier, cTypedef(t)
+
 
 @declareHandler(CursorKind.TYPE_REF)
 def TypeRef(cur, cxx, errors=None):
-    echo("\t" * g_indent +cur.spelling)
+    echo("\t" * g_indent + cur.spelling)
     return cur.spelling, None
 
 
@@ -133,7 +134,7 @@ def StructDecl(cur, cxx, errors=None):
     S = cClass() if cxx else cStruct()
     SetStructured(cur, S, errors)
     if conf.VERBOSE:
-        secho("  %s: %s"%(S.__class__.__name__,typename))
+        secho("  %s: %s" % (S.__class__.__name__, typename))
     return typename, S
 
 
@@ -150,7 +151,7 @@ def UnionDecl(cur, cxx, errors=None):
     S = cClass() if cxx else cUnion()
     SetStructured(cur, S, errors)
     if conf.VERBOSE:
-        secho("  %s: %s"%(S.__class__.__name__,typename))
+        secho("  %s: %s" % (S.__class__.__name__, typename))
     return typename, S
 
 
@@ -162,7 +163,7 @@ def ClassDecl(cur, cxx, errors=None):
     S = cClass()
     SetStructured(cur, S, errors)
     if conf.VERBOSE:
-        secho("  %s: %s"%(S.__class__.__name__,typename))
+        secho("  %s: %s" % (S.__class__.__name__, typename))
     return typename, S
 
 
@@ -191,10 +192,10 @@ def EnumDecl(cur, cxx, errors=None):
             if conf.DEBUG:
                 echo(str(f.enum_value), nl=False)
         elif conf.DEBUG:
-            echo("%s:%s"%(f.kind, f.spelling))
+            echo("%s:%s" % (f.kind, f.spelling))
     g_indent -= 1
     if conf.VERBOSE:
-        secho("  %s: %s"%(S.__class__.__name__,typename))
+        secho("  %s: %s" % (S.__class__.__name__, typename))
     return typename, S
 
 
@@ -225,7 +226,7 @@ def ClassTemplate(cur, cxx, errors=None):
     S = cClass()
     SetStructured(cur, S, errors)
     if conf.VERBOSE:
-        secho("  cTemplate/%s: %s"%(S.__class__.__name__,identifier))
+        secho("  cTemplate/%s: %s" % (S.__class__.__name__, identifier))
     return identifier, cTemplate(params=p, cClass=S)
 
 
@@ -245,7 +246,7 @@ def FuncTemplate(cur, cxx, errors=None):
             p.append("%s %s" % (x.type.spelling, x.spelling))
     f = re.sub(r"__attribute__.*", "", proto)
     if conf.VERBOSE:
-        secho("  cTemplate/cFunc: %s"%identifier)
+        secho("  cTemplate/cFunc: %s" % identifier)
     return identifier, cTemplate(params=p, cFunc=cFunc(prototype=f))
 
 
@@ -279,40 +280,43 @@ def NameSpace(cur, cxx, errors=None):
             S.local[i] = obj
     return namespace, S
 
+
 def CodeDef(cur, cxx, errors=None):
     global g_indent
     g_indent += 1
     locs = []
     calls = []
-    #for f in deepflatten(cur):
+    # for f in deepflatten(cur):
     for f in cur.walk_preorder():
         if conf.DEBUG:
-            echo("\t" * g_indent + "%s: %s"%(f.kind,f.spelling))
-        if f.kind==CursorKind.VAR_DECL:
+            echo("\t" * g_indent + "%s: %s" % (f.kind, f.spelling))
+        if f.kind == CursorKind.VAR_DECL:
             locs.append((f.type.spelling, f.spelling))
             if conf.DEBUG:
-                echo("\t" * g_indent + "var: (%s,%s)"%locs[-1])
-        elif f.kind==CursorKind.CALL_EXPR:
+                echo("\t" * g_indent + "var: (%s,%s)" % locs[-1])
+        elif f.kind == CursorKind.CALL_EXPR:
             calls.append(f.spelling)
     g_indent -= 1
-    return locs,calls
+    return locs, calls
 
 
 def SetStructured(cur, S, errors=None):
     global g_indent
     S._in = str(cur.extent.start.file)
     local = {}
-    alltoks = [(t.kind,t.spelling,t.location) for t in cur._tu.get_tokens(extent=cur.extent)]
+    alltoks = [
+        (t.kind, t.spelling, t.location) for t in cur._tu.get_tokens(extent=cur.extent)
+    ]
     attr_x = False
     if errors is None:
         errors = []
     g_indent += 1
     bitfield_error = False
     if errors:
-        for (k,s,l) in alltoks:
-            if k==TokenKind.PUNCTUATION and s==":":
+        for (k, s, l) in alltoks:
+            if k == TokenKind.PUNCTUATION and s == ":":
                 if conf.DEBUG:
-                    secho("bitfield structure with errors...",fg='yellow')
+                    secho("bitfield structure with errors...", fg="yellow")
                 bitfield_error = True
                 break
     for f in cur.get_children():
@@ -330,15 +334,15 @@ def SetStructured(cur, S, errors=None):
             T = [(t.kind, t.spelling, t.location) for t in f.get_tokens()]
             off = alltoks.index(T[0])
             fix = None
-            for k,s,l in alltoks[off:]:
-                if k==TokenKind.PUNCTUATION and s==";":
-                    if l.offset>T[-1][2].offset:
+            for k, s, l in alltoks[off:]:
+                if k == TokenKind.PUNCTUATION and s == ";":
+                    if l.offset > T[-1][2].offset:
                         fix = l.offset
                         break
             if fix is not None:
                 x = f._extent
                 e = clang.cindex.SourceLocation.from_offset(f._tu, x.end.file, fix)
-                x = clang.cindex.SourceRange.from_locations(x.start,e)
+                x = clang.cindex.SourceRange.from_locations(x.start, e)
                 f._extent = x
         # nested type definition of another structured type:
         if f.kind in (
@@ -490,7 +494,7 @@ def get_uniq_typename(t):
     s = x.search(t).group(0)
     h = hashlib.sha256(s.encode("ascii")).hexdigest()[:8]
     if not t.startswith(kind):
-        t = "%s %s"%(kind,t)
+        t = "%s %s" % (kind, t)
     return re.sub(r"\((anonymous|unnamed) .*\)", "?_%s" % h, t, count=1)
 
 
@@ -511,7 +515,7 @@ def fix_type_conversion(f, t, cxx, errs):
     # In this version we will detect which ints have been replaced
     # and switch them back to ut...
     if conf.DEBUG:
-        secho("fix_type_conversion:",fg='yellow')
+        secho("fix_type_conversion:", fg="yellow")
     if re.search(r"(?<!\w)int(?!\w)", t):
         # there is at least one int occurence in t...
         candidates = []
@@ -568,7 +572,7 @@ def fix_type_conversion(f, t, cxx, errs):
         ct = ""
         for m, s in zip(marks, st):
             ct = ct + m + s
-        t = ct+fixbitfield
+        t = ct + fixbitfield
     if conf.DEBUG:
         echo("\t" * g_indent + "type: %s" % t)
     return t
@@ -679,9 +683,9 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
             continue
         span = range(cur.extent.start.line, cur.extent.end.line + 1)
         if cur.location.line not in span:
-            span = range(cur.location.line, cur.location.line+1)
+            span = range(cur.location.line, cur.location.line + 1)
         for l in span:
-            errs.extend(diag.get(cur.location.file.name,None)[l])
+            errs.extend(diag.get(cur.location.file.name, None)[l])
     # now finally call the handlers:
     for cur, errs in pool:
         if conf.DEBUG and cur.location.file:
@@ -737,9 +741,9 @@ def parse_debug(filename, cxx=False):
     options |= RetainExcludedConditionalBlocks
     options |= KeepGoing
     _args = [
-            "-ferror-limit=0",
-            "-fmodules",
-            "-fbuiltin-module-map",
+        "-ferror-limit=0",
+        "-fmodules",
+        "-fbuiltin-module-map",
     ]
     _args += ["-M", "-MG", "-MF%s" % ".depf"]
     _args += [
@@ -767,9 +771,9 @@ def parse_debug(filename, cxx=False):
             continue
         span = range(cur.extent.start.line, cur.extent.end.line + 1)
         if cur.location.line not in span:
-            span = range(cur.location.line, cur.location.line+1)
+            span = range(cur.location.line, cur.location.line + 1)
         for l in span:
-            errs.extend(diag.get(cur.location.file.name,None)[l])
+            errs.extend(diag.get(cur.location.file.name, None)[l])
     defs = OrderedDict()
     for cur, errs in pool:
         if conf.DEBUG and cur.location.file:
@@ -783,7 +787,8 @@ def parse_debug(filename, cxx=False):
                     for x in cobj.to_db(ident, "debug", cur.location.file.name):
                         defs[x["id"]] = x
     conf.DEBUG = old
-    return pool,defs
+    return pool, defs
+
 
 def deepflatten(cur, ltypes=Iterable):
     r = cur.get_children()
@@ -794,5 +799,5 @@ def deepflatten(cur, ltypes=Iterable):
             break
         else:
             sub = c.get_children()
-            r = chain(sub,r)
+            r = chain(sub, r)
             yield c

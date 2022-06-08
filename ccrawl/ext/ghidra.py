@@ -38,6 +38,7 @@ def build_gdt(folder_item):
     length = len(archive.getbuffer())
     return header + struct.pack(">Q", length) + archive.getvalue()
 
+
 try:
     import ghidra_bridge
 
@@ -51,10 +52,10 @@ except ConnectionRefusedError:
 else:
     if conf.config is None:
         conf.config = conf.Config()
-    if conf.config.Ghidra.manager=='program':
+    if conf.config.Ghidra.manager == "program":
         dtm = currentProgram.getDataTypeManager()
         if conf.VERBOSE:
-            secho("ghidra_bridge connection with data type manager %s"%dtm, fg="blue")
+            secho("ghidra_bridge connection with data type manager %s" % dtm, fg="blue")
         tr = dtm.startTransaction("ccrawl")
         root = dtm.getRootCategory()
         catp = root.createCategory(conf.config.Ghidra.category)
@@ -62,9 +63,13 @@ else:
         if conf.VERBOSE:
             secho("importing types in ccrawl category...", fg="blue")
     else:
-        dtm = ghidra.program.model.data.StandAloneDataTypeManager(conf.config.Ghidra.category)
+        dtm = ghidra.program.model.data.StandAloneDataTypeManager(
+            conf.config.Ghidra.category
+        )
         if conf.VERBOSE:
-            secho("ghidra_bridge connection with standalone data type manager", fg="blue")
+            secho(
+                "ghidra_bridge connection with standalone data type manager", fg="blue"
+            )
         catp = dtm.getRootCategory()
 
     eqt = currentProgram.getEquateTable()
@@ -86,7 +91,7 @@ else:
             e = eqt.getEquate(obj.identifier)
             if e is None:
                 s = obj.replace(" ", "")
-                if s[0]=="(" and s[-1]==")":
+                if s[0] == "(" and s[-1] == ")":
                     s = s[1:-1]
                 if s[-1] == "u":
                     try:
@@ -94,7 +99,7 @@ else:
                     except ValueError:
                         secho("macro conversion error for '%s'" % s[:-1], fg="red")
                     else:
-                        tr = dtm.startTransaction("equate %s"%obj.identifier)
+                        tr = dtm.startTransaction("equate %s" % obj.identifier)
                         e = eqt.createEquate(obj.identifier, value)
                         dtm.endTransaction(tr, True)
             if e is None:
@@ -108,14 +113,14 @@ else:
             secho("Data type %s already imported" % n, fg="cyan")
             return x
         if conf.VERBOSE:
-            secho("building data type %s..." % n,nl=False)
+            secho("building data type %s..." % n, nl=False)
         tr = dtm.startTransaction("build")
         try:
             if obj._is_enum:
                 I = list(obj.items())
-                if len(I)<256:
+                if len(I) < 256:
                     sz = 1
-                elif len(I)<(1<<16):
+                elif len(I) < (1 << 16):
                     sz = 2
                 else:
                     sz = 4
@@ -135,11 +140,11 @@ else:
                     dt = catp.addDataType(dt, None)
         except Exception as e:
             if conf.VERBOSE:
-                secho("ghidra.build exception: %s"%e,fg='red')
+                secho("ghidra.build exception: %s" % e, fg="red")
             dt = None
         else:
             if conf.VERBOSE:
-                secho("done.",fg="green")
+                secho("done.", fg="green")
         finally:
             dtm.endTransaction(tr, True)
         return dt
@@ -178,12 +183,12 @@ else:
         sdt = catp.addDataType(sdt, None)
         sdt.setToDefaultPacking()
         for f in cx._fields_:
-            if len(f)==3:
-                n,t,bfw = f
+            if len(f) == 3:
+                n, t, bfw = f
                 # actual "pack" the structure:
                 sdt.setExplicitPackingValue(1)
             else:
-                n,t = f
+                n, t = f
                 bfw = 0
             dt = ctype_to_ghidra(t, dtm)
             if t.__name__ == "LP_CFunctionType":
@@ -191,9 +196,9 @@ else:
                     dt.dataType.setName("proto_%s" % n)
                 except:
                     proto = catp.getDataType("proto_%s" % n)
-                    dt =  ghidra.program.model.data.PointerDataType(proto)
-            if bfw>0:
-                sdt.addBitField(dt,bfw,n,"")
+                    dt = ghidra.program.model.data.PointerDataType(proto)
+            if bfw > 0:
+                sdt.addBitField(dt, bfw, n, "")
             else:
                 sdt.add(dt, -1, n, "")
         sdt.repack(True)
@@ -212,7 +217,7 @@ else:
                     dt.dataType.setName("proto_%s" % n)
                 except:
                     proto = catp.getDataType("proto_%s" % n)
-                    dt =  ghidra.program.model.data.PointerDataType(proto)
+                    dt = ghidra.program.model.data.PointerDataType(proto)
             sdt.add(dt, -1, n, "")
         return sdt
 
@@ -227,7 +232,7 @@ else:
             dt = ctype_to_ghidra(p, dtm)
             p = ghidra.program.model.data.ParameterDefinitionImpl("p%d" % i, dt, "")
             params.append(p)
-            i+=1
+            i += 1
         fdt.setArguments(params)
         if cx._restype_ is not None:
             res = ctype_to_ghidra(cx._restype_, dtm)
@@ -311,13 +316,12 @@ else:
     def dt_longdouble(cx, dtm):
         return ghidra.program.model.data.LongDoubleDataType()
 
-
     def find_auto_structs(f):
-        if isinstance(f,str):
+        if isinstance(f, str):
             try:
                 f = getGlobalFunctions(f)[0]
             except:
-                secho("error: function '%s' not found."%f,fg="red")
+                secho("error: function '%s' not found." % f, fg="red")
                 return None
         opt = ghidra.app.decompiler.DecompileOptions()
         ifc = ghidra.app.decompiler.DecompInterface()
@@ -328,78 +332,82 @@ else:
         hf = res.getHighFunction()
         lsm = hf.getLocalSymbolMap()
         Locs = {}
-        for n,s in lsm.getNameToSymbolMap().items():
+        for n, s in lsm.getNameToSymbolMap().items():
             S = []
             t = s.getDataType()
             if conf.DEBUG:
-                secho("\nVariable name & type: '{}' : '{}'".format(n,t),fg='magenta')
-            if t.getDescription().startswith('pointer'):
+                secho("\nVariable name & type: '{}' : '{}'".format(n, t), fg="magenta")
+            if t.getDescription().startswith("pointer"):
                 hv = s.getHighVariable()
                 vn0 = hv.getRepresentative()
-                todo = [(vn0,0)]
+                todo = [(vn0, 0)]
                 done = list(hv.getInstances())
                 for vn in done:
                     if vn != vn0:
-                        todo.append((vn,0))
-                while(len(todo)>0):
+                        todo.append((vn, 0))
+                while len(todo) > 0:
                     if conf.DEBUG:
-                        secho("todo: {}".format(todo),fg='green')
-                        secho("done: {}".format(done),fg='blue')
-                    cur,off0 = todo.pop(0)
-                    if cur is None: continue
+                        secho("todo: {}".format(todo), fg="green")
+                        secho("done: {}".format(done), fg="blue")
+                    cur, off0 = todo.pop(0)
+                    if cur is None:
+                        continue
                     for p in cur.getDescendants():
                         off = off0
-                        if conf.DEBUG: secho("  pcode: {}".format(p),fg='magenta')
+                        if conf.DEBUG:
+                            secho("  pcode: {}".format(p), fg="magenta")
                         if p.opcode == p.INT_ADD:
                             if p.inputs[1].isConstant():
-                               off += getSigned(p.inputs[1])
-                               if p.output not in done:
-                                   todo.append((p.output,off))
-                                   done.append(p.output)
+                                off += getSigned(p.inputs[1])
+                                if p.output not in done:
+                                    todo.append((p.output, off))
+                                    done.append(p.output)
                         elif p.opcode == p.INT_SUB:
                             if p.inputs[1].isConstant():
-                               off -= getSigned(p.inputs[1])
-                               if p.output not in done:
-                                   todo.append((p.output,off))
-                                   done.append(p.output)
+                                off -= getSigned(p.inputs[1])
+                                if p.output not in done:
+                                    todo.append((p.output, off))
+                                    done.append(p.output)
                         elif p.opcode == p.PTRADD:
                             if p.inputs[1].isConstant() and p.inputs[2].isConstant():
-                                off += getSigned(p.inputs[1])*(p.inputs[2].getOffset())
+                                off += getSigned(p.inputs[1]) * (
+                                    p.inputs[2].getOffset()
+                                )
                                 if p.output not in done:
-                                    todo.append((p.output,off))
+                                    todo.append((p.output, off))
                                     done.append(p.output)
                         elif p.opcode == p.PTRSUB:
                             if p.inputs[1].isConstant():
                                 off += getSigned(p.inputs[1])
                                 if p.output not in done:
-                                    todo.append((p.output,off))
+                                    todo.append((p.output, off))
                                     done.append(p.output)
                         elif p.opcode == p.LOAD:
                             outdt = getDataTypeTraceForward(p.output)
-                            el = (off,outdt.getLength())
+                            el = (off, outdt.getLength())
                             if el not in S:
                                 S.append(el)
                         elif p.opcode == p.STORE:
-                            if p.getSlot(cur)==1:
+                            if p.getSlot(cur) == 1:
                                 outdt = getDataTypeTraceBackward(p.inputs[2])
-                                el = (off,outdt.getLength())
+                                el = (off, outdt.getLength())
                                 if el not in S:
                                     S.append(el)
-                        elif p.opcode in (p.CAST,p.MULTIEQUAL,p.COPY):
+                        elif p.opcode in (p.CAST, p.MULTIEQUAL, p.COPY):
                             if p.output not in done:
-                                todo.append((p.output,off))
+                                todo.append((p.output, off))
                                 done.append(p.output)
                         if conf.DEBUG:
-                            secho("S = {}".format(S),fg='cyan')
+                            secho("S = {}".format(S), fg="cyan")
                 S.sort()
                 Locs[n] = S
         return Locs
 
     def getSigned(v):
-        mask = 0x80<<((v.getSize()-1)*8)
+        mask = 0x80 << ((v.getSize() - 1) * 8)
         value = v.getOffset()
-        if value&mask:
-            value -= 1 << (v.getSize()*8)
+        if value & mask:
+            value -= 1 << (v.getSize() * 8)
         return value
 
     def getDataTypeTraceBackward(v):
@@ -420,25 +428,24 @@ else:
             res = f(res, vn.getHigh().getDataType())
         return res
 
-
-    def do_commit_dtm(t,atm):
+    def do_commit_dtm(t, atm):
         h = ghidra.program.model.data.DataTypeConflictHandler.DEFAULT_HANDLER
         dtm = t.getDataTypeManager()
         atr = atm.startTransaction("commit to archive")
         dtr = dtm.startTransaction("update dt synch time")
         try:
-            print("commit '%s' "%(t.getName()),end="")
-            at = atm.resolve(t,h)
+            print("commit '%s' " % (t.getName()), end="")
+            at = atm.resolve(t, h)
             if at.name != t.name:
                 at.setName(t.name)
             if at.getDescription() != t.getDescription():
                 at.setDescrption(t.getDescription())
         except:
-            secho("error!",fg="red")
+            secho("error!", fg="red")
         else:
-            secho("✔️",fg="green")
-        dtm.endTransaction(dtr,True)
-        atm.endTransaction(atr,True)
+            secho("✔️", fg="green")
+        dtm.endTransaction(dtr, True)
+        atm.endTransaction(atr, True)
 
     def commit_local_to_gdt(name):
         dtmservice = ghidra.app.services.DataTypeManagerService
@@ -451,15 +458,13 @@ else:
         for a in dtm.sourceArchives:
             if a.name == name:
                 sa = a
-                sadtm = Alldtm.get(name,None)
+                sadtm = Alldtm.get(name, None)
                 break
         if sa and sadtm:
             for dt in dtm.getDataTypes(sa):
                 info = ghidra.app.plugin.core.datamgr.DataTypeSyncInfo(dt, sadtm)
                 if info.canCommit():
-                    do_commit_dtm(dt,sadtm)
+                    do_commit_dtm(dt, sadtm)
 
-    def dt_apply_recursive(dt,address):
-            dtm.findDataTypes
-
-
+    def dt_apply_recursive(dt, address):
+        dtm.findDataTypes

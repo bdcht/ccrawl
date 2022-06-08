@@ -143,7 +143,8 @@ def do_collect(ctx, src):
         src=src,
     )
 
-def files_and_includes(src,F):
+
+def files_and_includes(src, F):
     # count source files:
     FILES = set()
     HDIRS = set()
@@ -151,12 +152,12 @@ def files_and_includes(src,F):
         if os.path.isdir(D):
             for dirname, subdirs, files in os.walk(D.rstrip("/")):
                 has_headers = False
-                for f in filter(F,files):
+                for f in filter(F, files):
                     filename = "%s/%s" % (dirname, f)
                     FILES.add(filename)
                     has_headers = True
                 if has_headers:
-                    HDIRS.add("-I%s/"%dirname)
+                    HDIRS.add("-I%s/" % dirname)
         elif os.path.isfile(D) and F(D):
             FILES.add(D)
     # preprocess files to detect all #include directives
@@ -177,8 +178,13 @@ def files_and_includes(src,F):
 @click.option("-f", "--functions", is_flag=True, help="collect functions")
 @click.option("-m", "--macros", is_flag=True, help="collect macros")
 @click.option("-s", "--strict", is_flag=True, help="strict mode")
-@click.option("--auto-include", "autoinclude", default=True, is_flag=True,
-        help="try to guess -I path(s) for each input file")
+@click.option(
+    "--auto-include",
+    "autoinclude",
+    default=True,
+    is_flag=True,
+    help="try to guess -I path(s) for each input file",
+)
 @click.option("--clang", "xclang", help="parameters passed to clang")
 @click.argument(
     "src",
@@ -210,7 +216,7 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
     c.Collect.allc |= allc
     if allc is True:
         F = lambda f: (f.endswith(".c") or (cxx and f.endswith(".cpp")) or Fh(f))
-    elif (types or functions or macros):
+    elif types or functions or macros:
         K = []
         if types:
             K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL, CLASS_DECL, ENUM_DECL]
@@ -238,12 +244,12 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
             "-fbuiltin-module-map",
         ]
         # add header directories:
-        #for i in (D for D in src if os.path.isdir(D)):
+        # for i in (D for D in src if os.path.isdir(D)):
         #    args.append("-I%s" % i)
     else:
         args = xclang.split(" ")
     # count source files:
-    FILES, INCLUDES = files_and_includes(src,F)
+    FILES, INCLUDES = files_and_includes(src, F)
     total = len(FILES)
     W = c.Terminal.width - 12
     # parse and collect all sources:
@@ -267,12 +273,12 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
             FILES.difference_update(already_done)
             # aggregate cFunc instances and remove duplicates in dbo:
             for x in l:
-                if x["cls"]=="cFunc":
-                    kpad = x["id"]+x["val"]["prototype"]
+                if x["cls"] == "cFunc":
+                    kpad = x["id"] + x["val"]["prototype"]
                     if (kpad not in dbo) or (x["val"]["locs"] or x["val"]["calls"]):
                         dbo[kpad] = x
                 else:
-                    kpad = x["id"]+x["src"]
+                    kpad = x["id"] + x["src"]
                     dbo[kpad] = x
         t2 = time.time()
         if c.Terminal.timer:
@@ -480,7 +486,9 @@ def struct(ctx, pdef, conds):
         return
     db = ctx.obj["db"]
     Q = ctx.obj.get("select", Query().noop())
-    L = db.search(db.tag & Q & ((where("cls") == "cStruct") | (where("cls") == "cClass")))
+    L = db.search(
+        db.tag & Q & ((where("cls") == "cStruct") | (where("cls") == "cClass"))
+    )
     R = []
     fails = []
     with click.progressbar(L) as pL:
@@ -586,10 +594,11 @@ def info(ctx, pointer, identifier):
     """Get database internal informations about a definition."""
     db = ctx.obj["db"]
     Q = where("id") == identifier
-    if pointer not in (4,8):
-        pointer=0
+    if pointer not in (4, 8):
+        pointer = 0
     if db.contains(db.tag & Q):
         from ctypes import sizeof
+
         for l in db.search(db.tag & Q):
             x = ccore.from_db(l)
             click.echo("identifier: {}".format(identifier))
@@ -598,8 +607,9 @@ def info(ctx, pointer, identifier):
             click.secho("tag       : {}".format(l["tag"]), fg="magenta")
             if x._is_struct or x._is_union or x._is_class:
                 from ccrawl.ext import amoco
+
                 try:
-                    t = amoco.build(x,db)()
+                    t = amoco.build(x, db)()
                 except (TypeError, KeyError) as e:
                     what = e.args[0]
                     click.secho(
@@ -615,16 +625,16 @@ def info(ctx, pointer, identifier):
                 click.secho(
                     "offsets   : {}".format([(f[0], f[1]) for f in F]), fg="yellow"
                 )
-                psize="native"
-                if pointer==4:
-                    psize="32 bits"
-                elif pointer==8:
-                    psize="64 bits"
-                click.secho("[using %s pointer size]"%psize)
+                psize = "native"
+                if pointer == 4:
+                    psize = "32 bits"
+                elif pointer == 8:
+                    psize = "64 bits"
+                click.secho("[using %s pointer size]" % psize)
             elif x._is_func:
-                click.secho("params    : {}".format(l["val"]["params"]),fg="yellow")
-                click.secho("locals    : {}".format(l["val"]["locs"]),fg="yellow")
-                click.secho("calls     : {}".format(l["val"]["calls"]),fg="yellow")
+                click.secho("params    : {}".format(l["val"]["params"]), fg="yellow")
+                click.secho("locals    : {}".format(l["val"]["locs"]), fg="yellow")
+                click.secho("calls     : {}".format(l["val"]["calls"]), fg="yellow")
 
     else:
         click.secho("identifier '%s' not found" % identifier, fg="red", err=True)
@@ -676,32 +686,27 @@ def store(ctx, update):
                 db.ldb.remove(doc_ids=[l.doc_id for l in Done])
 
 
-
 # sync command:
 # ------------------------------------------------------------------------------
 
 
 @cli.command()
 @click.pass_context
-@click.option(
-    "-i", "--interact", is_flag=True, help="prompt before updating"
-)
-@click.option(
-    "-n", "--printonly", is_flag=True, help="print only but do not update"
-)
-def sync(ctx,interact,printonly):
+@click.option("-i", "--interact", is_flag=True, help="prompt before updating")
+@click.option("-n", "--printonly", is_flag=True, help="print only but do not update")
+def sync(ctx, interact, printonly):
     """use a local database to update the val & use attributes of documents in
     the remote database, matching on the id, cls, src and tag.
     """
-    db = ctx.obj['db']
+    db = ctx.obj["db"]
     if db.ldb is None:
-        click.secho("no local database to sync",fg="red")
+        click.secho("no local database to sync", fg="red")
         return
     if db.rdb is None:
-        click.secho("no remote database to sync",fg="red")
+        click.secho("no remote database to sync", fg="red")
         return
     if db.rdb.__class__.__name__ != "MongoDB":
-        click.secho("not a MongoDB remote database",fg="red")
+        click.secho("not a MongoDB remote database", fg="red")
         return
     db.cleanup_local()
     for l in db.ldb.search(db.tag):
@@ -710,37 +715,36 @@ def sync(ctx,interact,printonly):
             l["use"] = list(x.unfold(db.ldb).subtypes.keys())
         except:
             l["use"] = []
-        R = db.rdb.db["nodes"].find({"id" : l["id"],
-                     "cls": l["cls"],
-                     "tag": l["tag"],
-                     "src": l["src"]})
+        R = db.rdb.db["nodes"].find(
+            {"id": l["id"], "cls": l["cls"], "tag": l["tag"], "src": l["src"]}
+        )
         isnew = True
         for r in R:
             isnew = False
-            if l["val"]!=r["val"]:
+            if l["val"] != r["val"]:
                 if not conf.QUIET:
-                    click.echo("remote entry differs for %s [%s]"%(l["id"],l["cls"]))
+                    click.echo("remote entry differs for %s [%s]" % (l["id"], l["cls"]))
                 if conf.VERBOSE:
-                    click.secho("local : %s"%l["val"],fg="cyan")
-                    click.secho("remote: %s"%r["val"],fg="yellow")
+                    click.secho("local : %s" % l["val"], fg="cyan")
+                    click.secho("remote: %s" % r["val"], fg="yellow")
                 doit = True
                 if interact:
-                    doit = click.confirm('Do you want to continue?')
+                    doit = click.confirm("Do you want to continue?")
                 if doit and not printonly:
-                    db.rdb.db["nodes"].update_one({"_id":r["_id"]},
-                            {"$set": {"val": l["val"], "use": l["use"]}})
-                    db.rdb.update_structs(db,{"_id":r["_id"]})
+                    db.rdb.db["nodes"].update_one(
+                        {"_id": r["_id"]}, {"$set": {"val": l["val"], "use": l["use"]}}
+                    )
+                    db.rdb.update_structs(db, {"_id": r["_id"]})
             elif not conf.QUIET:
-                click.secho("matching entry %s [%s]"%(l["id"],l["cls"]),fg="green")
+                click.secho("matching entry %s [%s]" % (l["id"], l["cls"]), fg="green")
         if isnew:
             if not conf.QUIET:
-                click.secho("new remote entry %s [%s]"%(l["id"],l["cls"]),fg="blue")
+                click.secho("new remote entry %s [%s]" % (l["id"], l["cls"]), fg="blue")
             doit = True
             if interact:
-                doit = click.confirm('Do you want to continue?')
+                doit = click.confirm("Do you want to continue?")
             if doit and not printonly:
                 db.rdb.db["nodes"].insert_one(l)
-
 
 
 # fetch command:

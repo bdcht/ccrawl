@@ -91,6 +91,7 @@ class Formats(Configurable):
     default = Unicode("C", config=True)  # show results formatted as C code
     callcon = Unicode("cdecl", config=True)  # assume cdecl calling convention
 
+
 class Ghidra(Configurable):
     "configurable parameters related to ghidra"
     manager = Unicode("program", config=True)  # use ghidra_bridge on currentProgram

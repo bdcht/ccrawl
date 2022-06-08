@@ -43,8 +43,8 @@ def mk_ctypes(t, Types):
 
 
 def formatproto(res, proto, Types):
-    params = filter(None,[mk_ctypes(c_type(x), Types) for x in proto.args])
-    return ctypes.CFUNCTYPE(res,*params)
+    params = filter(None, [mk_ctypes(c_type(x), Types) for x in proto.args])
+    return ctypes.CFUNCTYPE(res, *params)
 
 
 def build(obj, db, Types={}, _bstack=[]):
@@ -53,7 +53,7 @@ def build(obj, db, Types={}, _bstack=[]):
         return Types[x]
     early_exit = False
     if obj.identifier in _bstack:
-        if (obj._is_struct or obj._is_union):
+        if obj._is_struct or obj._is_union:
             early_exit = True
     _bstack.append(obj.identifier)
     if obj.subtypes is None:
@@ -83,9 +83,9 @@ def build(obj, db, Types={}, _bstack=[]):
             Types[obj.identifier] = mk_ctypes(t, Types)
             return Types[obj.identifier]
     if obj._is_enum:
-        if len(obj)<256:
+        if len(obj) < 256:
             Types[x] = ctypes.c_byte
-        elif len(obj)<(1<<16):
+        elif len(obj) < (1 << 16):
             Types[x] = ctypes.c_short
         else:
             Types[x] = ctypes.c_int
