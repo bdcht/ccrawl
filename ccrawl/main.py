@@ -674,8 +674,73 @@ def store(ctx, update):
                 click.secho("done.", fg="green")
             if not update:
                 db.ldb.remove(doc_ids=[l.doc_id for l in Done])
-    # restore remote database operations:
-    db.rdb = rdb
+
+
+
+# sync command:
+# ------------------------------------------------------------------------------
+
+
+@cli.command()
+@click.pass_context
+@click.option(
+    "-i", "--interact", is_flag=True, help="prompt before updating"
+)
+@click.option(
+    "-n", "--printonly", is_flag=True, help="print only but do not update"
+)
+def sync(ctx,interact,printonly):
+    """use a local database to update the val & use attributes of documents in
+    the remote database, matching on the id, cls, src and tag.
+    """
+    db = ctx.obj['db']
+    if db.ldb is None:
+        click.secho("no local database to sync",fg="red")
+        return
+    if db.rdb is None:
+        click.secho("no remote database to sync",fg="red")
+        return
+    if db.rdb.__class__.__name__ != "MongoDB":
+        click.secho("not a MongoDB remote database",fg="red")
+        return
+    db.cleanup_local()
+    for l in db.ldb.search(db.tag):
+        x = ccore.from_db(l)
+        try:
+            l["use"] = list(x.unfold(db.ldb).subtypes.keys())
+        except:
+            l["use"] = []
+        R = db.rdb.db["nodes"].find({"id" : l["id"],
+                     "cls": l["cls"],
+                     "tag": l["tag"],
+                     "src": l["src"]})
+        isnew = True
+        for r in R:
+            isnew = False
+            if l["val"]!=r["val"]:
+                if not conf.QUIET:
+                    click.echo("remote entry differs for %s [%s]"%(l["id"],l["cls"]))
+                if conf.VERBOSE:
+                    click.secho("local : %s"%l["val"],fg="cyan")
+                    click.secho("remote: %s"%r["val"],fg="yellow")
+                doit = True
+                if interact:
+                    doit = click.confirm('Do you want to continue?')
+                if doit and not printonly:
+                    db.rdb.db["nodes"].update_one({"_id":r["_id"]},
+                            {"$set": {"val": l["val"], "use": l["use"]}})
+                    db.rdb.update_structs(db,{"_id":r["_id"]})
+            elif not conf.QUIET:
+                click.secho("matching entry %s [%s]"%(l["id"],l["cls"]),fg="green")
+        if isnew:
+            if not conf.QUIET:
+                click.secho("new remote entry %s [%s]"%(l["id"],l["cls"]),fg="blue")
+            doit = True
+            if interact:
+                doit = click.confirm('Do you want to continue?')
+            if doit and not printonly:
+                db.rdb.db["nodes"].insert_one(l)
+
 
 
 # fetch command:
