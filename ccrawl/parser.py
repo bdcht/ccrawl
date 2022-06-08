@@ -5,7 +5,8 @@ from clang.cindex import CursorKind, TokenKind, TranslationUnit, Index
 import clang.cindex
 import tempfile
 import hashlib
-from collections import OrderedDict, defaultdict
+from itertools import chain
+from collections import Iterable, OrderedDict, defaultdict
 from ccrawl import conf
 from ccrawl.core import (
     cFunc,
@@ -64,7 +65,23 @@ def FuncDecl(cur, cxx, errors=None):
     identifier = cur.spelling
     t = cur.type.spelling
     proto = fix_type_conversion(cur, t, cxx, errors)
-    return identifier, cFunc(proto)
+    params = []
+    locs = []
+    calls = []
+    f = cFunc(prototype=proto)
+    for e in cur.get_children():
+        if conf.DEBUG:
+            echo("%s: %s"%(e.kind, e.spelling))
+        if e.kind==CursorKind.PARM_DECL:
+            params.append(e.spelling)
+        elif e.kind==CursorKind.COMPOUND_STMT:
+            locs,calls = CodeDef(e, cxx, errors)
+    f["params"] = params
+    f["locs"] = locs
+    f["calls"] = calls
+    if conf.VERBOSE:
+        secho("  cFunc: %s"%identifier)
+    return identifier, f
 
 
 @declareHandler(MACRO_DEF)
@@ -76,6 +93,8 @@ def MacroDef(cur, cxx, errors=None):
             pre = "" if t.spelling in spec_chars else " "
             toks.append(pre + t.spelling)
         s = "".join(toks)
+        if conf.VERBOSE:
+            secho("  cMacro: %s"%identifier)
         return identifier, cMacro(s.replace("( ", "("))
 
 
@@ -91,7 +110,14 @@ def TypeDef(cur, cxx, errors=None):
     t = get_uniq_typename(t)
     if conf.DEBUG:
         echo("\t" * g_indent + "make unique: %s" % t)
+    if conf.VERBOSE:
+        secho("  cTypedef: %s"%identifier)
     return identifier, cTypedef(t)
+
+@declareHandler(CursorKind.TYPE_REF)
+def TypeRef(cur, cxx, errors=None):
+    echo("\t" * g_indent +cur.spelling)
+    return cur.spelling, None
 
 
 @declareHandler(STRUCT_DECL)
@@ -106,6 +132,8 @@ def StructDecl(cur, cxx, errors=None):
         echo("\t" * g_indent + "make unique: %s" % typename)
     S = cClass() if cxx else cStruct()
     SetStructured(cur, S, errors)
+    if conf.VERBOSE:
+        secho("  %s: %s"%(S.__class__.__name__,typename))
     return typename, S
 
 
@@ -121,6 +149,8 @@ def UnionDecl(cur, cxx, errors=None):
         echo("\t" * g_indent + "make unique: %s" % typename)
     S = cClass() if cxx else cUnion()
     SetStructured(cur, S, errors)
+    if conf.VERBOSE:
+        secho("  %s: %s"%(S.__class__.__name__,typename))
     return typename, S
 
 
@@ -131,6 +161,8 @@ def ClassDecl(cur, cxx, errors=None):
         echo("\t" * g_indent + "%s" % typename)
     S = cClass()
     SetStructured(cur, S, errors)
+    if conf.VERBOSE:
+        secho("  %s: %s"%(S.__class__.__name__,typename))
     return typename, S
 
 
@@ -158,9 +190,11 @@ def EnumDecl(cur, cxx, errors=None):
             S[f.spelling] = f.enum_value
             if conf.DEBUG:
                 echo(str(f.enum_value), nl=False)
-        if conf.DEBUG:
-            echo("")
+        elif conf.DEBUG:
+            echo("%s:%s"%(f.kind, f.spelling))
     g_indent -= 1
+    if conf.VERBOSE:
+        secho("  %s: %s"%(S.__class__.__name__,typename))
     return typename, S
 
 
@@ -190,6 +224,8 @@ def ClassTemplate(cur, cxx, errors=None):
     # ok so now proceed with the "class" parsing:
     S = cClass()
     SetStructured(cur, S, errors)
+    if conf.VERBOSE:
+        secho("  cTemplate/%s: %s"%(S.__class__.__name__,identifier))
     return identifier, cTemplate(params=p, cClass=S)
 
 
@@ -208,7 +244,9 @@ def FuncTemplate(cur, cxx, errors=None):
         elif x.kind == CursorKind.TEMPLATE_NON_TYPE_PARAMETER:
             p.append("%s %s" % (x.type.spelling, x.spelling))
     f = re.sub(r"__attribute__.*", "", proto)
-    return identifier, cTemplate(params=p, cFunc=cFunc(f))
+    if conf.VERBOSE:
+        secho("  cTemplate/cFunc: %s"%identifier)
+    return identifier, cTemplate(params=p, cFunc=cFunc(prototype=f))
 
 
 @declareHandler(CLASS_TPSPEC)
@@ -240,6 +278,24 @@ def NameSpace(cur, cxx, errors=None):
             S.append(i)
             S.local[i] = obj
     return namespace, S
+
+def CodeDef(cur, cxx, errors=None):
+    global g_indent
+    g_indent += 1
+    locs = []
+    calls = []
+    #for f in deepflatten(cur):
+    for f in cur.walk_preorder():
+        if conf.DEBUG:
+            echo("\t" * g_indent + "%s: %s"%(f.kind,f.spelling))
+        if f.kind==CursorKind.VAR_DECL:
+            locs.append((f.type.spelling, f.spelling))
+            if conf.DEBUG:
+                echo("\t" * g_indent + "var: (%s,%s)"%locs[-1])
+        elif f.kind==CursorKind.CALL_EXPR:
+            calls.append(f.spelling)
+    g_indent -= 1
+    return locs,calls
 
 
 def SetStructured(cur, S, errors=None):
@@ -529,14 +585,22 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
     # clang parser cindex options:
     if options is None:
         # (detailed processing allows to get macros in iterated cursors)
+        options = TranslationUnit.PARSE_NONE
         options = TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
         options |= TranslationUnit.PARSE_INCOMPLETE
-        options |= TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
+        options |= TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION
+        # (preprocessor options not exported in the python bindings):
+        RetainExcludedConditionalBlocks = 0x8000
+        KeepGoing = 0x200
+        options |= RetainExcludedConditionalBlocks
+        options |= KeepGoing
     if args is None:
-        # clang: keep comments in parser output and get template definition
+        # mandatory if only libclang python binding is installed, since then the llvm-headers
+        # are probably missing we need to use the builtin modulemap:
         _args = [
             "-ferror-limit=0",
-            "-fparse-all-comments",
+            "-fmodules",
+            "-fbuiltin-module-map",
         ]
     else:
         _args = args[:]
@@ -550,16 +614,21 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
         # in non strict mode, we allow missing includes
         fd, depf = tempfile.mkstemp(prefix="ccrawl-")
         os.close(fd)
-        _args += ["-M", "-MM", "-MG", "-MF%s" % depf, "-dD", "-dI", "-dM"]
+        _args += ["-M", "-MG", "-MF%s" % depf]
     if conf.DEBUG:
         echo("\nfilename: %s, args: %s" % (filename, _args))
     if unsaved_files is None:
+        # unsaved files are also used to replace existing files by these if the
+        # filename matches,
+        # TODO: allowing to "preload" headers like stddef.h for example...
         unsaved_files = []
     if kind is None:
         kind = CHandlers
     else:
         for k in kind:
             assert k in CHandlers
+    if conf.config.Collect.allc is False:
+        options |= TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     defs = OrderedDict()
     index = Index.create()
     # call clang parser:
@@ -595,7 +664,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
             echo(":")
     if not conf.config.Collect.strict:
         os.remove(depf)
-    # walk down all AST to get all cursors:
+    # walk down all AST to get all top-level cursors:
     pool = [(c, []) for c in tu.cursor.get_children()]
     name = str(tu.cursor.extent.start.file.name)
     diag = {}
@@ -653,3 +722,77 @@ def selected_errs(r):
         return True
     else:
         return False
+
+
+def parse_debug(filename, cxx=False):
+    old = conf.DEBUG
+    conf.DEBUG = True
+    options = TranslationUnit.PARSE_NONE
+    options = TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
+    options |= TranslationUnit.PARSE_INCOMPLETE
+    options |= TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION
+    ## (preprocessor options not exported in the python bindings):
+    RetainExcludedConditionalBlocks = 0x8000
+    KeepGoing = 0x200
+    options |= RetainExcludedConditionalBlocks
+    options |= KeepGoing
+    _args = [
+            "-ferror-limit=0",
+            "-fmodules",
+            "-fbuiltin-module-map",
+    ]
+    _args += ["-M", "-MG", "-MF%s" % ".depf"]
+    _args += [
+        "-I.",
+        "-I./xxx",
+        "-I./other",
+    ]
+    unsaved_files = []
+    index = Index.create()
+    if conf.DEBUG:
+        echo(_args)
+    tu = index.parse(filename, _args, unsaved_files, options)
+    for err in tu.diagnostics:
+        secho(err.format(), fg="yellow")
+    pool = [(c, []) for c in tu.cursor.get_children()]
+    name = str(tu.cursor.extent.start.file.name)
+    diag = {}
+    for r in tu.diagnostics:
+        if selected_errs(r):
+            if not r.location.file.name in diag:
+                diag[r.location.file.name] = defaultdict(list)
+            diag[r.location.file.name][r.location.line].append(r)
+    for cur, errs in pool:
+        if cur.location.file is None or (cur.location.file.name not in diag):
+            continue
+        span = range(cur.extent.start.line, cur.extent.end.line + 1)
+        if cur.location.line not in span:
+            span = range(cur.location.line, cur.location.line+1)
+        for l in span:
+            errs.extend(diag.get(cur.location.file.name,None)[l])
+    defs = OrderedDict()
+    for cur, errs in pool:
+        if conf.DEBUG and cur.location.file:
+            echo("-" * 80)
+            echo("%s: %s [%d errors]" % (cur.kind, cur.spelling, len(errs)))
+        if cur.kind in CHandlers:
+            kv = CHandlers[cur.kind](cur, cxx, errs)
+            if kv:
+                ident, cobj = kv
+                if cobj:
+                    for x in cobj.to_db(ident, "debug", cur.location.file.name):
+                        defs[x["id"]] = x
+    conf.DEBUG = old
+    return pool,defs
+
+def deepflatten(cur, ltypes=Iterable):
+    r = cur.get_children()
+    while True:
+        try:
+            c = next(r)
+        except StopIteration:
+            break
+        else:
+            sub = c.get_children()
+            r = chain(sub,r)
+            yield c

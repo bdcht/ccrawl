@@ -322,16 +322,16 @@ class cMacro(str, ccore):
 # ------------------------------------------------------------------------------
 
 
-class cFunc(str, ccore):
+class cFunc(dict, ccore):
     _is_func = True
 
     def restype(self):
-        t = c_type(self)
+        t = c_type(self["prototype"])
         t.pstack.pop()
         return t.show()
 
     def argtypes(self):
-        t = c_type(self)
+        t = c_type(self["prototype"])
         return t.pstack[-1].args
 
     def unfold(self, db, limit=None):

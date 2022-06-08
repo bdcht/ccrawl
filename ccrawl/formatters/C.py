@@ -44,7 +44,7 @@ def cMacro_C(obj, db, recursive):
 
 
 def cFunc_C(obj, db, recursive):
-    fptr = c_type(obj)
+    fptr = c_type(obj["prototype"])
     return fptr.show(obj.identifier) + ";"
 
 

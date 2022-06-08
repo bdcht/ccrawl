@@ -91,7 +91,7 @@ def build(obj, db, Types={}, _bstack=[]):
             Types[x] = ctypes.c_int
         globals()[x] = {}.update(obj)
     elif obj._is_func:
-        Types[x] = mk_ctypes(c_type(obj), Types)
+        Types[x] = mk_ctypes(c_type(obj["prototype"]), Types)
     elif obj._is_struct or obj._is_union:
         parent = ctypes.Structure
         if obj._is_union:

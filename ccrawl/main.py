@@ -4,8 +4,8 @@ import time
 import click
 from ccrawl import conf
 from ccrawl.formatters import formats
-from ccrawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL
-from ccrawl.parser import FUNCTION_DECL, MACRO_DEF
+from ccrawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL, ENUM_DECL
+from ccrawl.parser import CLASS_DECL, FUNCTION_DECL, MACRO_DEF
 from ccrawl.parser import parse
 from ccrawl.core import ccore
 from ccrawl.utils import c_type
@@ -102,6 +102,7 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
         click.echo("loading local database %s ..." % c.Database.local, nl=False)
     try:
         ctx.obj["db"] = Proxy(c.Database)
+        ctx.obj["tag"] = tag
         if tag:
             ctx.obj["db"].set_tag(tag)
     except Exception:
@@ -160,7 +161,7 @@ def files_and_includes(src,F):
             FILES.add(D)
     # preprocess files to detect all #include directives
     # and update or re-order the INCLUDES set:
-    INCLUDES = []
+    INCLUDES = list(HDIRS)
     return FILES, INCLUDES
 
 
@@ -203,22 +204,25 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
     """
     c = conf.config
     cxx = c.Collect.cxx
-    F = lambda f: f.endswith(".h") or (cxx and f.endswith(".hpp"))
+    F = Fh = lambda f: f.endswith(".h") or (cxx and f.endswith(".hpp"))
     K = None
     c.Collect.strict |= strict
+    c.Collect.allc |= allc
     if allc is True:
-        F = lambda f: (f.endswith(".c") or (cxx and f.endswith(".cpp")) or F(f))
-    if types or functions or macros:
+        F = lambda f: (f.endswith(".c") or (cxx and f.endswith(".cpp")) or Fh(f))
+    elif (types or functions or macros):
         K = []
         if types:
-            K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL]
+            K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL, CLASS_DECL, ENUM_DECL]
         if functions:
             K += [FUNCTION_DECL]
         if macros:
             K += [MACRO_DEF]
-    tag = ctx.obj["db"].tag._hash or None
-    if tag is None:
+    tag = ctx.obj["tag"]
+    if ctx.obj["tag"] is None:
         tag = str(time.time())
+    else:
+        tag = ctx.obj["db"].tag._hash
     # filters:
     ctx.obj["F"] = F
     # selected kinds of cursors to collect:
@@ -230,11 +234,12 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
         # keep comments in parser output:
         args = [
             "-ferror-limit=0",
-            "-fparse-all-comments",
+            "-fmodules",
+            "-fbuiltin-module-map",
         ]
         # add header directories:
-        for i in (D for D in src if os.path.isdir(D)):
-            args.append("-I%s" % i)
+        #for i in (D for D in src if os.path.isdir(D)):
+        #    args.append("-I%s" % i)
     else:
         args = xclang.split(" ")
     # count source files:
@@ -260,13 +265,20 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
             # remove already processed/included files
             already_done = set([el["src"] for el in l])
             FILES.difference_update(already_done)
-            # remove duplicates into dbo:
+            # aggregate cFunc instances and remove duplicates in dbo:
             for x in l:
-                dbo[x["id"] + x["src"]] = x
+                if x["cls"]=="cFunc":
+                    kpad = x["id"]+x["val"]["prototype"]
+                    if (kpad not in dbo) or (x["val"]["locs"] or x["val"]["calls"]):
+                        dbo[kpad] = x
+                else:
+                    kpad = x["id"]+x["src"]
+                    dbo[kpad] = x
         t2 = time.time()
         if c.Terminal.timer:
             click.secho("%.2f)" % (t2 - t1), fg="cyan")
     db = ctx.obj["db"]
+
     if not c.Terminal.quiet:
         click.echo("-" * (c.Terminal.width))
         click.echo("saving database...".ljust(W), nl=False)
@@ -353,7 +365,7 @@ def select(ctx, ands, ors):
             click.secho('"%s"' % l["id"], fg="magenta")
     else:
         if conf.DEBUG:
-            click.echo("FIND_COMMAND: %s" % ctx.invoked_subcommand)
+            click.echo("SELECT_COMMAND: %s" % ctx.invoked_subcommand)
 
 
 @select.command()
@@ -609,6 +621,10 @@ def info(ctx, pointer, identifier):
                 elif pointer==8:
                     psize="64 bits"
                 click.secho("[using %s pointer size]"%psize)
+            elif x._is_func:
+                click.secho("params    : {}".format(l["val"]["params"]),fg="yellow")
+                click.secho("locals    : {}".format(l["val"]["locs"]),fg="yellow")
+                click.secho("calls     : {}".format(l["val"]["calls"]),fg="yellow")
 
     else:
         click.secho("identifier '%s' not found" % identifier, fg="red", err=True)
