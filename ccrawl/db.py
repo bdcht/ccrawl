@@ -50,6 +50,8 @@ class Proxy(object):
     def search(self, q=None, **kargs):
         if q is None:
             q = self.tag
+        else:
+            q = self.tag & q
         for k in kargs:
             q &= where(k) == kargs[k]
         if self.rdb:

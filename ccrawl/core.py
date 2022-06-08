@@ -37,7 +37,7 @@ class ccore(object):
     def add_subtype(self, db, elt, limit=None):
         x = ccore._cache_.get(elt, None)
         if x is None:
-            data = db.get(id=elt)
+            data = db.get(where("id")==elt)
             if data:
                 x = ccore.from_db(data)
                 ccore._cache_[elt] = x

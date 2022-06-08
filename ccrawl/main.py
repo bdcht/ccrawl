@@ -645,16 +645,13 @@ def store(ctx, update):
     is computed before pushing definitions to the remote database.
     """
     db = ctx.obj["db"]
-    rdb = db.rdb
-    # force all operations to occur on local database:
-    db.rdb = None
     Done = []
-    for l in db.search(db.tag):
+    for l in db.ldb.search(db.tag):
         x = ccore.from_db(l)
         if not conf.QUIET:
             click.echo("unfolding '%s'..." % x.identifier, nl=False)
         try:
-            l["use"] = list(x.unfold(db).subtypes.keys())
+            l["use"] = list(x.unfold(db.ldb).subtypes.keys())
         except:
             if not conf.QUIET:
                 click.secho("failed.", fg="red")
@@ -664,11 +661,11 @@ def store(ctx, update):
             if update is True:
                 db.ldb.update(l)
         Done.append(l)
-    if rdb:
+    if db.rdb:
         if not conf.QUIET:
             click.echo("remote db insert multiple ...", nl=False)
         try:
-            rdb.insert_multiple(Done)
+            db.rdb.insert_multiple(Done)
         except Exception:
             if not conf.QUIET:
                 click.secho("failed.", fg="red")
