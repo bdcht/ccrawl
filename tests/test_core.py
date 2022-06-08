@@ -1,5 +1,6 @@
 import pytest
 from ccrawl.core import *
+from ccrawl.db import Query
 
 def test_ccore():
     x = ccore()
@@ -30,12 +31,13 @@ def test_from_db_2(db_doc2):
     assert x._is_struct
     assert x.identifier == 'struct X'
     assert x.subtypes is None
+    Q = Query().noop()
     class DB(object):
         def get(self,id):
+            if isinstance(id,type(Q)):
+                id = id._hash[-1]
             if id=='yyyy':
                 return db_doc2[1]
-            else:
-                raise NotImplementedError
     x.unfold(DB())
     assert 'yyyy' in x.subtypes
     y = x.subtypes['yyyy']

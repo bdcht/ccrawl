@@ -44,4 +44,4 @@ def test_04_cmd_show(configfile,dbfile):
     assert result.exit_code == 0
     l = result.output.split('\n')
     assert l[0] == 'struct xt_string_info {'
-    assert l[3] == '  int (*pfunc)();'
+    assert l[3] == '  int (*pfunc)(myu8, int);'

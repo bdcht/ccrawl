@@ -69,4 +69,4 @@ def test_format_amoco(configfile,c_header):
     assert x.show(form='amoco') == "TypeDefine('foo2','P * 2')"
     x = ccore.from_db(defs[10])
     assert x._is_struct
-    assert x.show(form='amoco') == '@StructDefine("""\nmyinteger : I ;comment for field I\ni * 12 : tab ;modern comment for tab\ns * 16 : p ;\nP : s ;\nP : next ;\nfoo : func ;\nstruct__bar * 2 : bar ;\n""")\nclass struct__mystruct(StructFormatter):\n    def __init__(self,data="",offset=0):\n        if data: self.unpack(data,offset)\n    '
+    assert x.show(form='amoco') == '@StructDefine("""\nmyinteger : I ;\ni * 12 : tab ;\ns * 16 : p ;\nP : s ;\nP : next ;\nfoo : func ;\nstruct__bar * 2 : bar ;\n""")\nclass struct__mystruct(StructFormatter):\n    def __init__(self,data="",offset=0):\n        if data: self.unpack(data,offset)\n    '
