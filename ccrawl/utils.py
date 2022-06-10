@@ -80,9 +80,14 @@ class c_type(object):
         # get final element type:
         bf = decl.rfind("#")
         if bf > 0:
-            x = bitfield.parseString(decl)
-            self.lbfw = x.pop()
-            r = ""
+            try:
+                x = bitfield.parseString(decl)
+            except Exception:
+                x, r = (pp.Group(objecttype) + pp.restOfLine).parseString(decl[:bf])
+                self.lbfw = 0
+            else:
+                r = ""
+                self.lbfw = x.pop()
         else:
             x, r = (pp.Group(objecttype) + pp.restOfLine).parseString(decl)
             self.lbfw = 0
