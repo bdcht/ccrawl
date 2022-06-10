@@ -334,12 +334,15 @@ class cFunc(dict, ccore):
 
     def restype(self):
         t = c_type(self["prototype"])
-        t.pstack.pop()
+        if len(t.pstack)>0:
+            t.pstack.pop()
         return t.show()
 
     def argtypes(self):
         t = c_type(self["prototype"])
-        return t.pstack[-1].args
+        if len(t.pstack)>0:
+            return t.pstack[-1].args
+        return []
 
     def unfold(self, db, limit=None):
         if self.subtypes is None:
