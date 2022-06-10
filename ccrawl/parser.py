@@ -357,7 +357,7 @@ def SetStructured(cur, S, errors=None):
             if f.kind == FUNC_TEMPLATE:
                 S.append(
                     (
-                        ("template%s" % slocal.get_template(), slocal["cFunc"]),
+                        ("template%s" % slocal.get_template(), slocal["cFunc"]["prototype"]),
                         ("", identifier),
                         (f.access_specifier.name, ""),
                     )
