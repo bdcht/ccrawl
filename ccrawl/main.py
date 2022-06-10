@@ -458,14 +458,16 @@ def constant(ctx, mask, symbol, val):
 
 @select.command()
 @click.option("-d", "--def", "pdef", is_flag=True, default=False)
+@click.option("-p", "--psize", "pointer", type=click.INT, default=0)
 @click.argument("conds", nargs=-1, type=click.STRING)
 @click.pass_context
-def struct(ctx, pdef, conds):
+def struct(ctx, pdef, pointer, conds):
     """Get structured definitions (struct, union or class)
     from the remote database (or the local database if no remote is found) matching
     constraints on total size or specific type name or size at given offset within
     the structure.
     """
+    from ccrawl.ext import amoco
     reqs = {}
     try:
         for p in conds:
@@ -474,7 +476,7 @@ def struct(ctx, pdef, conds):
                 sz = int(t)
                 reqs[off] = sz
             else:
-                off = int(off)
+                off = int(off,0)
                 if t[0] == "+":
                     reqs[off] = int(t)
                 elif t[0] == "?":
@@ -498,19 +500,15 @@ def struct(ctx, pdef, conds):
             try:
                 if x._is_class:
                     x = x.as_cStruct(db)
-                t = x.build(db)
+                t = amoco.build(x,db)()
             except Exception:
                 fails.append("can't build %s" % x.identifier)
                 continue
-            F = []
-            for i, f in enumerate(t._fields_):
-                field = getattr(t, f[0])
-                F.append((field.offset, field.size, ctcls(x[i][0])))
+            F,SZ = zip(*(t.offsets(psize=pointer)))
+            xsize = t.size(psize=pointer)
             if F:
-                xsize = F[-1][0] + F[-1][1]
                 if "*" in reqs and reqs["*"] != xsize:
                     continue
-                F = dict(((f[0], f[1:3]) for f in F))
                 ok = []
                 for o, s in reqs.items():
                     if o == "*":
@@ -519,14 +517,16 @@ def struct(ctx, pdef, conds):
                     ok.append(cond)
                     if not cond:
                         break
+                    else:
+                        i = F.index(o)
                     if s == "?":
                         continue
                     if s == "*":
-                        cond = F[o][1].is_ptr
+                        cond = t.fields[i].typename=='P'
                     elif isinstance(s, c_type):
-                        cond = F[o][1].show() == s.show()
+                        cond = x[i][0] == s.show()
                     else:
-                        cond = F[o][0] == s
+                        cond = SZ[i] == s
                     ok.append(cond)
                     if not cond:
                         break
