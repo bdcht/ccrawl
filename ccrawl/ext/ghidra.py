@@ -194,7 +194,7 @@ else:
             if t.__name__ == "LP_CFunctionType":
                 try:
                     dt.dataType.setName("proto_%s" % n)
-                except:
+                except Exception:
                     proto = catp.getDataType("proto_%s" % n)
                     dt = ghidra.program.model.data.PointerDataType(proto)
             if bfw > 0:
@@ -215,7 +215,7 @@ else:
             if t.__name__ == "LP_CFunctionType":
                 try:
                     dt.dataType.setName("proto_%s" % n)
-                except:
+                except Exception:
                     proto = catp.getDataType("proto_%s" % n)
                     dt = ghidra.program.model.data.PointerDataType(proto)
             sdt.add(dt, -1, n, "")
@@ -320,12 +320,12 @@ else:
         if isinstance(f, str):
             try:
                 f = getGlobalFunctions(f)[0]
-            except:
+            except Exception:
                 secho("error: function '%s' not found." % f, fg="red")
                 return None
         opt = ghidra.app.decompiler.DecompileOptions()
         ifc = ghidra.app.decompiler.DecompInterface()
-        dut = ghidra.app.decompiler.component.DecompilerUtils
+        #dut = ghidra.app.decompiler.component.DecompilerUtils
         ifc.setOptions(opt)
         ifc.openProgram(f.getProgram())
         res = ifc.decompileFunction(f, 1000, monitor)
@@ -440,7 +440,7 @@ else:
                 at.setName(t.name)
             if at.getDescription() != t.getDescription():
                 at.setDescrption(t.getDescription())
-        except:
+        except Exception:
             secho("error!", fg="red")
         else:
             secho("✔️", fg="green")

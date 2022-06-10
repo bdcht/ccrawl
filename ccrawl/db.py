@@ -216,7 +216,7 @@ class MongoDB(object):
                 tot32 = ax.size(psize=4)
                 off64 = ax.offsets(psize=8)
                 tot64 = ax.size(psize=8)
-            except:
+            except Exception:
                 continue
             s_32.update_one(
                 {"_id": i},

@@ -346,7 +346,7 @@ class Select_Struct(Resource):
                 if x._is_class:
                     x = x.as_cStruct(db)
                 t = x.build(db)
-            except:
+            except Exception:
                 continue
             F = []
             for i, f in enumerate(t._fields_):
@@ -404,4 +404,4 @@ api.add_resource(Select_Struct, "/api/select/struct")
 def run(ctx):
     global g_ctx
     g_ctx = ctx
-    app.run(debug=True)
+    app.run(debug=False)

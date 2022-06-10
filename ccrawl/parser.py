@@ -670,7 +670,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
         os.remove(depf)
     # walk down all AST to get all top-level cursors:
     pool = [(c, []) for c in tu.cursor.get_children()]
-    name = str(tu.cursor.extent.start.file.name)
+    #name = str(tu.cursor.extent.start.file.name)
     diag = {}
     for r in tu.diagnostics:
         if selected_errs(r):
@@ -759,7 +759,7 @@ def parse_debug(filename, cxx=False):
     for err in tu.diagnostics:
         secho(err.format(), fg="yellow")
     pool = [(c, []) for c in tu.cursor.get_children()]
-    name = str(tu.cursor.extent.start.file.name)
+    #name = str(tu.cursor.extent.start.file.name)
     diag = {}
     for r in tu.diagnostics:
         if selected_errs(r):

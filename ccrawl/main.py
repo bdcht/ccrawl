@@ -662,7 +662,7 @@ def store(ctx, update):
             click.echo("unfolding '%s'..." % x.identifier, nl=False)
         try:
             l["use"] = list(x.unfold(db.ldb).subtypes.keys())
-        except:
+        except Exception:
             if not conf.QUIET:
                 click.secho("failed.", fg="red")
         else:
@@ -713,7 +713,7 @@ def sync(ctx, interact, printonly):
         x = ccore.from_db(l)
         try:
             l["use"] = list(x.unfold(db.ldb).subtypes.keys())
-        except:
+        except Exception:
             l["use"] = []
         R = db.rdb.db["nodes"].find(
             {"id": l["id"], "cls": l["cls"], "tag": l["tag"], "src": l["src"]}
