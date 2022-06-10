@@ -1,6 +1,6 @@
 from ccrawl import conf
 from ccrawl.formatters.ctypes_ import toCTypes
-from ccrawl.utils import c_type, fargs, pp
+from ccrawl.utils import c_type, cxx_type, fargs, pp
 from click import secho
 import ctypes
 
@@ -43,11 +43,25 @@ def mk_ctypes(t, Types):
 
 
 def formatproto(res, proto, Types):
-    params = filter(None, [mk_ctypes(c_type(x), Types) for x in proto.args])
+    params = filter(None, [mk_ctypes(get_c_or_cxx_type(t), Types) for t in proto.args])
     return ctypes.CFUNCTYPE(res, *params)
 
+def get_c_or_cxx_type(x):
+    if not ('&' in x):
+        try:
+            t = c_type(x)
+        except pp.ParseException:
+            pass
+        else:
+            return t
+    t = cxx_type(x)
+    return t
 
 def build(obj, db, Types={}, _bstack=[]):
+    if obj._is_class:
+        x = obj.as_cStruct(db)
+        x.unfold(db)
+        return build(x, db, Types, _bstack)
     x = str(obj.identifier.replace("?_", "").replace(" ", "_"))
     if x in Types:
         return Types[x]
@@ -63,7 +77,7 @@ def build(obj, db, Types={}, _bstack=[]):
             continue
         build(subtype, db, Types, _bstack)
     if obj._is_typedef:
-        t = c_type(obj)
+        t = get_c_or_cxx_type(obj)
         Types[obj.identifier] = mk_ctypes(t, Types)
         _bstack.pop()
         return Types[obj.identifier]
@@ -73,15 +87,16 @@ def build(obj, db, Types={}, _bstack=[]):
         try:
             v = int(v, base=0)
         except ValueError:
-            pass
-        try:
-            t = c_type(v)
-        except pp.ParseException:
-            globals()[obj.identifier] = v
-            return v
+            try:
+                t = mk_ctypes(get_c_or_cxx_type(v),Types)
+            except pp.ParseException:
+                globals()[obj.identifier] = v
+                return v
+            else:
+                Types[obj.identifier] = t
+                return Types[obj.identifier]
         else:
-            Types[obj.identifier] = mk_ctypes(t, Types)
-            return Types[obj.identifier]
+            return v
     if obj._is_enum:
         if len(obj) < 256:
             Types[x] = ctypes.c_byte
@@ -91,7 +106,7 @@ def build(obj, db, Types={}, _bstack=[]):
             Types[x] = ctypes.c_int
         globals()[x] = {}.update(obj)
     elif obj._is_func:
-        Types[x] = mk_ctypes(c_type(obj["prototype"]), Types)
+        Types[x] = mk_ctypes(get_c_or_cxx_type(obj["prototype"]), Types)
     elif obj._is_struct or obj._is_union:
         parent = ctypes.Structure
         if obj._is_union:
@@ -101,9 +116,10 @@ def build(obj, db, Types={}, _bstack=[]):
             fmt = []
             anon = []
             for t, n, c in iter(obj):
-                r = c_type(t)
+                r = get_c_or_cxx_type(t)
                 if "?_" in r.lbase:
-                    anon.append(n)
+                    if r.lbase.startswith("struct ") or r.lbase.startswith("union "):
+                        anon.append(n)
                 if not n and not r.lbase.startswith("union "):
                     continue
                 bfw = r.lbfw
@@ -115,10 +131,6 @@ def build(obj, db, Types={}, _bstack=[]):
             if len(anon) > 0:
                 Types[x]._anonymous_ = tuple(anon)
             Types[x]._fields_ = fmt
-    elif obj._is_class:
-        x = obj.as_cStruct(db)
-        x.unfold(db)
-        return build(x, db)
     else:
         raise NotImplementedError
     _bstack.pop()
