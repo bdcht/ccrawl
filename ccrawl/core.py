@@ -167,15 +167,19 @@ class cClass(list, ccore):
                 qal, t = x
                 mn, n = y
                 if qal == "parent":
-                    elt = n
+                    elt = [n]
+                elif qal == "using":
+                    elt = t
                 else:
                     if mn or ("virtual" in qal):
                         continue
                     elt = cxx_type(t)
                     elt = elt.show_base(kw=True, ns=True)
-                if elt not in T:
-                    T.append(elt)
-                    self.add_subtype(db, elt, limit)
+                    elt = [elt]
+                for e in elt:
+                    if e not in T:
+                        T.append(e)
+                        self.add_subtype(db, e, limit)
         return self
 
     def build(self, db):
@@ -219,6 +223,8 @@ class cClass(list, ccore):
                                 M.append((t, "__vptr$%s" % nn))
                     M.extend(m)
                 V.update(v)
+            elif qal == "using":
+                continue
             elif "virtual" in qal:
                 vptr = 1
             else:
