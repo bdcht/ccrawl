@@ -278,6 +278,8 @@ def NameSpace(cur, cxx, errors=None):
                 i = i.replace("%s::" % namespace, "")
             S.append(i)
             S.local[i] = obj
+    if conf.VERBOSE:
+        secho("  %s: %s" % (S.__class__.__name__, namespace))
     return namespace, S
 
 
@@ -610,9 +612,10 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
         _args = args[:]
     if conf.config is None:
         conf.config = conf.Config()
+    cxx_args = ["-x", "c++", "-std=c++11", "-fno-delayed-template-parsing"]
     if conf.config.Collect.cxx:
         if filename.endswith(".hpp") or filename.endswith(".cpp"):
-            _args.extend(["-x", "c++", "-std=c++11", "-fno-delayed-template-parsing"])
+            _args.extend(cxx_args)
     cxx = "c++" in _args
     if not conf.config.Collect.strict:
         # in non strict mode, we allow missing includes
@@ -645,8 +648,10 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
                 # common errors when parsing c++ as c:
                 if ("expected ';'" in err.spelling) or ("'namespace'" in err.spelling):
                     if conf.config.Collect.cxx:
-                        A = ["-x", "c++", "-std=c++11"]
-                        tu = index.parse(filename, _args + A, unsaved_files, options)
+                        if conf.DEBUG:
+                            secho("reparse as c++ input...",fg="cyan")
+                        cxx = True
+                        tu = index.parse(filename, _args + cxx_args, unsaved_files, options)
                         break
                     else:
                         secho("[c++]".rjust(12), fg="yellow")
@@ -746,6 +751,8 @@ def parse_debug(filename, cxx=False):
         "-fbuiltin-module-map",
     ]
     _args += ["-M", "-MG", "-MF%s" % ".depf"]
+    if cxx:
+        _args += ["-x", "c++", "-std=c++11", "-fno-delayed-template-parsing"]
     _args += [
         "-I.",
         "-I./xxx",
