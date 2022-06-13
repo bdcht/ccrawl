@@ -1,5 +1,5 @@
 # from amoco.system import structs
-from ccrawl.utils import c_type
+from ccrawl.utils import c_type, cxx_type
 from click import secho
 from tinydb import where
 
@@ -33,6 +33,7 @@ tostruct = {
 
 
 def id_amoco(s):
+    s = s.replace("$","_").replace(":","_")
     return s.replace("?_", "").replace(" ", "_")
 
 
@@ -97,6 +98,9 @@ def cEnum_amoco(obj, db, recursive):
     s.extend(("{} = {}".format(k, v) for (k, v) in obj.items()))
     return "\n".join(s)
 
+
+def cClass_amoco(obj, db, recursive):
+    return cStruct_amoco(obj.as_cStruct(db), db, recursive)
 
 def cStruct_amoco(obj, db, recursive):
     if isinstance(recursive, set):
