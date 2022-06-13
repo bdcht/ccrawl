@@ -103,6 +103,8 @@ public:
      };
 };
 
+namespace NS {
+
 class Scv {
     int mf1(); // non-static member function declaration
     void mf2() volatile, mf3() &&; // can be cv-qualified and reference-qualified
@@ -111,6 +113,8 @@ class Scv {
     Scv() : data(12) {} // constructors are member functions too
     int data;
 };
+
+}
 
 class M : T {
     std::size_t C;

@@ -1,7 +1,7 @@
 #ifdef TEST
 
-struct S {
-  struct S* self;
+struct SSS {
+  struct SSS* self;
   struct X  x;
 };
 
