@@ -135,26 +135,24 @@ We can show a *full* (recursive) definition of a class::
 And its ctypes_ memory layout::
 
   $ ccrawl -b None -l test.db show -f ctypes 'class Child'
-  class_Child = type('class_Child',(Structure,),{})
+  struct___layout$Child = type('struct___layout$Child',(Structure,),{})
   
-  class_Child._fields_ = [("__vptr$Parent1", c_void_p),
-                          ("parent1_data", c_int),
-                          ("__vptr$Parent2", c_void_p),
-                          ("parent2_data", c_int),
-                          ("child_data", c_int),
-                          ("__vptr$Grandparent", c_void_p),
-                          ("grandparent_data", c_int)]
+  struct___layout$Child._fields_ = [("__vptr$Parent1", c_void_p),
+                                    ("parent1_data", c_int),
+                                    ("__vptr$Parent2", c_void_p),
+                                    ("parent2_data", c_int),
+                                    ("child_data", c_int),
+                                    ("__vptr$Grandparent", c_void_p),
+                                    ("grandparent_data", c_int)]
 
 See the documentation for more examples.
 
 Todo
 ====
 
-- add support for C++ template formatters
+- improve C++ support (namespaces, template formatters, external build in ctypes/amoco/Ghidra)
 - add web frontend
-- plugin for Ghidra
 - plugin for IDA Pro
-- add support for parsing functions bodies (number/types of local vars, blocks?)
 
 Changelog
 =========
