@@ -373,6 +373,7 @@ def SetStructured(cur, S, errors=None):
         elif f.kind is CursorKind.CXX_BASE_SPECIFIER:
             is_virtual = clang.cindex.conf.lib.clang_isVirtualBase(f)
             virtual = "virtual" if is_virtual else ""
+            # the spelling seems to always includes the 'class'/'struct' keyword...
             S.append(
                 (("parent", virtual), ("", f.spelling), (f.access_specifier.name, ""))
             )
