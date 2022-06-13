@@ -496,16 +496,17 @@ def struct(ctx, pdef, pointer, conds):
     with click.progressbar(L) as pL:
         for l in pL:
             x = ccore.from_db(l)
-            ctcls = c_type
+            name = x.identifier
             try:
                 if x._is_class:
                     x = x.as_cStruct(db)
-                t = amoco.build(x,db)()
-            except Exception:
-                fails.append("can't build %s" % x.identifier)
+                ax = amoco.build(x,db)
+                t = ax()
+                F,SZ = zip(*(t.offsets(psize=pointer)))
+                xsize = t.size(psize=pointer)
+            except Exception as e:
+                fails.append("can't build %s (error: %s)" % (x.identifier,str(e)))
                 continue
-            F,SZ = zip(*(t.offsets(psize=pointer)))
-            xsize = t.size(psize=pointer)
             if F:
                 if "*" in reqs and reqs["*"] != xsize:
                     continue
@@ -532,9 +533,9 @@ def struct(ctx, pdef, pointer, conds):
                         break
                 if all(ok):
                     if not pdef:
-                        res = x.identifier
+                        res = name
                     else:
-                        res = x.show(db, form="C")
+                        res = x.show(db, False, form="C")+"\n"
                     R.append(res)
     if conf.VERBOSE:
         click.secho("\n".join(fails), fg="red", err=True)
@@ -607,7 +608,6 @@ def info(ctx, pointer, identifier):
             click.secho("tag       : {}".format(l["tag"]), fg="magenta")
             if x._is_struct or x._is_union or x._is_class:
                 from ccrawl.ext import amoco
-
                 try:
                     t = amoco.build(x, db)()
                 except (TypeError, KeyError) as e:
@@ -632,9 +632,12 @@ def info(ctx, pointer, identifier):
                     psize = "64 bits"
                 click.secho("[using %s pointer size]" % psize)
             elif x._is_func:
-                click.secho("params    : {}".format(l["val"]["params"]), fg="yellow")
-                click.secho("locals    : {}".format(l["val"]["locs"]), fg="yellow")
-                click.secho("calls     : {}".format(l["val"]["calls"]), fg="yellow")
+                try:
+                    click.secho("params    : {}".format(l["val"]["params"]), fg="yellow")
+                    click.secho("locals    : {}".format(l["val"]["locs"]), fg="yellow")
+                    click.secho("calls     : {}".format(l["val"]["calls"]), fg="yellow")
+                except Exception:
+                    click.secho("no params/locals/calls...check your database!",fg="red")
 
     else:
         click.secho("identifier '%s' not found" % identifier, fg="red", err=True)
