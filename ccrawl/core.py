@@ -88,7 +88,8 @@ class ccore(object):
         data = [doc]
         if hasattr(self, "local"):
             for i, x in iter(self.local.items()):
-                data.extend(x.to_db(i, tag, identifier))
+                if x:
+                    data.extend(x.to_db(i, tag, identifier))
         return data
 
     @staticmethod
