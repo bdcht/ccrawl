@@ -191,12 +191,26 @@ class cClass(list, ccore):
         return ctypes_.build(x, db)
 
     def cStruct_build_info(self, db):
+        """Defines the structure layout for this class,
+           according to the gcc cxx ABI for virtual classes.
+
+           The returned value is a triplet, (vptr, M, V) where
+
+             - vptr is a virtual indicator,
+             - M is the list of non-virtual fields,
+             - V is the ordered dict of virtual fields.
+
+
+        """
         self.unfold(db)
         M, V = [], OrderedDict()
         vptr = 0
+        # iterate over classes' fields
         for (x, y, _) in self:
             qal, t = x
             mn, n = y
+            # we don't care about scope & comments
+            # we start by handling parent classes:
             if qal == "parent":
                 n = cxx_type(n)
                 nn = n.show_base()
@@ -210,6 +224,7 @@ class cClass(list, ccore):
                 if x is None:
                     raise TypeError("unkown type '%s'" % n)
                 assert x._is_class
+                # get layout of the parent class:
                 vtbl, m, v = x.cStruct_build_info(db)
                 if t == "virtual":
                     vptr = 2
