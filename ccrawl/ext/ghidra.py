@@ -201,7 +201,7 @@ else:
                 sdt.addBitField(dt, bfw, n, "")
             else:
                 sdt.add(dt, -1, n, "")
-        sdt.repack(True)
+        sdt.repack()
         return sdt
 
     @declareGhidraHandler("Union")
