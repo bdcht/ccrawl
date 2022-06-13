@@ -48,7 +48,7 @@ rawtypes = pp.Optional(prefix) + pp.Or(T)
 pstars = pp.Group(pp.Regex(r"\*+") + pp.Optional(const, default=""))
 ampers = pp.Regex("&+")
 # define structured types (struct,union,enum):
-symbol = pp.Regex(r"[?]?[A-Za-z_:<>][A-Za-z0-9_:<>]*")
+symbol = pp.Regex(r"[?]?[A-Za-z_:<>][A-Za-z0-9_:<>$]*")
 structured = pp.oneOf("struct union enum class")
 strucdecl = pp.Optional(prefix) + pp.Optional(structured) + symbol
 # define objecttype:
