@@ -254,7 +254,9 @@ class cClass(list, ccore):
             x = cUnion()
         else:
             x = cStruct()
-        x.identifier = self.identifier
+        name = cxx_type(self.identifier)
+        x.identifier = "struct __layout$%s"%(name.show_base(kw=False,ns=True))
+        # now get the structure information for this class:
         x.subtypes = None
         vptr, M, V = self.cStruct_build_info(db)
         if len(M) > 0 and vptr:
