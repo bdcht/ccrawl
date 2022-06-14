@@ -4,8 +4,8 @@ import time
 import click
 from ccrawl import conf
 from ccrawl.formatters import formats
-from ccrawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL
-from ccrawl.parser import FUNCTION_DECL, MACRO_DEF
+from ccrawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL, ENUM_DECL
+from ccrawl.parser import CLASS_DECL, FUNCTION_DECL, MACRO_DEF
 from ccrawl.parser import parse
 from ccrawl.core import ccore
 from ccrawl.utils import c_type
@@ -102,6 +102,7 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
         click.echo("loading local database %s ..." % c.Database.local, nl=False)
     try:
         ctx.obj["db"] = Proxy(c.Database)
+        ctx.obj["tag"] = tag
         if tag:
             ctx.obj["db"].set_tag(tag)
     except Exception:
@@ -138,9 +139,31 @@ def do_collect(ctx, src):
         functions=False,
         macros=False,
         strict=False,
-        xclang="",
+        xclang=None,
         src=src,
     )
+
+
+def files_and_includes(src, F):
+    # count source files:
+    FILES = set()
+    HDIRS = set()
+    for D in src:
+        if os.path.isdir(D):
+            for dirname, subdirs, files in os.walk(D.rstrip("/")):
+                has_headers = False
+                for f in filter(F, files):
+                    filename = "%s/%s" % (dirname, f)
+                    FILES.add(filename)
+                    has_headers = True
+                if has_headers:
+                    HDIRS.add("-I%s/" % dirname)
+        elif os.path.isfile(D) and F(D):
+            FILES.add(D)
+    # preprocess files to detect all #include directives
+    # and update or re-order the INCLUDES set:
+    INCLUDES = list(HDIRS)
+    return FILES, INCLUDES
 
 
 @cli.command()
@@ -155,8 +178,13 @@ def do_collect(ctx, src):
 @click.option("-f", "--functions", is_flag=True, help="collect functions")
 @click.option("-m", "--macros", is_flag=True, help="collect macros")
 @click.option("-s", "--strict", is_flag=True, help="strict mode")
-@click.option("--auto-include", "autoinclude", is_flag=True,
-        help="try to guess -I path(s) for each input file")
+@click.option(
+    "--auto-include",
+    "autoinclude",
+    default=True,
+    is_flag=True,
+    help="try to guess -I path(s) for each input file",
+)
 @click.option("--clang", "xclang", help="parameters passed to clang")
 @click.argument(
     "src",
@@ -182,22 +210,25 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
     """
     c = conf.config
     cxx = c.Collect.cxx
-    F = lambda f: f.endswith(".h") or (cxx and f.endswith(".hpp"))
+    F = Fh = lambda f: f.endswith(".h") or (cxx and f.endswith(".hpp"))
     K = None
     c.Collect.strict |= strict
+    c.Collect.allc |= allc
     if allc is True:
-        F = lambda f: (f.endswith(".c") or (cxx and f.endswith(".cpp")) or F(f))
-    if types or functions or macros:
+        F = lambda f: (f.endswith(".c") or (cxx and f.endswith(".cpp")) or Fh(f))
+    elif types or functions or macros:
         K = []
         if types:
-            K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL]
+            K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL, CLASS_DECL, ENUM_DECL]
         if functions:
             K += [FUNCTION_DECL]
         if macros:
             K += [MACRO_DEF]
-    tag = ctx.obj["db"].tag._hash or None
-    if tag is None:
+    tag = ctx.obj["tag"]
+    if ctx.obj["tag"] is None:
         tag = str(time.time())
+    else:
+        tag = ctx.obj["db"].tag._hash[-1]
     # filters:
     ctx.obj["F"] = F
     # selected kinds of cursors to collect:
@@ -209,37 +240,28 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
         # keep comments in parser output:
         args = [
             "-ferror-limit=0",
-            "-fparse-all-comments",
+            "-fmodules",
+            "-fbuiltin-module-map",
         ]
         # add header directories:
-        for i in (D for D in src if os.path.isdir(D)):
-            args.append("-I%s" % i)
+        # for i in (D for D in src if os.path.isdir(D)):
+        #    args.append("-I%s" % i)
     else:
         args = xclang.split(" ")
     # count source files:
-    FILES = set()
-    INCLUDES = set()
-    for D in src:
-        if os.path.isdir(D):
-            for dirname, subdirs, files in os.walk(D.rstrip("/")):
-                INCLUDES.add("-I%s/"%dirname)
-                for f in filter(F,files):
-                    filename = "%s/%s" % (dirname, f)
-                    FILES.add(filename)
-        elif os.path.isfile(D) and F(D):
-            FILES.add(D)
+    FILES, INCLUDES = files_and_includes(src, F)
     total = len(FILES)
     W = c.Terminal.width - 12
     # parse and collect all sources:
     if autoinclude:
-        args.extend(list(INCLUDES))
+        args.extend(INCLUDES)
     while len(FILES) > 0:
         t0 = time.time()
         filename = FILES.pop()
         if not c.Terminal.quiet:
             p = ((total - len(FILES)) * 100.0) / total
             click.echo(("[%3d%%] %s " % (p, filename)).ljust(W), nl=False)
-        l = parse(filename, args, kind=K, tag=tag[-1])
+        l = parse(filename, args, kind=K, tag=tag)
         t1 = time.time()
         if c.Terminal.timer:
             click.secho("(%.2f+" % (t1 - t0), nl=False, fg="cyan")
@@ -247,14 +269,22 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
             return -1
         if len(l) > 0:
             # remove already processed/included files
-            FILES.difference_update([el["src"] for el in l])
-            # remove duplicates into dbo:
+            already_done = set([el["src"] for el in l])
+            FILES.difference_update(already_done)
+            # aggregate cFunc instances and remove duplicates in dbo:
             for x in l:
-                dbo[x["id"] + x["src"]] = x
+                if x["cls"] == "cFunc":
+                    kpad = x["id"] + x["val"]["prototype"]
+                    if (kpad not in dbo) or (x["val"]["locs"] or x["val"]["calls"]):
+                        dbo[kpad] = x
+                else:
+                    kpad = x["id"] + x["src"]
+                    dbo[kpad] = x
         t2 = time.time()
         if c.Terminal.timer:
             click.secho("%.2f)" % (t2 - t1), fg="cyan")
     db = ctx.obj["db"]
+
     if not c.Terminal.quiet:
         click.echo("-" * (c.Terminal.width))
         click.echo("saving database...".ljust(W), nl=False)
@@ -292,9 +322,10 @@ def search(ctx, ignorecase, rex):
     Q = where("id").matches(rex, flags=flg)
     if db.rdb:
         Q |= where("val").matches(rex, flags=flg)
+        Q |= where("use").matches(rex, flags=flg)
     else:
         Q |= where("val").test(look)
-    L = db.search(Q)
+    L = db.search(db.tag & Q)
     for l in L:
         click.echo("found ", nl=False)
         click.secho("%s " % l["cls"], nl=False, fg="cyan")
@@ -332,7 +363,7 @@ def select(ctx, ands, ors):
     ctx.obj["select"] = Q
     if ctx.invoked_subcommand is None:
         db = ctx.obj["db"]
-        L = db.search(Q)
+        L = db.search(db.tag & Q)
         for l in L:
             click.echo("found ", nl=False)
             click.secho("%s " % l["cls"], nl=False, fg="cyan")
@@ -340,7 +371,7 @@ def select(ctx, ands, ors):
             click.secho('"%s"' % l["id"], fg="magenta")
     else:
         if conf.DEBUG:
-            click.echo("FIND_COMMAND: %s" % ctx.invoked_subcommand)
+            click.echo("SELECT_COMMAND: %s" % ctx.invoked_subcommand)
 
 
 @select.command()
@@ -363,7 +394,7 @@ def prototype(ctx, proto):
         return
     db = ctx.obj["db"]
     Q = ctx.obj.get("select", Query().noop())
-    L = db.search(Q, cls="cFunc")
+    L = db.search(db.tag & Q, cls="cFunc")
     R = []
     with click.progressbar(L) as pL:
         for l in L:
@@ -394,7 +425,7 @@ def constant(ctx, mask, symbol, val):
     db = ctx.obj["db"]
     Q = ctx.obj.get("select", Query().noop())
     Q &= (where("cls") == "cMacro") | (where("cls") == "cEnum")
-    L = db.search(Q)
+    L = db.search(db.tag & Q)
     R = []
     with click.progressbar(L) as pL:
         for l in pL:
@@ -427,14 +458,16 @@ def constant(ctx, mask, symbol, val):
 
 @select.command()
 @click.option("-d", "--def", "pdef", is_flag=True, default=False)
+@click.option("-p", "--psize", "pointer", type=click.INT, default=0)
 @click.argument("conds", nargs=-1, type=click.STRING)
 @click.pass_context
-def struct(ctx, pdef, conds):
+def struct(ctx, pdef, pointer, conds):
     """Get structured definitions (struct, union or class)
     from the remote database (or the local database if no remote is found) matching
     constraints on total size or specific type name or size at given offset within
     the structure.
     """
+    from ccrawl.ext import amoco
     reqs = {}
     try:
         for p in conds:
@@ -443,7 +476,7 @@ def struct(ctx, pdef, conds):
                 sz = int(t)
                 reqs[off] = sz
             else:
-                off = int(off)
+                off = int(off,0)
                 if t[0] == "+":
                     reqs[off] = int(t)
                 elif t[0] == "?":
@@ -455,29 +488,28 @@ def struct(ctx, pdef, conds):
         return
     db = ctx.obj["db"]
     Q = ctx.obj.get("select", Query().noop())
-    L = db.search(Q & ((where("cls") == "cStruct") | (where("cls") == "cClass")))
+    L = db.search(
+        db.tag & Q & ((where("cls") == "cStruct") | (where("cls") == "cClass"))
+    )
     R = []
     fails = []
     with click.progressbar(L) as pL:
         for l in pL:
             x = ccore.from_db(l)
-            ctcls = c_type
+            name = x.identifier
             try:
                 if x._is_class:
                     x = x.as_cStruct(db)
-                t = x.build(db)
-            except Exception:
-                fails.append("can't build %s" % x.identifier)
+                ax = amoco.build(x,db)
+                t = ax()
+                F,SZ = zip(*(t.offsets(psize=pointer)))
+                xsize = t.size(psize=pointer)
+            except Exception as e:
+                fails.append("can't build %s (error: %s)" % (x.identifier,str(e)))
                 continue
-            F = []
-            for i, f in enumerate(t._fields_):
-                field = getattr(t, f[0])
-                F.append((field.offset, field.size, ctcls(x[i][0])))
             if F:
-                xsize = F[-1][0] + F[-1][1]
                 if "*" in reqs and reqs["*"] != xsize:
                     continue
-                F = dict(((f[0], f[1:3]) for f in F))
                 ok = []
                 for o, s in reqs.items():
                     if o == "*":
@@ -486,22 +518,24 @@ def struct(ctx, pdef, conds):
                     ok.append(cond)
                     if not cond:
                         break
+                    else:
+                        i = F.index(o)
                     if s == "?":
                         continue
                     if s == "*":
-                        cond = F[o][1].is_ptr
+                        cond = t.fields[i].typename=='P'
                     elif isinstance(s, c_type):
-                        cond = F[o][1].show() == s.show()
+                        cond = x[i][0] == s.show()
                     else:
-                        cond = F[o][0] == s
+                        cond = SZ[i] == s
                     ok.append(cond)
                     if not cond:
                         break
                 if all(ok):
                     if not pdef:
-                        res = x.identifier
+                        res = name
                     else:
-                        res = x.show(db, form="C")
+                        res = x.show(db, False, form="C")+"\n"
                     R.append(res)
     if conf.VERBOSE:
         click.secho("\n".join(fails), fg="red", err=True)
@@ -539,8 +573,8 @@ def show(ctx, form, recursive, identifier):
     if recursive is True:
         recursive = set()
     Q = where("id") == identifier
-    if db.contains(Q):
-        for l in db.search(Q):
+    if db.contains(db.tag & Q):
+        for l in db.search(db.tag & Q):
             x = ccore.from_db(l)
             click.echo(x.show(db, recursive, form=form))
     else:
@@ -552,23 +586,30 @@ def show(ctx, form, recursive, identifier):
 
 
 @cli.command()
+@click.option(
+    "-p", "pointer", is_flag=False, default=0, help="size of pointers (4 or 8)"
+)
 @click.argument("identifier", nargs=1, type=click.STRING)
 @click.pass_context
-def info(ctx, identifier):
+def info(ctx, pointer, identifier):
     """Get database internal informations about a definition."""
     db = ctx.obj["db"]
     Q = where("id") == identifier
-    if db.contains(Q):
+    if pointer not in (4, 8):
+        pointer = 0
+    if db.contains(db.tag & Q):
         from ctypes import sizeof
-        for l in db.search(Q):
+
+        for l in db.search(db.tag & Q):
             x = ccore.from_db(l)
             click.echo("identifier: {}".format(identifier))
             click.secho("class     : {}".format(l["cls"]), fg="cyan")
             click.echo("source    : {}".format(l["src"]))
             click.secho("tag       : {}".format(l["tag"]), fg="magenta")
             if x._is_struct or x._is_union or x._is_class:
+                from ccrawl.ext import amoco
                 try:
-                    t = x.build(db)
+                    t = amoco.build(x, db)()
                 except (TypeError, KeyError) as e:
                     what = e.args[0]
                     click.secho(
@@ -578,22 +619,25 @@ def info(ctx, identifier):
                     )
                     click.echo("", err=True)
                     continue
-                F = []
-                for i, f in enumerate(t._fields_):
-                    field = getattr(t, f[0])
-                    if (field.size>>16):
-                        o = float("%d.%d"%(field.offset,field.size&0xffff))
-                        s = float(".%d"%(field.size>>16))
-                        F.append((o,s))
-                        o,s = field.offset,sizeof(f[1])
-                    else:
-                        o,s = field.offset,field.size
-                        F.append((o,s))
-                xsize = o+s
+                F = t.offsets(psize=pointer)
+                xsize = t.size(psize=pointer)
                 click.secho("size      : {}".format(xsize), fg="yellow")
                 click.secho(
                     "offsets   : {}".format([(f[0], f[1]) for f in F]), fg="yellow"
                 )
+                psize = "native"
+                if pointer == 4:
+                    psize = "32 bits"
+                elif pointer == 8:
+                    psize = "64 bits"
+                click.secho("[using %s pointer size]" % psize)
+            elif x._is_func:
+                try:
+                    click.secho("params    : {}".format(l["val"]["params"]), fg="yellow")
+                    click.secho("locals    : {}".format(l["val"]["locs"]), fg="yellow")
+                    click.secho("calls     : {}".format(l["val"]["calls"]), fg="yellow")
+                except Exception:
+                    click.secho("no params/locals/calls...check your database!",fg="red")
 
     else:
         click.secho("identifier '%s' not found" % identifier, fg="red", err=True)
@@ -614,17 +658,14 @@ def store(ctx, update):
     is computed before pushing definitions to the remote database.
     """
     db = ctx.obj["db"]
-    rdb = db.rdb
-    # force all operations to occur on local database:
-    db.rdb = None
     Done = []
-    for l in db.search(db.tag):
+    for l in db.ldb.search(db.tag):
         x = ccore.from_db(l)
         if not conf.QUIET:
             click.echo("unfolding '%s'..." % x.identifier, nl=False)
         try:
-            l["use"] = list(x.unfold(db).subtypes.keys())
-        except:
+            l["use"] = list(x.unfold(db.ldb).subtypes.keys())
+        except Exception:
             if not conf.QUIET:
                 click.secho("failed.", fg="red")
         else:
@@ -633,11 +674,11 @@ def store(ctx, update):
             if update is True:
                 db.ldb.update(l)
         Done.append(l)
-    if rdb:
+    if db.rdb:
         if not conf.QUIET:
             click.echo("remote db insert multiple ...", nl=False)
         try:
-            rdb.insert_multiple(Done)
+            db.rdb.insert_multiple(Done)
         except Exception:
             if not conf.QUIET:
                 click.secho("failed.", fg="red")
@@ -646,8 +687,67 @@ def store(ctx, update):
                 click.secho("done.", fg="green")
             if not update:
                 db.ldb.remove(doc_ids=[l.doc_id for l in Done])
-    # restore remote database operations:
-    db.rdb = rdb
+
+
+# sync command:
+# ------------------------------------------------------------------------------
+
+
+@cli.command()
+@click.pass_context
+@click.option("-i", "--interact", is_flag=True, help="prompt before updating")
+@click.option("-n", "--printonly", is_flag=True, help="print only but do not update")
+def sync(ctx, interact, printonly):
+    """use a local database to update the val & use attributes of documents in
+    the remote database, matching on the id, cls, src and tag.
+    """
+    db = ctx.obj["db"]
+    if db.ldb is None:
+        click.secho("no local database to sync", fg="red")
+        return
+    if db.rdb is None:
+        click.secho("no remote database to sync", fg="red")
+        return
+    if db.rdb.__class__.__name__ != "MongoDB":
+        click.secho("not a MongoDB remote database", fg="red")
+        return
+    db.cleanup_local()
+    for l in db.ldb.search(db.tag):
+        x = ccore.from_db(l)
+        try:
+            l["use"] = list(x.unfold(db.ldb).subtypes.keys())
+        except Exception:
+            l["use"] = []
+        R = db.rdb.db["nodes"].find(
+            {"id": l["id"], "cls": l["cls"], "tag": l["tag"], "src": l["src"]}
+        )
+        isnew = True
+        for r in R:
+            isnew = False
+            if l["val"] != r["val"]:
+                if not conf.QUIET:
+                    click.echo("remote entry differs for %s [%s]" % (l["id"], l["cls"]))
+                if conf.VERBOSE:
+                    click.secho("local : %s" % l["val"], fg="cyan")
+                    click.secho("remote: %s" % r["val"], fg="yellow")
+                doit = True
+                if interact:
+                    doit = click.confirm("Do you want to continue?")
+                if doit and not printonly:
+                    db.rdb.db["nodes"].update_one(
+                        {"_id": r["_id"]}, {"$set": {"val": l["val"], "use": l["use"]}}
+                    )
+                    db.rdb.update_structs(db, {"_id": r["_id"]})
+            elif not conf.QUIET:
+                click.secho("matching entry %s [%s]" % (l["id"], l["cls"]), fg="green")
+        if isnew:
+            if not conf.QUIET:
+                click.secho("new remote entry %s [%s]" % (l["id"], l["cls"]), fg="blue")
+            doit = True
+            if interact:
+                doit = click.confirm("Do you want to continue?")
+            if doit and not printonly:
+                db.rdb.db["nodes"].insert_one(l)
 
 
 # fetch command:
@@ -722,21 +822,21 @@ def stats(ctx):
     click.echo("       .local     : %s" % str(db.ldb))
     click.echo("       .url       : %s" % str(db.rdb))
     click.echo("documents:")
-    F = db.search(where("cls") == "cFunc")
+    F = db.search(db.tag & (where("cls") == "cFunc"))
     click.echo("       .cFunc     : %d" % len(F))
-    C = db.search(where("cls") == "cClass")
+    C = db.search(db.tag & (where("cls") == "cClass"))
     click.echo("       .cClass    : %d" % len(C))
-    S = db.search(where("cls") == "cStruct")
+    S = db.search(db.tag & (where("cls") == "cStruct"))
     click.echo("       .cStruct   : %d" % len(S))
-    U = db.search(where("cls") == "cUnion")
+    U = db.search(db.tag & (where("cls") == "cUnion"))
     click.echo("       .cUnion    : %d" % len(U))
-    E = db.search(where("cls") == "cEnum")
+    E = db.search(db.tag & (where("cls") == "cEnum"))
     click.echo("       .cEnum     : %d" % len(E))
-    T = db.search(where("cls") == "cTypedef")
+    T = db.search(db.tag & (where("cls") == "cTypedef"))
     click.echo("       .cTypedef  : %d" % len(T))
-    M = db.search(where("cls") == "cMacro")
+    M = db.search(db.tag & (where("cls") == "cMacro"))
     click.echo("       .cMacro    : %d" % len(M))
-    P = db.search(where("cls") == "cTemplate")
+    P = db.search(db.tag & (where("cls") == "cTemplate"))
     click.echo("       .cTemplate : %d" % len(P))
     click.echo("structures:")
     l, s = max(((len(s["val"]), s["id"]) for s in S))

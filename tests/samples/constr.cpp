@@ -1,5 +1,7 @@
 #include "classes.hpp"
 
+using namespace NS;
+
 struct A
 {
     int x;
@@ -34,7 +36,10 @@ struct F
     int& ref; // reference member
     const int c; // const member
     // F::F() is implicitly defined as deleted
+private:
+    Scv z;
 };
+
 
 void newstruct::meth(void) {};
 

@@ -1,5 +1,5 @@
 # from amoco.system import structs
-from ccrawl.utils import c_type
+from ccrawl.utils import c_type, cxx_type
 from click import secho
 from tinydb import where
 
@@ -33,6 +33,7 @@ tostruct = {
 
 
 def id_amoco(s):
+    s = s.replace("$","_").replace(":","_")
     return s.replace("?_", "").replace(" ", "_")
 
 
@@ -65,7 +66,8 @@ def cTypedef_amoco(obj, db, recursive):
     pre = ""
     t = c_type(obj)
     if isinstance(recursive, set) and (t.lbase not in tostruct):
-        Q = where("id") == t.lbase
+        recursive.add(obj.identifier)
+        Q = db.tag & (where("id") == t.lbase)
         if db.contains(Q):
             x = obj.from_db(db.get(Q))
             pre = x.show(db, recursive, form="amoco")
@@ -97,8 +99,13 @@ def cEnum_amoco(obj, db, recursive):
     return "\n".join(s)
 
 
+def cClass_amoco(obj, db, recursive):
+    return cStruct_amoco(obj.as_cStruct(db), db, recursive)
+
 def cStruct_amoco(obj, db, recursive):
     if isinstance(recursive, set):
+        if obj.identifier in recursive:
+            return ""
         Q = True
         recursive.update(tostruct)
         recursive.add(obj.identifier)
@@ -114,7 +121,7 @@ def cStruct_amoco(obj, db, recursive):
         if not n and not r.lbase.startswith("union "):
             continue
         if Q and (r.lbase not in recursive):
-            q = where("id") == r.lbase
+            q = db.tag & (where("id") == r.lbase)
             if r.lbase.startswith("?_"):
                 q &= where("src") == obj.identifier
             if db.contains(q):
@@ -132,6 +139,8 @@ def cStruct_amoco(obj, db, recursive):
         rt, t = fieldformat(r)
         if rt:
             t = rt
+        if c and c.count("\n") > 0:
+            c = None
         S.append("{} : {} ;{}\n".format(t, n, c or ""))
     if len(R) > 0:
         R.append("\n")

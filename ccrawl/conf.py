@@ -5,7 +5,7 @@ from traitlets.config import Configurable
 from traitlets.config import PyFileConfigLoader
 from traitlets import Unicode, Bool, observe
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 
 # default clang library file: NOT REQUIRED for >libclang-12
 # if os.name == 'posix':
@@ -77,6 +77,7 @@ class Collect(Configurable):
     "configurable parameters related to the collect command"
     strict = Bool(False, config=True)  # don't block on missing headers/types
     cxx = Bool(True, config=True)  # try detecting c++ inputs
+    allc = Bool(False, config=True)  # parse everything including function bodies
     tmp = Unicode()  # don't change temp directory
     lib = Unicode("", config=True)  # allow to choose clang_library_file
 
@@ -89,6 +90,7 @@ class Formats(Configurable):
     "configurable parameters related to formatters"
     default = Unicode("C", config=True)  # show results formatted as C code
     callcon = Unicode("cdecl", config=True)  # assume cdecl calling convention
+
 
 class Ghidra(Configurable):
     "configurable parameters related to ghidra"

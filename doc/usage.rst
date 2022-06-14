@@ -56,9 +56,9 @@ For example, structure ``struct _mystruct`` in file *"samples/header.h"* is stor
      {'cls': 'cStruct',
         'id': 'struct _mystruct',
         'src': 'samples/header.h',
-        'tag': '1549141214.805588',
-        'val': [['myinteger', 'I', 'comment for field I'],
-                ['int [12]', 'tab', 'modern comment for tab'],
+        'tag': '1654709776.1331487',
+        'val': [['myinteger', 'I', None],
+                ['int [12]', 'tab', None],
                 ['unsigned char [16]', 'p', None],
                 ['short *', 's', None],
                 ['struct _mystruct *', 'next', None],
@@ -98,19 +98,23 @@ For example::
 
     $ cd tests/
     $ ccrawl -b None -l test.db collect samples/
-    [  8%] samples/wonza.hpp                                       [ 17]
-    [ 25%] samples/stru.h                                          [  0]
-    [ 33%] samples/cxxabi.h                                        [ 17]
-    [ 41%] samples/simple.h                                        [  2]
-    [ 50%] samples/xxx/yyy/somewhere.h                             [ 10]
-    [ 58%] samples/header.h                                        [ 25]
-    [ 66%] samples/fwd_decl.hpp                                    [  2]
-    [ 75%] samples/derived.hpp                                     [  4]
-    [ 83%] samples/c_linkage.hpp                                   [  1]
-    [ 91%] samples/00_empty.h                                      [  0]
-    [100%] samples/templates.hpp                                   [352]
+    [  6%] samples/classes.hpp                                     [ 12]
+    [ 12%] samples/00_empty.h                                      [  0]
+    [ 18%] samples/simple.h                                        [  2]
+    [ 25%] samples/header.h                                        [ 27]
+    [ 31%] samples/bitfield.h                                      [  2]
+    [ 37%] samples/inclusion_err.h                                 [  2]
+    [ 43%] samples/auto.h                                          [  5]
+    [ 56%] samples/wonza.hpp                                       [ 17]
+    [ 62%] samples/stru.h                                          [  2]
+    [ 68%] samples/derived.hpp                                     [  4]
+    [ 75%] samples/cxxabi.h                                        [ 17]
+    [ 81%] samples/xxx/yyy/somewhere.h                             [ 12]
+    [ 87%] samples/templates.hpp                                   [414]
+    [ 93%] samples/c_linkage.hpp                                   [  1]
+    [100%] samples/fwd_decl.hpp                                    [  2]
     --------------------------------------------------------------------
-    saving database...                                            [ 430]
+    saving database...                                            [ 505]
 
 
 Search
@@ -127,12 +131,10 @@ The ``search`` command performs a regular expression search within database 'id'
 For example::
 
     $ ccrawl -b None -l test.db search "_my"
-    found cStruct identifer "struct ?_7e12ea0f" with matching value
-    found cTypedef identifer "mystruct" with matching value
-    found cTypedef identifer "myunion" with matching value
-    found cUnion identifer "union _myunion"
     found cStruct identifer "struct _mystruct" with matching value
-
+    found cTypedef identifer "mystruct" with matching value
+    found cStruct identifer "struct ?_ba24571a" with matching value
+    found cTypedef identifer "myunion" with matching value
 
 
 Select
@@ -163,7 +165,7 @@ The ``select`` command performs advanced queries within the local database::
                          Option --mask allows to look for the set of macros or enum symbols
                          that equals <value> when OR-ed.
 
-               struct [-d, --def] "<offset>:<type>" ...
+               struct [-d, --def] [-p, --pointer {4 or 8}] "<offset>:<type>" ...
                          Find structures (cls=cStruct) satisfying constraints of the form:
                          "<offset>:<type>" where offset indicates a byte offset value (or '*')
                          and type is a C type name, symbol '?', '*' or a byte size value:
@@ -179,10 +181,31 @@ For example::
 
     $ ccrawl -b None -l test.db select constant -s "MY" 0x10
     MYCONST
-    $ ccrawl -b None -l test.db select struct "*:+104"
+    $ ccrawl -b None -l test.db select struct -p 8 "*:+104"
     [####################################]  100%
     struct _mystruct
-    class S
+    class X::D
+    $ ccrawl -b None -l test.db select -a id="class X::D" struct -p 8 -d "*:+104"
+    struct __layout$X::D {
+     void *__vptr$C1;
+     int c;
+     void *__vptr$C2;
+     int cc;
+     int x;
+     int ccc;
+     int d;
+     void *__vptr$V1;
+     int a;
+     void *__vptr$A2;
+     int aa;
+     int v;
+     void *__vptr$V3;
+     void *__vptr$V2;
+     int b;
+     int bb;
+     int vv;
+    };
+
 
 
 Show
@@ -243,7 +266,7 @@ For example::
     source    : samples/header.h
     tag       : xxx
     size      : 104
-    offsets   : [(0, 1), (4, 48), (52, 16), (72, 8), (80, 8), (88, 8), (96, 8)]
+    offsets   : [(0, 1), (4, 48), (52, 16), (72, 8), (80, 8), (88, 8), (96, 2)]
 
 
 

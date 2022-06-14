@@ -12,7 +12,7 @@ typedef xxx myinteger;
 
 typedef int (*foo)(int, char c, unsigned x, void*);
 
-typedef int (*fox)(unk, char c, unsigned x, void*);
+typedef int (*fox)(myinteger, char c, unsigned x, void*);
 
 //typedef unk (*foz)(int, char c, unsigned x, void*);  This leads to wrong parsing in clang!
 

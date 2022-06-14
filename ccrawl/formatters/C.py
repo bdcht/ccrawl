@@ -22,7 +22,8 @@ def cTypedef_C(obj, db, recursive):
     pre = ""
     t = c_type(obj)
     if isinstance(recursive, set) and (t.lbase not in struct_letters):
-        Q = where("id") == t.lbase
+        recursive.add(obj.identifier)
+        Q = db.tag & (where("id") == t.lbase)
         if db.contains(Q):
             x = obj.from_db(db.get(Q))
             pre = x.show(db, recursive, form="C") + "\n"
@@ -43,7 +44,7 @@ def cMacro_C(obj, db, recursive):
 
 
 def cFunc_C(obj, db, recursive):
-    fptr = c_type(obj)
+    fptr = c_type(obj["prototype"])
     return fptr.show(obj.identifier) + ";"
 
 
@@ -61,6 +62,9 @@ def cStruct_C(obj, db, recursive):
     name = obj.identifier
     # prepare query if recursion is needed:
     if isinstance(recursive, set):
+        # if we are on a loop, just declare the struct name:
+        if name in recursive:
+            return "%s;" % name
         Q = True
         recursive.update(struct_letters)
         recursive.add(name)
@@ -92,7 +96,7 @@ def cStruct_C(obj, db, recursive):
         elif Q and (r.lbase not in recursive):
             # prepare query
             # (deal with the case of querying an anonymous type)
-            q = where("id") == r.lbase
+            q = db.tag & (where("id") == r.lbase)
             if "?_" in r.lbase:
                 q &= where("src") == obj.identifier
             # do the query and update R:
@@ -132,8 +136,8 @@ cUnion_C = cStruct_C
 def cClass_C(obj, db, recursive):
     # get the cxx type object:
     tn = cxx_type(obj.identifier)
-    # get the current class namespace:
-    namespace = tn.show_base(kw=False, ns=False)
+    # get the current class name without keyword or namespace:
+    classname = tn.show_base(kw=False, ns=False)
     # prepare query if recursion is needed:
     if isinstance(recursive, set):
         Q = True
@@ -155,18 +159,22 @@ def cClass_C(obj, db, recursive):
         mn, n = y  # mangled name & name
         p, c = z  # public/protected/private & comment
         if qal == "parent":
+            # the parent class name is found in n:
             r = cxx_type(n)
             e = r.lbase
             if Q and (e not in recursive):
-                q = where("id") == e
+                q = db.tag & (where("id") == e)
                 x = obj.from_db(db.get(q)).show(db, recursive, form="C")
                 R.append(x)
                 recursive.add(e)
             continue
         elif qal == "using":
-            what = "::".join((cxx_type(u).show_base() for u in t))
+            # inherited type of attribute from parent is provided as a list in t:
+            what = "::".join((cxx_type(u).show_base(kw=False) for u in t))
             using = "  using %s" % what
-            using += "::%s;" % n if n != namespace else ";"
+            # inherited name of attribute from parent is provided in n:
+            # we append the attribute name unless its the class constructor
+            using += "::%s;" % n if n != classname else ";"
             S.append(using)
             continue
         elif qal.startswith("template<"):
@@ -177,13 +185,13 @@ def cClass_C(obj, db, recursive):
         # get "element base" part of type t:
         e = r.lbase
         # is t a nested class ?
-        nested = r.ns.split("::")[-1].startswith(namespace)
+        nested = r.ns.split("::")[-1].startswith(classname)
         # is t a nested enum ?
         nested |= e.startswith("enum ?_")
         # query field element raw base type if needed:
         if Q and ((e not in recursive) or nested):
             # prepare query
-            q = where("id") == e
+            q = db.tag & (where("id") == e)
             # deal with nested type:
             if nested:
                 q &= where("src") == tn.lbase
@@ -196,7 +204,7 @@ def cClass_C(obj, db, recursive):
                     R.append(x)
                     recursive.add(e)
                 else:
-                    x = x.replace("%s::" % namespace, "")
+                    x = x.replace("%s::" % classname, "")
                     # nested struct/union/class: we need to transfer
                     # any predefs into R
                     x = x.split("\n\n")

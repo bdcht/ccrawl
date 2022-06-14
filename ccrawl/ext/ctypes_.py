@@ -1,6 +1,6 @@
 from ccrawl import conf
 from ccrawl.formatters.ctypes_ import toCTypes
-from ccrawl.utils import c_type, fargs
+from ccrawl.utils import c_type, cxx_type, fargs, pp
 from click import secho
 import ctypes
 
@@ -43,60 +43,95 @@ def mk_ctypes(t, Types):
 
 
 def formatproto(res, proto, Types):
-    params = [mk_ctypes(c_type(x), Types) for x in proto.args]
-    params.insert(0, res)
-    return ctypes.CFUNCTYPE(*params)
+    params = filter(None, [mk_ctypes(get_c_or_cxx_type(t), Types) for t in proto.args])
+    return ctypes.CFUNCTYPE(res, *params)
 
+def get_c_or_cxx_type(x):
+    if not ('&' in x):
+        try:
+            t = c_type(x)
+        except pp.ParseException:
+            pass
+        else:
+            return t
+    t = cxx_type(x)
+    return t
 
-def build(obj, db, Types={}):
+def build(obj, db, Types={}, _bstack=[]):
+    if obj._is_class:
+        x = obj.as_cStruct(db)
+        x.unfold(db)
+        return build(x, db, Types, _bstack)
+    x = str(obj.identifier.replace("?_", "").replace(" ", "_"))
+    if x in Types:
+        return Types[x]
+    early_exit = False
+    if obj.identifier in _bstack:
+        if obj._is_struct or obj._is_union:
+            early_exit = True
+    _bstack.append(obj.identifier)
+    if obj.subtypes is None:
+        obj.unfold(db)
     for subtype in obj.subtypes.values() or []:
-        if subtype is None:
+        if early_exit or (subtype is None):
             continue
-        build(subtype, db, Types)
+        build(subtype, db, Types, _bstack)
     if obj._is_typedef:
-        t = c_type(obj)
+        t = get_c_or_cxx_type(obj)
         Types[obj.identifier] = mk_ctypes(t, Types)
+        _bstack.pop()
         return Types[obj.identifier]
     if obj._is_macro:
+        _bstack.pop()
         v = obj.strip()
         try:
             v = int(v, base=0)
         except ValueError:
-            pass
-        globals()[obj.identifier] = v
-        return v
-    x = str(obj.identifier.replace("?_", "").replace(" ", "_"))
+            try:
+                t = mk_ctypes(get_c_or_cxx_type(v),Types)
+            except pp.ParseException:
+                globals()[obj.identifier] = v
+                return v
+            else:
+                Types[obj.identifier] = t
+                return Types[obj.identifier]
+        else:
+            return v
     if obj._is_enum:
-        Types[x] = ctypes.c_int
+        if len(obj) < 256:
+            Types[x] = ctypes.c_byte
+        elif len(obj) < (1 << 16):
+            Types[x] = ctypes.c_short
+        else:
+            Types[x] = ctypes.c_int
         globals()[x] = {}.update(obj)
     elif obj._is_func:
-        Types[x] = mk_ctypes(c_type(obj), Types)
+        Types[x] = mk_ctypes(get_c_or_cxx_type(obj["prototype"]), Types)
     elif obj._is_struct or obj._is_union:
         parent = ctypes.Structure
         if obj._is_union:
             parent = ctypes.Union
         Types[x] = type(x, (parent,), {})
-        fmt = []
-        anon = []
-        for t, n, c in iter(obj):
-            r = c_type(t)
-            if "?_" in r.lbase:
-                anon.append(n)
-            if not n and not r.lbase.startswith("union "):
-                continue
-            bfw = r.lbfw
-            r = mk_ctypes(r, Types)
-            if bfw > 0:
-                fmt.append((str(n), r, bfw))
-            else:
-                fmt.append((str(n), r))
-        if len(anon) > 0:
-            Types[x]._anonymous_ = tuple(anon)
-        Types[x]._fields_ = fmt
-    elif obj._is_class:
-        x = obj.as_cStruct(db)
-        x.unfold(db)
-        return build(x, db)
+        if not early_exit:
+            fmt = []
+            anon = []
+            for t, n, c in iter(obj):
+                r = get_c_or_cxx_type(t)
+                if "?_" in r.lbase:
+                    if r.lbase.startswith("struct ") or r.lbase.startswith("union "):
+                        anon.append(n)
+                if not n and not r.lbase.startswith("union "):
+                    continue
+                bfw = r.lbfw
+                r = mk_ctypes(r, Types)
+                if bfw > 0:
+                    fmt.append((str(n), r, bfw))
+                else:
+                    fmt.append((str(n), r))
+            if len(anon) > 0:
+                Types[x]._anonymous_ = tuple(anon)
+            Types[x]._fields_ = fmt
     else:
         raise NotImplementedError
+    _bstack.pop()
     return Types[x]

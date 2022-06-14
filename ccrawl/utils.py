@@ -36,11 +36,11 @@ struct_letters = {
 # definitions for objecttype --------------------------------------------------
 # the elementary type related to the parsed string.
 # define 'raw' types:
-unsigned = pp.Keyword("unsigned")|pp.Keyword("signed")
+unsigned = pp.Keyword("unsigned") | pp.Keyword("signed")
 const = pp.Keyword("const")
 volatile = pp.Keyword("volatile")
 noexcept = pp.Keyword("noexcept")
-prefix = pp.ZeroOrMore(pp.Or((const,volatile,unsigned)))
+prefix = pp.ZeroOrMore(pp.Or((const, volatile, unsigned)))
 cvqual = pp.Or((const, volatile, const + volatile, noexcept))
 T = [pp.Keyword(t) for t in struct_letters]
 rawtypes = pp.Optional(prefix) + pp.Or(T)
@@ -48,7 +48,7 @@ rawtypes = pp.Optional(prefix) + pp.Or(T)
 pstars = pp.Group(pp.Regex(r"\*+") + pp.Optional(const, default=""))
 ampers = pp.Regex("&+")
 # define structured types (struct,union,enum):
-symbol = pp.Regex(r"[?]?[A-Za-z_:<>][A-Za-z0-9_:<>]*")
+symbol = pp.Regex(r"[?]?[A-Za-z_:<>][A-Za-z0-9_:<>$]*")
 structured = pp.oneOf("struct union enum class")
 strucdecl = pp.Optional(prefix) + pp.Optional(structured) + symbol
 # define objecttype:
@@ -80,32 +80,37 @@ class c_type(object):
         # get final element type:
         bf = decl.rfind("#")
         if bf > 0:
-            x = bitfield.parseString(decl)
-            self.lbfw = x.pop()
-            r = ""
+            try:
+                x = bitfield.parseString(decl)
+            except Exception:
+                x, r = (pp.Group(objecttype) + pp.restOfLine).parseString(decl[:bf])
+                self.lbfw = 0
+            else:
+                r = ""
+                self.lbfw = x.pop()
         else:
             x, r = (pp.Group(objecttype) + pp.restOfLine).parseString(decl)
             self.lbfw = 0
         lbase = []
         self.lconst = self.lunsigned = self.lvolatile = False
         for w in x:
-            if w=="const":
+            if w == "const":
                 self.lconst = True
-            elif w=="unsigned":
+            elif w == "unsigned":
                 self.lunsigned = True
-            elif w=="signed":
+            elif w == "signed":
                 pass
-            elif w=="volatile":
+            elif w == "volatile":
                 self.lvolatile = True
             else:
                 lbase.append(w)
         self.lbase = " ".join(lbase)
-        r = r.replace('[]','*')
+        r = r.replace("[]", "*")
         r = "(%s)" % r
         try:
             nest = nested_c.parseString(r).asList()[0]
         except Exception as e:
-            print("c_type: error while parsing '%s'"%r)
+            print("c_type: error while parsing '%s'" % r)
             raise e
         self.pstack = pstack(nest, self.__class__)
 

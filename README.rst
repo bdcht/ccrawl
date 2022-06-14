@@ -135,34 +135,43 @@ We can show a *full* (recursive) definition of a class::
 And its ctypes_ memory layout::
 
   $ ccrawl -b None -l test.db show -f ctypes 'class Child'
-  class_Child = type('class_Child',(Structure,),{})
+  struct___layout$Child = type('struct___layout$Child',(Structure,),{})
   
-  class_Child._fields_ = [("__vptr$Parent1", c_void_p),
-                          ("parent1_data", c_int),
-                          ("__vptr$Parent2", c_void_p),
-                          ("parent2_data", c_int),
-                          ("child_data", c_int),
-                          ("__vptr$Grandparent", c_void_p),
-                          ("grandparent_data", c_int)]
+  struct___layout$Child._fields_ = [("__vptr$Parent1", c_void_p),
+                                    ("parent1_data", c_int),
+                                    ("__vptr$Parent2", c_void_p),
+                                    ("parent2_data", c_int),
+                                    ("child_data", c_int),
+                                    ("__vptr$Grandparent", c_void_p),
+                                    ("grandparent_data", c_int)]
 
 See the documentation for more examples.
 
 Todo
 ====
 
-- add support for C++ template formatters
+- improve C++ support (namespaces, template formatters, external build in ctypes/amoco/Ghidra)
 - add web frontend
-- plugin for Ghidra
 - plugin for IDA Pro
-- add support for parsing functions bodies (number/types of local vars, blocks?)
 
 Changelog
 =========
 
+- `v1.7`_
+
+  * optionally parse functions' bodies and update 'cFunc' descriptions with parsed infos
+  * add sync command to update mongodb remote database from a rebuilt local database
+  * improve Ghidra's interface to detect structures
+  * add pointer size option to compute structures' fields offsets
+  * fix: adjust enum size to its minimal needed size
+  * fix: apply global tag filter to all queries to the ProxyDB
+  * update to libclang-14
+
 - `v1.6`_
 
-  * xxx
-  * xxx
+  * add external interface to export types into Ghidra's data type manager
+  * add find_matching_types to replicate the Ghidra's "auto_struct" command
+  * add database(s) cleanup methods
 
 - `v1.5`_
 

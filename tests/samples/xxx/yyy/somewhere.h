@@ -6,10 +6,13 @@ typedef unsigned char xxx;
 typedef unsigned char __u8;
 typedef __u8 myu8;
 
+typedef unsigned short __u16;
+typedef __u16 myu16;
+
 struct xt_string_info {
-    __u16 from_offset;
-    __u16 to_offset;
-    int (*pfunc)(__unk,int);
+    myu16 from_offset;
+    myu16 to_offset;
+    int (*pfunc)(myu8,int);
     char      algo[C1];
     char      pattern[C2];
     __u8  patlen;

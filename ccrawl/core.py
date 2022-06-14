@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from ccrawl import formatters
 from ccrawl.utils import struct_letters, c_type, cxx_type
+from ccrawl.db import where
 
 
 class ccore(object):
@@ -37,7 +38,7 @@ class ccore(object):
     def add_subtype(self, db, elt, limit=None):
         x = ccore._cache_.get(elt, None)
         if x is None:
-            data = db.get(id=elt)
+            data = db.get(where("id") == elt)
             if data:
                 x = ccore.from_db(data)
                 ccore._cache_[elt] = x
@@ -87,7 +88,8 @@ class ccore(object):
         data = [doc]
         if hasattr(self, "local"):
             for i, x in iter(self.local.items()):
-                data.extend(x.to_db(i, tag, identifier))
+                if x:
+                    data.extend(x.to_db(i, tag, identifier))
         return data
 
     @staticmethod
@@ -166,15 +168,19 @@ class cClass(list, ccore):
                 qal, t = x
                 mn, n = y
                 if qal == "parent":
-                    elt = n
+                    elt = [n]
+                elif qal == "using":
+                    elt = t
                 else:
                     if mn or ("virtual" in qal):
                         continue
                     elt = cxx_type(t)
                     elt = elt.show_base(kw=True, ns=True)
-                if elt not in T:
-                    T.append(elt)
-                    self.add_subtype(db, elt, limit)
+                    elt = [elt]
+                for e in elt:
+                    if e not in T:
+                        T.append(e)
+                        self.add_subtype(db, e, limit)
         return self
 
     def build(self, db):
@@ -185,12 +191,26 @@ class cClass(list, ccore):
         return ctypes_.build(x, db)
 
     def cStruct_build_info(self, db):
+        """Defines the structure layout for this class,
+           according to the gcc cxx ABI for virtual classes.
+
+           The returned value is a triplet, (vptr, M, V) where
+
+             - vptr is a virtual indicator,
+             - M is the list of non-virtual fields,
+             - V is the ordered dict of virtual fields.
+
+
+        """
         self.unfold(db)
         M, V = [], OrderedDict()
         vptr = 0
+        # iterate over classes' fields
         for (x, y, _) in self:
             qal, t = x
             mn, n = y
+            # we don't care about scope & comments
+            # we start by handling parent classes:
             if qal == "parent":
                 n = cxx_type(n)
                 nn = n.show_base()
@@ -204,6 +224,7 @@ class cClass(list, ccore):
                 if x is None:
                     raise TypeError("unkown type '%s'" % n)
                 assert x._is_class
+                # get layout of the parent class:
                 vtbl, m, v = x.cStruct_build_info(db)
                 if t == "virtual":
                     vptr = 2
@@ -218,6 +239,8 @@ class cClass(list, ccore):
                                 M.append((t, "__vptr$%s" % nn))
                     M.extend(m)
                 V.update(v)
+            elif qal == "using":
+                continue
             elif "virtual" in qal:
                 vptr = 1
             else:
@@ -231,7 +254,9 @@ class cClass(list, ccore):
             x = cUnion()
         else:
             x = cStruct()
-        x.identifier = self.identifier
+        name = cxx_type(self.identifier)
+        x.identifier = "struct __layout$%s"%(name.show_base(kw=False,ns=True))
+        # now get the structure information for this class:
         x.subtypes = None
         vptr, M, V = self.cStruct_build_info(db)
         if len(M) > 0 and vptr:
@@ -322,17 +347,20 @@ class cMacro(str, ccore):
 # ------------------------------------------------------------------------------
 
 
-class cFunc(str, ccore):
+class cFunc(dict, ccore):
     _is_func = True
 
     def restype(self):
-        t = c_type(self)
-        t.pstack.pop()
+        t = c_type(self["prototype"])
+        if len(t.pstack)>0:
+            t.pstack.pop()
         return t.show()
 
     def argtypes(self):
-        t = c_type(self)
-        return t.pstack[-1].args
+        t = c_type(self["prototype"])
+        if len(t.pstack)>0:
+            return t.pstack[-1].args
+        return []
 
     def unfold(self, db, limit=None):
         if self.subtypes is None:
