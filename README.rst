@@ -198,6 +198,7 @@ Changelog
 .. _clang: https://pypi.org/project/clang/
 .. _ctypes: https://docs.python.org/3.7/library/ctypes.html
 .. _amoco: https://github.com/bdcht/amoco
+.. _v1.7: https://github.com/bdcht/ccrawl/releases/tag/v1.7
 .. _v1.6: https://github.com/bdcht/ccrawl/releases/tag/v1.6
 .. _v1.5: https://github.com/bdcht/ccrawl/releases/tag/v1.5
 .. _v1.4: https://github.com/bdcht/ccrawl/releases/tag/v1.4
