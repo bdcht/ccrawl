@@ -284,3 +284,13 @@ class MongoDB(object):
                 ]
             )
             Locs[n] = (S, [x["id"] for x in res])
+
+    def find_calls_to(self,ref,D=None):
+        if D is None:
+            D = {}
+        return self.db["nodes"].find(
+             {
+                 "cls": "cFunc",
+                 "val.calls": {"$elemMatch": {"$regex": ref}},
+             }.update(D)
+        )
