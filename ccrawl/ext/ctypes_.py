@@ -111,17 +111,18 @@ def build(obj, db, Types={}, _bstack=[]):
         parent = ctypes.Structure
         if obj._is_union:
             parent = ctypes.Union
-        Types[x] = type(x, (parent,), {})
+        Types[x] = S = type(x, (parent,), {})
         if not early_exit:
             fmt = []
             anon = []
             for t, n, c in iter(obj):
                 r = get_c_or_cxx_type(t)
                 if "?_" in r.lbase:
+                    if not n:
+                        continue
                     if r.lbase.startswith("struct ") or r.lbase.startswith("union "):
-                        anon.append(n)
-                if not n and not r.lbase.startswith("union "):
-                    continue
+                        if r.dim==0:
+                            anon.append(n)
                 bfw = r.lbfw
                 r = mk_ctypes(r, Types)
                 if bfw > 0:
@@ -129,8 +130,8 @@ def build(obj, db, Types={}, _bstack=[]):
                 else:
                     fmt.append((str(n), r))
             if len(anon) > 0:
-                Types[x]._anonymous_ = tuple(anon)
-            Types[x]._fields_ = fmt
+                S._anonymous_ = tuple(anon)
+            S._fields_ = fmt
     else:
         raise NotImplementedError
     _bstack.pop()
