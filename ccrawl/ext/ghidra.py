@@ -190,6 +190,8 @@ else:
             else:
                 n, t = f
                 bfw = 0
+            if bfw==0 and not n:
+                continue
             dt = ctype_to_ghidra(t, dtm)
             if t.__name__ == "LP_CFunctionType":
                 try:
