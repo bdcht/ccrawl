@@ -77,6 +77,7 @@ class Collect(Configurable):
     "configurable parameters related to the collect command"
     strict = Bool(False, config=True)  # don't block on missing headers/types
     cxx = Bool(True, config=True)  # try detecting c++ inputs
+    skipcxx = Bool(True, config=True)  # ignore detected c++ files when cxx is False
     allc = Bool(False, config=True)  # parse everything including function bodies
     tmp = Unicode()  # don't change temp directory
     lib = Unicode("", config=True)  # allow to choose clang_library_file

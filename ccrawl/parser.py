@@ -654,7 +654,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
                         cxx = True
                         tu = index.parse(filename, _args + cxx_args, unsaved_files, options)
                         break
-                    else:
+                    elif conf.config.Collect.skipcxx:
                         secho("[c++]".rjust(12), fg="yellow")
                         return []
             elif err.severity == 4:
