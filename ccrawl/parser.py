@@ -108,6 +108,8 @@ def TypeDef(cur, cxx, errors=None):
         dt = dt.get_canonical()
     t = fix_type_conversion(cur, dt.spelling, cxx, errors)
     t = get_uniq_typename(t)
+    if t.startswith("struct volatile "):
+        t = t.replace("struct volatile ","")
     if conf.DEBUG:
         echo("\t" * g_indent + "make unique: %s" % t)
     if conf.VERBOSE:
