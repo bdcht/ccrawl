@@ -4,7 +4,7 @@ from pyparsing import ParseException
 
 try:
     import os
-    os.environ["AMOCO_LOG_LEVEL"]=u"ERROR"
+    os.environ["AMOCO_LOG_LEVEL"]=u"WARNING"
     from amoco.system.structs import (
         Alltypes,
         Consts,
