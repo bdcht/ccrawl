@@ -21,13 +21,13 @@ import sys
 # -- Project information -----------------------------------------------------
 
 project = "ccrawl"
-copyright = "2019-2020, bdcht"
+copyright = "2019-2022, bdcht"
 author = "bdcht"
 
 # The short X.Y version
-version = "1.5"
+version = "1.8"
 # The full version, including alpha/beta/rc tags
-release = "v1.5"
+release = "v1.8"
 
 
 # -- General configuration ---------------------------------------------------
@@ -66,7 +66,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
