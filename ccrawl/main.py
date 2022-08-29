@@ -127,43 +127,8 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
             click.echo("COMMAND: %s" % ctx.invoked_subcommand)
 
 
-# Collect command:
+# collect command:
 # ------------------------------------------------------------------------------
-
-
-def do_collect(ctx, src):
-    ctx.invoke(
-        collect,
-        allc=False,
-        types=False,
-        functions=False,
-        macros=False,
-        strict=False,
-        xclang=None,
-        src=src,
-    )
-
-
-def files_and_includes(src, F):
-    # count source files:
-    FILES = set()
-    HDIRS = set()
-    for D in src:
-        if os.path.isdir(D):
-            for dirname, subdirs, files in os.walk(D.rstrip("/")):
-                has_headers = False
-                for f in filter(F, files):
-                    filename = "%s/%s" % (dirname, f)
-                    FILES.add(filename)
-                    has_headers = True
-                if has_headers:
-                    HDIRS.add("-I%s/" % dirname)
-        elif os.path.isfile(D) and F(D):
-            FILES.add(D)
-    # preprocess files to detect all #include directives
-    # and update or re-order the INCLUDES set:
-    INCLUDES = list(HDIRS)
-    return FILES, INCLUDES
 
 
 @cli.command()
@@ -296,6 +261,41 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
     return 0
 
 
+def do_collect(ctx, src):
+    ctx.invoke(
+        collect,
+        allc=False,
+        types=False,
+        functions=False,
+        macros=False,
+        strict=False,
+        xclang=None,
+        src=src,
+    )
+
+
+def files_and_includes(src, F):
+    # count source files:
+    FILES = set()
+    HDIRS = set()
+    for D in src:
+        if os.path.isdir(D):
+            for dirname, subdirs, files in os.walk(D.rstrip("/")):
+                has_headers = False
+                for f in filter(F, files):
+                    filename = "%s/%s" % (dirname, f)
+                    FILES.add(filename)
+                    has_headers = True
+                if has_headers:
+                    HDIRS.add("-I%s/" % dirname)
+        elif os.path.isfile(D) and F(D):
+            FILES.add(D)
+    # preprocess files to detect all #include directives
+    # and update or re-order the INCLUDES set:
+    INCLUDES = list(HDIRS)
+    return FILES, INCLUDES
+
+
 # search command:
 # ------------------------------------------------------------------------------
 
@@ -337,7 +337,7 @@ def search(ctx, ignorecase, rex):
     return L
 
 
-# find commands:
+# select commands:
 # ------------------------------------------------------------------------------
 
 
@@ -812,8 +812,10 @@ def sources(ctx):
 
 
 @cli.command()
+@click.option("-s", "--structs", is_flag=True,
+        help="try building all structs and report missing references")
 @click.pass_context
-def stats(ctx):
+def stats(ctx,structs):
     """Show some statistics about the remote (or local if
     remote is not found) database.
     """
@@ -841,7 +843,38 @@ def stats(ctx):
     click.echo("structures:")
     l, s = max(((len(s["val"]), s["id"]) for s in S))
     click.echo("  max fields: %d (in '%s')" % (l, s))
+    if structs:
+        from ccrawl.ext.amoco import build
+        maxsz = 0
+        maxsz_s = ""
+        maxar = 0
+        for s in S:
+            x = ccore.from_db(s)
+            if conf.VERBOSE:
+                click.echo("  building '%s'..."%s["id"])
+            try:
+                ax = build(x,db)
+                t = ax()
+                for f in t.fields:
+                    if f.count>maxar:
+                        maxar = f.count
+                        maxar_s = s["id"]
+                sz = t.size(4)
+                if sz>maxsz:
+                    maxsz = sz
+                    maxsz_s = s["id"]
+            except Exception:
+                if conf.VERBOSE:
+                    click.echo("failed.")
+            else:
+                if conf.VERBOSE:
+                    click.echo("ok.")
+        click.echo("  max size: %s (in '%s')" % (maxsz, maxsz_s))
+        click.echo("  max array: %s (in '%s')" % (maxar, maxar_s))
 
+
+# server command:
+# ------------------------------------------------------------------------------
 
 @cli.command()
 @click.pass_context
