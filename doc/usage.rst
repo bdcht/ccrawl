@@ -94,7 +94,9 @@ The ``collect`` command locally extracts definitions from the provided sources <
                                   local database.
 
 
-For example::
+For example:
+
+.. code-block:: console
 
     $ cd tests/
     $ ccrawl -b None -l test.db collect samples/
@@ -128,7 +130,9 @@ The ``search`` command performs a regular expression search within database 'id'
                                   documents keys 'id' and 'val'. Documents are filtered with
                                   'tag' as well if the --tag global options is used.
 
-For example::
+For example:
+
+.. code-block:: console
 
     $ ccrawl -b None -l test.db search "_my"
     found cStruct identifer "struct _mystruct" with matching value
@@ -220,7 +224,9 @@ The ``show`` command allows to recursively output a given identifier in various 
                [-f, --format <fmt>]  use output format <fmt>. Defaults to C, other formats are
                                      "ctypes", "amoco".
 
-For example::
+For example:
+
+.. code-block:: console
 
     $ ccrawl -b None -l test.db show -r 'struct _mystruct'
     typedef unsigned char xxx;
@@ -255,10 +261,14 @@ Info
 The ``info`` command provides meta-data information about a given identifier. For structures
 the offsets and sizes of every field is displayed if all subtypes are defined::
 
-    $ ccrawl [global options] info <identifier>
+    $ ccrawl [global options] info [options] <identifier>
 
+      options: [-p <size>]     size (4 or 8) of pointers used to compute fields' offsets for
+                               info on structures
 
-For example::
+For example:
+
+.. code-block:: console
 
     $ ccrawl -b None -l test.db info 'struct _mystruct'
     identifier: struct _mystruct
@@ -269,8 +279,52 @@ For example::
     offsets   : [(0, 1), (4, 48), (52, 16), (72, 8), (80, 8), (88, 8), (96, 2)]
 
 
+Graph
++++++
 
+The ``graph`` command outputs the dot-format dependency graph associated to a given type.
+the graph nodes are the types names and edges show the dependency from one type to another,
+ie essentially the structures' field (and pointer accessor) that binds those types::
 
+    $ ccrawl [global options] graph [options] <identifier>
+
+      options: [-o <file>]     output filename (defaults to stdout)
+
+For example:
+
+.. code-block:: console
+
+    $ ccrawl -b None -l test.db graph 'struct grG'
+    //graph is connected
+    //graph has a strongly connected component of size 3
+    //graph has a strongly connected component of size 4
+    digraph {
+      rankdir="LR"
+      node [style="rounded"]
+      v0 [label="struct grG"  shape="box"]
+      v1 [label="sA" ]
+      v2 [label="struct grA"  shape="box"]
+      v3 [label="pA" ]
+      v4 [label="missing"  color="red"]
+      v5 [label="pB" ]
+      v6 [label="struct grB"  shape="box"]
+      v7 [label="pG" ]
+      v0 -> v1 [label="a"]
+      v1 -> v2 [style="dashed"]
+      v2 -> v3 [label="next"]
+      v3 -> v1 [label="*" color="blue"]
+      v2 -> v4 [label="**t"]
+      v0 -> v5 [label="*tb"]
+      v5 -> v6 [label="*"]
+      v6 -> v7 [label="g"]
+      v7 -> v0 [label="*" color="blue"]
+      v6 -> v2 [label="a[3]"]
+    }
+
+which results in:
+
+.. image:: g.png
+  :alt: dot -Tpng g.dot > g.png
 
 
 .. _libclang: https://clang.llvm.org/doxygen/group__CINDEX.html
