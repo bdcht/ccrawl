@@ -47,6 +47,10 @@ class ccore(object):
                 return
         self.subtypes[elt] = x.unfold(db, limit)
 
+    def graph(self,db,V=None,g=None):
+        from ccrawl.graphs import build
+        return build(self,db,V,g)
+
     @classmethod
     def set_formatter(cls, form):
         ff = "{}_{}".format(cls.__name__, form)

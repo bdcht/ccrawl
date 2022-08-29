@@ -884,3 +884,66 @@ def server(ctx):
     from ccrawl.srv.main import run
 
     run(ctx)
+
+# graph command:
+# ------------------------------------------------------------------------------
+
+@cli.command()
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(exists=False, file_okay=True, dir_okay=False),
+    help="write to given filename",
+)
+@click.argument("identifier", nargs=1, type=click.STRING)
+@click.pass_context
+def graph(ctx,identifier,output):
+    """Output the type dependency graph associated to a given root type
+       in graphviz's dot format.
+    """
+    db = ctx.obj['db']
+    Q = where("id") == identifier
+    if db.contains(db.tag & Q):
+        l = db.get(db.tag & Q)
+        x = ccore.from_db(l)
+        g = x.graph(db)
+        if g is not None:
+            if not g.connected():
+                click.secho("//something is wrong...result graph is not connected!",fg="red")
+            else:
+                click.secho("//graph is connected",fg="cyan")
+                L = g.C[0].get_scs_with_feedback()
+                for l in L:
+                    sz = len(l)
+                    if sz>1:
+                        click.secho("//graph has a strongly connected component of size %d"%sz)
+            dot = ["digraph {", '  rankdir="LR"', '  node [style="rounded"]']
+            for v in g.V():
+                i = v.loc("v")
+                s = '  %s [label="%s" '%(i,v.label)
+                if isinstance(v.data,list):
+                    dot.append(s+' shape="box"]')
+                elif isinstance(v.data,ccore):
+                    dot.append(s+']')
+                else:
+                    dot.append(s+' color="red"]')
+            for e in g.E():
+                v1, v2 = e.v
+                n1 = v1.loc("v")
+                n2 = v2.loc("v")
+                if e.data:
+                    el = '[label="%s"'%e.data
+                else:
+                    el = '[style="dashed"'
+                if e.feedback:
+                    el += ' color="blue"]'
+                else:
+                    el += ']'
+                dot.append('  %s -> %s %s'%(n1,n2,el))
+            dot.append("}")
+            out = "\n".join(dot)
+            if output is not None:
+                with open(output,"w") as f:
+                    f.write(out)
+            else:
+                click.echo(out)
