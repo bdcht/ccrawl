@@ -157,6 +157,14 @@ Todo
 Changelog
 =========
 
+- `v1.8`_
+
+  * add graph command to output (in dot format) the dependency graph for a given root structure
+  * add --structs option to stats command which tries to build structures and report missing refs
+  * add find_calls_to method in mongodb proxy class to report collected "calls" from function's body
+  * fix "struct volatile" case (libclang-14)
+  * fix support for bitfield structure with unnamed field in ext.ghidra
+
 - `v1.7`_
 
   * optionally parse functions' bodies and update 'cFunc' descriptions with parsed infos
@@ -198,6 +206,7 @@ Changelog
 .. _clang: https://pypi.org/project/clang/
 .. _ctypes: https://docs.python.org/3.7/library/ctypes.html
 .. _amoco: https://github.com/bdcht/amoco
+.. _v1.7: https://github.com/bdcht/ccrawl/releases/tag/v1.8
 .. _v1.7: https://github.com/bdcht/ccrawl/releases/tag/v1.7
 .. _v1.6: https://github.com/bdcht/ccrawl/releases/tag/v1.6
 .. _v1.5: https://github.com/bdcht/ccrawl/releases/tag/v1.5
