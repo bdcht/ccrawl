@@ -75,3 +75,26 @@ def test_04_cmd_show(configfile, dbfile):
     l = result.output.split("\n")
     assert l[0] == "struct xt_string_info {"
     assert l[3] == "  int (*pfunc)(myu8, int);"
+
+def test_05_cmd_graph(configfile, dbfile):
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        [
+            "-l",
+            dbfile,
+            "-b",
+            "None",
+            "-c",
+            configfile,
+            "graph",
+            "struct grG",
+        ],
+    )
+    assert result.exit_code == 0
+    l = result.output.split("\n")
+    assert l[0] == "//graph is connected"
+    assert l[1] == "//graph has a strongly connected component of size 3"
+    assert l[2] == "//graph has a strongly connected component of size 4"
+    assert l[3] == "digraph {"
+    assert l[6] == '  v0 [label="struct grG"  shape="box"]'

@@ -34,6 +34,7 @@ def test_ctypes_01(dbfile):
     assert type(cx).__name__ == "PyCStructType"
     assert cx.p.offset == 52
     assert cx.p.size == 16
+    ccore._cache_ = {}
 
 
 def test_ctypes_02(dbfile):

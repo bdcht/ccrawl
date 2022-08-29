@@ -109,7 +109,7 @@ def db_doc2():
     return docs
 
 
-@pytest.fixture(autouse=True, scope="session")
+@pytest.fixture(autouse=True, scope="module")
 def configfile():
     fd, fname = tempfile.mkstemp(".conf", prefix="ccrawl-test-")
     S = u"""c.Terminal.debug = False

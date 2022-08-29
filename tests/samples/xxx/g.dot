@@ -1,0 +1,26 @@
+//graph is connected
+//graph has a strongly connected component of size 3
+//graph has a strongly connected component of size 4
+digraph {
+  rankdir="LR"
+  node [style="rounded"]
+  v0 [label="struct grG"  shape="box"]
+  v1 [label="sA" ]
+  v2 [label="struct grA"  shape="box"]
+  v3 [label="pA" ]
+  v4 [label="missing"  color="red"]
+  v5 [label="pB" ]
+  v6 [label="struct grB"  shape="box"]
+  v7 [label="pG" ]
+  v0 -> v1 [label="a"]
+  v1 -> v2 [style="dashed"]
+  v2 -> v3 [label="next"]
+  v3 -> v1 [label="*" color="blue"]
+  v2 -> v4 [label="**t"]
+  v0 -> v5 [label="*tb"]
+  v5 -> v6 [label="*"]
+  v6 -> v7 [label="g"]
+  v7 -> v0 [label="*" color="blue"]
+  v6 -> v2 [label="a[3]"]
+}
+
