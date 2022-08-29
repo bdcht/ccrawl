@@ -149,6 +149,14 @@ class cStruct(list, ccore):
                     self.add_subtype(db, elt, limit)
         return self
 
+    def index_of(self,n):
+        i=0
+        for f in self:
+            if f[1]==n:
+                return i
+            i += 1
+        return None
+
     def __eq__(self, other):
         return list(self) == list(other)
 
@@ -325,6 +333,14 @@ class cUnion(list, ccore):
                         limit -= 1
                     self.add_subtype(db, elt, limit)
         return self
+
+    def index_of(self,n):
+        i=0
+        for f in self:
+            if f[1]==n:
+                return i
+            i += 1
+        return None
 
     def __eq__(self, other):
         return list(self) == list(other)
