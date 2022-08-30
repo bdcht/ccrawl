@@ -15,7 +15,7 @@
 import os
 import sys
 
-# sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../ccrawl'))
 
 
 # -- Project information -----------------------------------------------------
@@ -47,6 +47,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.graphviz",
     "sphinx.ext.inheritance_diagram",
+    'traitlets.config.sphinxdoc'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -170,6 +171,7 @@ texinfo_documents = [
 ]
 
 
+
 # -- Options for Epub output -------------------------------------------------
 
 # Bibliographic Dublin Core info.
@@ -186,3 +188,11 @@ epub_title = project
 
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ["search.html"]
+
+# Example configuration for intersphinx: refer to the Python standard library.
+intersphinx_mapping = {'python': ('https://docs.python.org/', None),
+                       'grandalf':('https://grandalf.readthedocs.io/en/latest/',None),
+                       'amoco':('https://amoco.readthedocs.io/en/latest/',None),
+                      }
+
+autodoc_member_order = 'bysource'

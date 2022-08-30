@@ -4,8 +4,26 @@ from tinydb.storages import JSONStorage, MemoryStorage
 from tinydb.middlewares import CachingMiddleware
 from tinydb import TinyDB, Query, where
 
+"""
+This module implements all classes that allow to interact with the various databases
+that are supported by ccrawl. The idea was to allow ccrawl to work either in 'local'
+mode with a TinyDB database stored as a json file, or in 'remote' mode with a MongoDB
+database suited for querying very large sets of documents. 
+"""
 
 class Proxy(object):
+    """
+    This is the frontend class for interaction with the database. It supports either
+    a local TinyDB database or a remote MongoDB database.
+
+    Most methods tend to favor interacting with the remote database if present, and
+    fallback to a local database if not.
+    Queries are unified using the TinyDB.Query class, which is *translated*
+    to a native MongoDB query when interacting with the remote database. This has
+    limitations since MongoDB queries are more expressive but we can always use
+    directly the Proxy.rdb instance to avoid this limitation.
+    """
+
     def __init__(self, config):
         self.c = config
         self.ldb = None
@@ -33,12 +51,24 @@ class Proxy(object):
                 self.rdb = None
 
     def set_tag(self, tag=None):
+        """
+        Sets the global "tag" added to all queries performed by the Proxy to filter
+        the database by document.tag values.
+        """
         self.tag = (where("tag") == tag) if (tag is not None) else Query().noop()
 
     def insert_multiple(self, docs):
+        """
+        Inserts multiple documents in the *local* database only.
+        """
         self.ldb.insert_multiple(docs)
 
     def contains(self, q=None, **kargs):
+        """
+        Returns True if the provided query 'q' matches a document
+        (on the filtered by self.tag set of document from remote if present
+        otherwise local.)
+        """
         if q is None:
             q = self.tag
         for k in kargs:
@@ -48,6 +78,11 @@ class Proxy(object):
         return self.ldb.contains(q)
 
     def search(self, q=None, **kargs):
+        """
+        Returns the list of documents matching the provided query 'q'
+        (on the filtered by self.tag set of document from remote if present
+        otherwise local.)
+        """
         if q is None:
             q = self.tag
         else:
@@ -59,6 +94,11 @@ class Proxy(object):
         return self.ldb.search(q)
 
     def get(self, q=None, **kargs):
+        """
+        Returns the first document matching the provided query 'q'
+        (on the filtered by self.tag set of document from remote if present
+        otherwise local.)
+        """
         if q is None:
             q = self.tag
         for k in kargs:
@@ -68,6 +108,11 @@ class Proxy(object):
         return self.ldb.get(q)
 
     def cleanup_local(self):
+        """
+        Removes duplicates from the *local* database only.
+        (Documents are considered duplicates if their "id" and "val"
+        attributes are equal.)
+        """
         D = {}
         for e in self.ldb.search(self.tag):
             k = "%s := %s" % (e["id"], e["val"])
@@ -80,14 +125,23 @@ class Proxy(object):
                 self.ldb.remove(doc_ids=v[1:])
 
     def cleanup(self):
+        """
+        Wrapper for remote cleanup method.
+        """
         self.rdb.cleanup(self)
 
     def find_matching_types(self, Locs, req=None, psize=0):
+        """
+        Wrapper for find_matching_types method.
+        """
         if self.rdb is not None:
             self.rdb.find_matching_types(Locs, req, psize)
         return Locs
 
     def close(self):
+        """
+        Close the *local* database only.
+        """
         self.ldb.close()
 
 
@@ -109,6 +163,15 @@ class CouchDB(object):
 
 
 class MongoDB(object):
+    """
+    This class implements the interface with a mongodb server.
+
+    The database used is named "ccrawl", and documents are all stored in
+    the "nodes" collection. Collections struct_ptr32 and struct_ptr64 are
+    used to precompute structures' offsets assuming respective pointer size
+    of 32 bits and 64 bits.
+    """
+
     def __init__(self, url, auth=None, verify=True):
         from pymongo import MongoClient
 
@@ -120,6 +183,7 @@ class MongoDB(object):
         return u"<MongoDB [%s]>" % self.url
 
     def _where(self, q):
+        "Translate a TinyDB.Query into a MongoDB request"
         res = dict()
         if len(q) > 1:
             op = q[0]
@@ -145,22 +209,32 @@ class MongoDB(object):
         return res
 
     def insert_multiple(self, docs):
+        "Calls insert_many on the nodes collection."
         col = self.db.get_collection("nodes")
         return col.insert_many(docs)
 
     def contains(self, q, **kargs):
+        """Calls find on the nodes collection for the given query.
+        with limit set to 1 and returns True if the list is non empty.
+        """
         col = self.db.get_collection("nodes")
         return len(list(col.find(self._where(q)).limit(1))) > 0
 
     def search(self, q, **kargs):
+        "Calls find on the nodes collection for the given query."
         col = self.db.get_collection("nodes")
         return list(col.find(self._where(q)))
 
     def get(self, q, **kargs):
+        "Calls find_one on the nodes collection for the given query."
         col = self.db.get_collection("nodes")
         return col.find_one(self._where(q))
 
     def cleanup(self, proxy):
+        """
+        Removes duplicates and their precomputed data in structs_ptr32/64
+        collections and re-index the database by "id" and "val" fields.
+        """
         from pymongo import TEXT
 
         click.echo("removing duplicates...", nl=False)
@@ -176,6 +250,10 @@ class MongoDB(object):
         click.echo("done.")
 
     def cleanup_structs(self, **kargs):
+        """
+        Remove all entries from struct_ptr32/64 collections that don't have
+        a matching _id in the nodes collection.
+        """
         for col in (self.db["structs_ptr32"], self.db["structs_ptr64"]):
             L = []
             for s in col.find():
@@ -185,6 +263,10 @@ class MongoDB(object):
             col.delete_many({"_id": {"$in": L}})
 
     def cleanup_selected(self, **kargs):
+        """
+        Remove all entries that matches passed key=value arguments
+        (from all collections.)
+        """
         L = []
         S = []
         for s in self.db["nodes"].find(kargs):
@@ -198,6 +280,10 @@ class MongoDB(object):
             self.db["nodes"].delete_many({"_id": {"$in": L}})
 
     def update_structs(self, proxydb, req=None):
+        """
+        Update the struct_32/64 collections for the given request filtered
+        documents.
+        """
         from ccrawl.core import ccore
         from ccrawl.ext import amoco
 
@@ -230,6 +316,9 @@ class MongoDB(object):
             )
 
     def remove_duplicates(self, **kargs):
+        """
+        Remove duplicates from the nodes collection.
+        """
         col = self.db.get_collection("nodes")
         L = [{"$match": kargs}] if kargs else []
         L += [
@@ -249,6 +338,14 @@ class MongoDB(object):
             col.delete_many({"_id": {"$in": x["tbd"][1:]}})
 
     def find_matching_types(self, Locs, req=None, psize=0):
+        """
+        For a given dictionnary of "locations" where the key
+        is an arbitrary name (a stack variable name, etc) and
+        the value is a list of (offset,size) tuples that describe
+        how this local stack variable is accessed within a function,
+        try to find any matching structured type in the database and
+        updates the dict value by adding these typenames.
+        """
         if req is None:
             req = {}
         psize = psize // 8 or psize
@@ -286,6 +383,11 @@ class MongoDB(object):
             Locs[n] = (S, [x["id"] for x in res])
 
     def find_calls_to(self,ref,D=None):
+        """
+        Find cFunc documents that calls a given ref name.
+        This works only for functions that have been collected with
+        the --all option.
+        """
         if D is None:
             D = {}
         return self.db["nodes"].find(

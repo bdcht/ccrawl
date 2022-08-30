@@ -5,8 +5,27 @@ from ccrawl.db import where
 
 
 class ccore(object):
-    """Generic class dedicated to a collected object
-    used as parent of all types"""
+    """
+    Generic class dedicated to a collected object,
+    used as parent class for all C/C++ items collected
+    by ccrawl:
+
+      - typedef
+      - struct
+      - union
+      - enum
+      - macro
+      - func
+      - class
+      - template
+      - namespace
+
+    Attributes:
+        formatter (function): a function used to print the object
+                              in various formats.
+        _cache_ (dict): a global (parent class level) dict of all types
+                        that have been fetched from the database so far.
+    """
 
     _is_typedef = False
     _is_struct = False
@@ -21,21 +40,46 @@ class ccore(object):
     _cache_ = {}
 
     def show(self, db=None, r=None, form=None):
+        """
+        Generic method that possibly defines and
+        ultimately calls the internal formatter function.
+
+        Attributes:
+            db [opt] (Proxy): database used in recursive mode
+        """
         if (not self.formatter) or form:
             self.set_formatter(form)
         return self.formatter(db, r)
 
     def unfold(self, db, limit=None):
+        """
+        Generic method that fetches recursively from the given database
+        all other types on which this type depends. The method is recursive
+        in the sense that all subtypes are unfolded as well until they only
+        depend on primitive types (int, short, float, etc.)
+        """
         self.subtypes = OrderedDict()
         return self
 
     def build(self, db):
+        """
+        Generic method for building a ctypes instance for this type.
+        Basically just a wrapper for the ext.ctypes_.build function.
+
+        Parameters:
+            db (Proxy): database used to get any other type on which
+                        this type depends.
+        """
         self.unfold(db)
         from ccrawl.ext import ctypes_
 
         return ctypes_.build(self, db)
 
     def add_subtype(self, db, elt, limit=None):
+        """
+        Generic method that fetches item 'elt' from the database and
+        adds it to the subtypes of this type before unfolding it.
+        """
         x = ccore._cache_.get(elt, None)
         if x is None:
             data = db.get(where("id") == elt)
@@ -48,11 +92,28 @@ class ccore(object):
         self.subtypes[elt] = x.unfold(db, limit)
 
     def graph(self,db,V=None,g=None):
+        """
+        Generic method that returns the types-dependency graph
+        associated with this type.
+        Basically just a wrapper for the graphs.build function.
+
+        Parameters:
+            db (Proxy): database used to get any other type on which
+                        this type depends.
+        """
         from ccrawl.graphs import build
         return build(self,db,V,g)
 
     @classmethod
     def set_formatter(cls, form):
+        """
+        Selects the formatter to be used for the entire class from
+        the available :mod:`formatters`.
+
+        Parameters:
+            form (str): name of a module in the formatters sub-package.
+                        If the module is not found, 'raw' is used.
+        """
         ff = "{}_{}".format(cls.__name__, form)
         try:
             cls.formatter = getattr(formatters, ff)
@@ -81,6 +142,10 @@ class ccore(object):
             return cNamespace
 
     def to_db(self, identifier, tag, src):
+        """
+        Generic method that returns a list of database-insertable "documents"
+        for the current item.
+        """
         doc = {
             "id": identifier,
             "val": self,
@@ -98,6 +163,14 @@ class ccore(object):
 
     @staticmethod
     def from_db(data):
+        """
+        Generic method that returns a specialized ccore instance from a given
+        document data usually obtained from the database.
+
+        Parameters:
+            data (dict): must have "id", "cls" and "val" keys where cls is
+                         one of the below ccore specialized class name.
+        """
         identifier = data["id"]
         val = ccore.getcls(data["cls"])(data["val"])
         val.identifier = identifier
@@ -109,9 +182,15 @@ class ccore(object):
 
 
 class cTypedef(str, ccore):
+    """
+    Specialized ccore class that is also a 'str' representing a C/C++ typedef.
+    """
     _is_typedef = True
 
     def unfold(self, db, limit=None, ctx=None):
+        """
+        Unfolding a typedef simply adds its underlying type definition to subtypes.
+        """
         if self.subtypes is None:
             self.subtypes = OrderedDict()
             ctype = c_type(self)
@@ -133,9 +212,15 @@ class cTypedef(str, ccore):
 
 
 class cStruct(list, ccore):
+    """
+    Specialized ccore class that is also a 'list' representing a C struct.
+    """
     _is_struct = True
 
     def unfold(self, db, limit=None):
+        """
+        Unfolding a struct adds all its fields' types to subtypes.
+        """
         if self.subtypes is None:
             self.subtypes = OrderedDict()
             T = list(struct_letters.keys())
@@ -169,6 +254,9 @@ class cStruct(list, ccore):
 
 
 class cClass(list, ccore):
+    """
+    Specialized ccore class that is also a 'list' representing a C++ class.
+    """
     _is_class = True
 
     def unfold(self, db, limit=None):
@@ -212,7 +300,8 @@ class cClass(list, ccore):
              - M is the list of non-virtual fields,
              - V is the ordered dict of virtual fields.
 
-
+           This triplet is used to create a cStruct instance
+           that correspond to an instance of this C++ class in memory.
         """
         self.unfold(db)
         M, V = [], OrderedDict()
@@ -262,6 +351,10 @@ class cClass(list, ccore):
         return (vptr, M, V)
 
     def as_cStruct(self, db):
+        """
+        Creates a cStruct instance that correspond to this C++ class,
+        according the gcc cxx ABI for virtual classes.
+        """
         if self.identifier.startswith("union "):
             x = cUnion()
         else:
@@ -286,6 +379,9 @@ class cClass(list, ccore):
         return x
 
     def has_virtual_members(self):
+        """
+        Returns True if the C++ class has virtual members.
+        """
         for x, _, _ in self:
             qal, t = x
             if "virtual" in qal:
@@ -293,6 +389,9 @@ class cClass(list, ccore):
         return False
 
     def base_specifier_list(self):
+        """
+        Returns the list of C++ parent (possibly virtual) classes.
+        """
         spe = []
         for x, y, z in self:
             qal, t = x
@@ -318,6 +417,9 @@ class cClass(list, ccore):
 
 
 class cUnion(list, ccore):
+    """
+    Specialized ccore class that is also a 'list' representing a C union.
+    """
     _is_union = True
 
     def unfold(self, db, limit=None):
@@ -354,6 +456,9 @@ class cUnion(list, ccore):
 
 
 class cEnum(dict, ccore):
+    """
+    Specialized ccore class that is also a 'dict' representing a C enum.
+    """
     _is_enum = True
 
 
@@ -361,6 +466,9 @@ class cEnum(dict, ccore):
 
 
 class cMacro(str, ccore):
+    """
+    Specialized ccore class that is also a 'str' representing a C macro.
+    """
     _is_macro = True
 
 
@@ -368,6 +476,9 @@ class cMacro(str, ccore):
 
 
 class cFunc(dict, ccore):
+    """
+    Specialized ccore class that is also a 'dict' representing a C/C++ function.
+    """
     _is_func = True
 
     def restype(self):
@@ -404,6 +515,9 @@ class cFunc(dict, ccore):
 
 
 class cTemplate(dict, ccore):
+    """
+    Specialized ccore class that is also a 'dict' representing a C++ template.
+    """
     _is_template = True
 
     def get_basename(self):
@@ -421,6 +535,9 @@ class cTemplate(dict, ccore):
 
 
 class cNamespace(list, ccore):
+    """
+    Specialized ccore class that is also a 'list' representing a C++ namespace.
+    """
     _is_namespace = True
 
     def unfold(self, db, limit=None):

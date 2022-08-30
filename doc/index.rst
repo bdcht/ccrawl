@@ -64,14 +64,15 @@ be shown as well.
    :caption: Python API
 
    overview
+   main
    core
    parser
    db
    formatters
    ext
-   utils
    config
-   main
+   utils
+   graphs
 
 
 Indices and tables

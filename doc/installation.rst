@@ -1,3 +1,5 @@
+.. _installation:
+
 Installation
 ============
 
@@ -12,7 +14,9 @@ It depends on:
  - rapidjson_
  - pymongo_  (interface for MongoDB)
 
-We recommend to install ccrawl in its own *virtualenv* with included ipython_ ::
+We recommend to install ccrawl in its own *virtualenv* with included ipython_ :
+
+.. code-block:: console
 
   user@machine:~ % tar xzvf ccrawl.tgz; cd ccrawl
 
@@ -39,7 +43,7 @@ We recommend to install ccrawl in its own *virtualenv* with included ipython_ ::
     ___ ___ _ __ __ ___      _| |
    / __/ __| '__/ _` \ \ /\ / / |
   | (_| (__| | | (_| |\ V  V /| |
-   \___\___|_|  \__,_| \_/\_/ |_| v1.5.0
+   \___\___|_|  \__,_| \_/\_/ |_| v1.8.0
 
 
   In [1]: [^D]

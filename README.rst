@@ -46,7 +46,9 @@ an instance (object) layout in memory, including all virtual table pointers (or 
 that result from possibly multiple parent (possibly virtual) classes.
 
 Finally, Ccrawl allows to compute various statistics about a library API, and allows to
-compute the dependency graph of all collected types.
+compute the dependency graph of any given type like for example (see tests/samples/xxx/graph.h):
+
+.. image:: https://github.com/bdcht/ccrawl/blob/release/doc/g.png
 
 User documentation and API can be found at
 `http://ccrawl.readthedocs.io/en/latest/index.html`

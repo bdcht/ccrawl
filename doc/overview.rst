@@ -17,12 +17,15 @@ Ccrawl is composed of several python modules and sub-packages:
   query for various properties of stored C/C++ definitions and to output the full definition
   of a chosen structure (all needed types recusively) or to instanciate an "external"
   object associated with the chosen definition (for example a ctypes instance, an amoco struct
-  or a ghidra data type instance.) Sub-packages :ref:`formatters` deals with translating
-  the queried definitions into a specific language (raw, C/C++, amoco, ctypes, etc) and
+  or a ghidra data type instance.) Sub-packages :ref:`formatters` deals with translating the
+  queried definitions into a specific language (raw, C/C++, amoco, ctypes, etc) and
   sub-package :ref:`ext` deals with instanciating the queried definitions into specific
-  python tools (amoco, ctypes, ghidra, etc.)
+  python tools (amoco, ctypes, Ghidra, etc.)
 
 - Module :mod:`conf` provides the global configuration based on the traitlets package.
 
 - Module :mod:`utils` implements the pyparsing utilities for
   decomposing a C/C++ type into a ccrawl object.
+
+- Module :mod:`graphs` implements the graph classes (Node, Link, CGraph) for computing the
+  dependency-graph of a set of types.

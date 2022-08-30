@@ -5,7 +5,7 @@ from traitlets.config import Configurable
 from traitlets.config import PyFileConfigLoader
 from traitlets import Unicode, Bool, observe
 
-__version__ = "1.7.0"
+__version__ = "1.8.0"
 
 # default clang library file: NOT REQUIRED for >libclang-12
 # if os.name == 'posix':
@@ -37,7 +37,7 @@ BANNER = (
 
 
 class Terminal(Configurable):
-    "configurable parameters related to ui/output"
+    "Configurable parameters related to ui/output"
     debug = Bool(DEBUG, config=True)  # don't show debug output
     verbose = Bool(VERBOSE, config=True)  # don't show verbose output
     quiet = Bool(QUIET, config=True)  # don't show no output
@@ -64,7 +64,7 @@ class Terminal(Configurable):
 
 
 class Database(Configurable):
-    "configurable parameters related to the database"
+    "Configurable parameters related to the database"
     local = Unicode(
         "/tmp/ccrawl.db", config=True
     )  # local tiny database name is ccrawl.db
@@ -74,7 +74,7 @@ class Database(Configurable):
 
 
 class Collect(Configurable):
-    "configurable parameters related to the collect command"
+    "Configurable parameters related to the collect command"
     strict = Bool(False, config=True)  # don't block on missing headers/types
     cxx = Bool(True, config=True)  # try detecting c++ inputs
     skipcxx = Bool(True, config=True)  # ignore detected c++ files when cxx is False
@@ -88,18 +88,24 @@ class Collect(Configurable):
 
 
 class Formats(Configurable):
-    "configurable parameters related to formatters"
+    "Configurable parameters related to formatters"
     default = Unicode("C", config=True)  # show results formatted as C code
     callcon = Unicode("cdecl", config=True)  # assume cdecl calling convention
 
 
 class Ghidra(Configurable):
-    "configurable parameters related to ghidra"
+    "Configurable parameters related to ghidra"
     manager = Unicode("program", config=True)  # use ghidra_bridge on currentProgram
     category = Unicode("ccrawl", config=True)  # import types into ccrawl category
 
 
 class Config(object):
+    """Main configuration class that reads the given file (defaults to ~/.ccrawlrc)
+       as a traitlets config format and fills the *Configurable* instances.
+       Also adds the __str__ method to print the entire configuration.
+
+       See configuration_ for details on configurable parameters.
+    """
     def __init__(self, f=None):
         if f is None:
             f = ".ccrawlrc"

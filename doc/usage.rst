@@ -290,7 +290,7 @@ ie essentially the structures' field (and pointer accessor) that binds those typ
 
       options: [-o <file>]     output filename (defaults to stdout)
 
-For example:
+For example (see samples/xxx/graph.h) :
 
 .. code-block:: console
 
@@ -325,6 +325,28 @@ which results in:
 
 .. image:: g.png
   :alt: dot -Tpng g.dot > g.png
+
+In the output graph, structures have rounded box, other types are just
+rounded. If the type is missing from the database, the node is colored in red.
+Edges are possibly associated with an "accessor" like here the
+field named `a` in `struct grG` is of type `sA`. Indeed, we have:
+
+For example:
+
+.. code-block:: C
+
+    struct grG {
+      int n;
+      sA a;
+      pB *tb;
+    };
+
+Note that primitive types are always ignored (the `int n` field does not appear in the graph.)
+An accessor can also be `a[3]` like the one between `struct grB` and `struct grA` or simply
+an "anonymous" pointer dereference in the case of a type definition like `typedef stuct grG *pG`.
+Finally, edges that are directed "backward" are colored in blue.
+The first lines of the output are comments that indicate if the graph is "connected" and
+if it has some non-trivial *strongly connected components* (basically cycles).
 
 
 .. _libclang: https://clang.llvm.org/doxygen/group__CINDEX.html

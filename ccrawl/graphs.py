@@ -8,6 +8,12 @@ try:
     has_graph = True
 
     class Node(Vertex):
+        """A Node is a grandalf.Vertex equipped with a label property
+           an improved __repr__ method that displays the Vertex's data
+           and type of data (a ccore instance or a str) and a loc
+           method that reports its index within the graph (unless its
+           not yet part of a graph.)
+        """
 
         @property
         def label(self):
@@ -40,6 +46,9 @@ try:
 
 
     class Link(Edge):
+        """A Link is a grandalf.Edge equipped with a label property
+           and an improved __repr__ method.
+        """
 
         def __init__(self,x,y,data=None):
             super().__init__(x,y,1.0,data)
@@ -54,6 +63,9 @@ try:
 
 
     class CGraph(Graph):
+        """A CGraph is a grandalf.Graph equipped with a
+           an improved __repr__ method.
+        """
 
         def __repr__(self):
             return "<CGraph @ %s, C: %s>"%(hex(id(self)),str([g.order() for g in self.C]))
@@ -64,6 +76,13 @@ except ImportError:
 
 
 def build(obj,db,V=None,g=None):
+    """
+    This function takes a ccrawl.core object and a db.Proxy and returns
+    the dependency graph of this object as a CGraph instance. 
+    
+    Optional arguments V and g allow to extend the current dict of Node (V)
+    and a CGraph (g) from another given object.
+    """
     if has_graph:
         obj.unfold(db)
         if V is None:
@@ -74,6 +93,15 @@ def build(obj,db,V=None,g=None):
     return g
 
 def do_graph(obj,V,g):
+    """
+    This function takes an unfolded ccrawl.core object, a dict V of Nodes
+    (acting a the current cache set of Nodes created so far for this graph),
+    and a CGraph instance g.
+
+    It "fills" g with new Link edges (and thus new Nodes as well) by walking
+    the given cStruct/cUnion/cTypedef object and instanciating new Nodes and
+    Links based on the corresponding subtypes and names.
+    """
     # get/add Node obj to V dict:
     if obj.identifier in V:
         v = V[obj.identifier]
@@ -129,12 +157,21 @@ def do_graph(obj,V,g):
                 do_graph(x,V,g)
 
 def get_typegraph_cycles_params(g,r=None):
+    """
+    For a given CGraph g, returns the "cycles" found in this graph as
+    a dict where the key is a root Node for a cycle, and the value is
+    a list of cycles.
+    Each cycle is defined as a tuple of "accessors" that correspond
+    to all Links' data values that returns back to the root Node. 
+    """
     X = {}
     for gc in g.C:
         L = gc.get_scs_with_feedback()
         for l in L:
             sz = len(l)
             if sz>1:
+                # the strongly connect component is non trivial...
+                # lets compute its cycles:
                 p = get_scs_params(l)
                 if p is not None:
                     X.update(p)
@@ -142,6 +179,10 @@ def get_typegraph_cycles_params(g,r=None):
 
 from itertools import tee
 def get_scs_params(l):
+    """
+    For a given list of Nodes that form a strongly connected component
+    of a graph, compute all cycles from the initial (root) Node.
+    """
     def pairwise(it):
         a,b = tee(it)
         next(b,None)
@@ -162,6 +203,9 @@ def get_scs_params(l):
     return {v0: params}
 
 def get_cycles(obj,db,psize=4):
+    """
+    For a given ccrawl.core object, compute its dependency graph "cycles".
+    """
     g = build(obj,db)
     X = get_typegraph_cycles_params(g)
     R = {}
@@ -189,6 +233,11 @@ def parse_accessor(s):
 
 from ccrawl.ext import amoco
 def get_cycle_offsets(node,db,P,psize):
+    """
+    For a given cycle P, associated to a root node, return
+    the list of (offset,name) or deref operator '*' that correspond to
+    this cycle.
+    """
     def offset_of(obj,db,el,psize):
         i = obj.index_of(el)
         if db.rdb:
