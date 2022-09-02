@@ -131,3 +131,64 @@ def get_c_or_cxx_type(x):
     t = cxx_type(x)
     return t
 
+
+A_to_C = {
+  'P' : 'void*',
+  'b' : 'char',
+  'c' : 'char',
+  'B' : 'unsigned char',
+  'h' : 'short',
+  'H' : 'unsigned short',
+  'i' : 'int',
+  'I' : 'unsigned int',
+  'l' : 'long',
+  'L' : 'unsigned long',
+  'q' : 'long long',
+  'Q' : 'unsigned long long',
+}
+
+__r = 0
+
+def to_ccore(ax,identifier,**kargs):
+    from ccrawl.core import ccore
+    global __r
+    subs = []
+    if ax.typedef:
+        t = ax.fields[0].typename
+        if t in A_to_C:
+            t = A_to_C[t]
+        else:
+            if t in Alltypes:
+                subs.append(to_ccore(Alltypes[t],t))
+        c = ccore.getcls("cTypedef")(t)
+    else:
+        if not ax.union:
+            c = ccore.getcls("cStruct")()
+        else:
+            c = ccore.getcls("cUnion")()
+        ccore.unfold(c,None)
+        for f in ax.fields:
+            t = f.typename
+            if t in A_to_C:
+                t = A_to_C[t]
+            else:
+                if t in Alltypes:
+                    subs.append(to_ccore(Alltypes[t],t))
+            if hasattr(f,'subnames'):
+                for sn,ss in zip(f.subnames,f.subsizes):
+                    if sn=="_":
+                        sn = "reserved_%s"%__r
+                        __r+=1
+                    c.append([t+' # %d'%ss, sn, f.comment])
+            else:
+                fn = f.name
+                if fn=="_":
+                    fn = "reserved_%d"%__r
+                    __r+=1
+                if f.count>0:
+                    t += "[%d]"%f.count
+                c.append([t,fn,f.comment])
+    c.identifier = identifier
+    for sc in subs:
+        c.subtypes[sc.identifier] = sc
+    return c
