@@ -165,6 +165,7 @@ Changelog
   * add graph command to output (in dot format) the dependency graph for a given root structure
   * add --structs option to stats command which tries to build structures and report missing refs
   * add find_calls_to method in mongodb proxy class to report collected "calls" from function's body
+  * add amoco.system.structs to ccrawl.core converter
   * fix "struct volatile" case (libclang-14)
   * fix support for bitfield structure with unnamed field in ext.ghidra
 
