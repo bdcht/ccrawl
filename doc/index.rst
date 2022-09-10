@@ -64,7 +64,6 @@ be shown as well.
    :caption: Python API
 
    overview
-   main
    core
    parser
    db

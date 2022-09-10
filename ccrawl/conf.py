@@ -104,7 +104,7 @@ class Config(object):
        as a traitlets config format and fills the *Configurable* instances.
        Also adds the __str__ method to print the entire configuration.
 
-       See configuration_ for details on configurable parameters.
+       See :doc:`configuration` for details on configurable parameters.
     """
     def __init__(self, f=None):
         if f is None:

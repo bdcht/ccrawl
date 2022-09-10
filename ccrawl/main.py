@@ -11,21 +11,24 @@ from ccrawl.core import ccore
 from ccrawl.utils import c_type
 from ccrawl.db import Proxy, Query, where
 
+"""
+
+"""
+
 # ccrawl commands utilities:
 # ------------------------------------------------------------------------------
 
 
 def spawn_console(ctx):
-    """Crawl console for interactive mode.
+    """
+    Provides a console for interactive mode.
     The console is based on IPython if found, or uses CPython otherwise.
-    When interactive, ccrawl is configured in non strict collect mode.
     """
     c = conf.config
     if not ctx.obj["db"]:
         ctx.obj["db"] = Proxy(c.Database)
     cvars = dict(globals(), **locals())
     cvars.update(ctx.obj)
-    # c.Collect.strict=False
     if c.Terminal.console.lower() == "ipython":
         try:
             from IPython import start_ipython
@@ -79,6 +82,12 @@ def spawn_console(ctx):
 @click.option("-g", "--tag", help="filter queries with given tag")
 @click.pass_context
 def cli(ctx, verbose, quiet, db, local, configfile, tag):
+    """
+    Click-decorated command to define global options and spawn an interactive
+    console if no subcommand is found in the Click context.
+    The configuration is read, verbosity level is adjusted, and the database
+    interface is instanciated.
+    """
     ctx.obj = {}
     c = conf.config = conf.Config(configfile)
     if quiet:
@@ -159,7 +168,8 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
 )
 @click.pass_context
 def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, src):
-    """Collects types (struct,union,class,...) definitions,
+    """
+    Collects types (struct,union,class,...) definitions,
     functions prototypes and/or macro definitions from SRC files/directory.
     Collected definitions are stored in a local database,
     tagged with the global 'tag' option if present or with a timestamp.
@@ -305,7 +315,8 @@ def files_and_includes(src, F):
 @click.argument("rex", nargs=1, type=click.STRING)
 @click.pass_context
 def search(ctx, ignorecase, rex):
-    """Search for documents in the remote database
+    """
+    Search for documents in the remote database
     (or the local database if no remote is found) with either name
     or definition matching the provided regular expression.
     """

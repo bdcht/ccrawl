@@ -72,8 +72,24 @@ nested_c = pp.OneOrMore(nested_par)
 
 
 class c_type(object):
-    """The c_type object parses a C type string and decomposes it into
-    several parts
+    """
+    The c_type object parses a C type string and decomposes it into
+    several parts. 
+
+    The parser is implemented with below 'nested_c' pyparsing object.
+    It captures nested parenthesis expressions that allows to define complex C
+    types that represent pointer-to array-of ... function prototypes returning a
+    C type.
+
+    Attributes:
+        lbase (str): base typename
+        lbfw (int): type has a bitfield length (0 means type is not a bitfield)
+        lconst (bool): type has a 'const' keyword
+        unsigned (bool): type has an 'unsigned' keyword
+        volatile (bool): type has a 'volatile' keyword
+        pstack (list): list of "pointers stack" (see :ref:`pstack` function)
+        is_ptr (bool): True if the pstack contains a :class:`ptr` object.
+        dim (int): dimension if the type is an array (or 0.)
     """
 
     def __init__(self, decl):
@@ -137,6 +153,12 @@ class c_type(object):
         return " ".join(s)
 
     def show_base(self, kw=False, ns=False):
+        """
+        returns the string that represents the base type
+        with possibly additional 'const' and 'unsigned'
+        keywords (if kw is True) and namespace(s) indicators
+        (if ns is True).
+        """
         s = [self.lbase]
         if self.lunsigned:
             s.insert(0, "unsigned")
@@ -145,6 +167,11 @@ class c_type(object):
         return " ".join(s)
 
     def show_ptr(self, name):
+        """
+        returns the string that represents the pointers stack,
+        with optional name parameter used as the name of the
+        function (in case of a prototype).
+        """
         s = name
         stripok = False
         for p in reversed(self.pstack):
@@ -159,6 +186,10 @@ class c_type(object):
         return s
 
     def show(self, name=""):
+        """
+        returns the string that represents full type with optional
+        name parameter for a function's prototype.
+        """
         extra = " : %d" % self.lbfw if self.lbfw else ""
         s = ("%s %s" % (self.show_base(), self.show_ptr(name))).strip()
         return s + extra
@@ -166,9 +197,12 @@ class c_type(object):
 
 # C++ type declaration parser:
 # ------------------------------------------------------------------------------
-# cxx_type extends c_type with extracting the namespace parts of the fully
-# qualified name of the C++ type.
+
 class cxx_type(c_type):
+    """
+    cxx_type extends c_type with extracting the namespace parts of the fully
+    qualified name of the C++ type.
+    """
     def __init__(self, decl):
         super().__init__(decl)
         # get namespaces:
@@ -222,6 +256,14 @@ class cxx_type(c_type):
 
 
 class ptr(object):
+    """
+    Object that represents a series of pointer (aka stars) possibly with
+    additional 'const' keyword.
+
+    Attributes:
+        p (str): list of '*' chars that represent the C pointers
+        const (str): 'const' keyword or None.
+    """
     def __init__(self, p, c):
         self.is_ptr = True
         self.p, self.const = p, c
@@ -232,6 +274,12 @@ class ptr(object):
 
 
 class arr(object):
+    """
+    Object that represents an array indicator.
+
+    Attributes:
+        a (int): dimension of the array
+    """
     def __init__(self, a):
         self.is_ptr = False
         self.a = a
@@ -241,6 +289,13 @@ class arr(object):
 
 
 class fargs(object):
+    """
+    Object that represents the arguments list of a function prototype.
+
+    Attributes:
+        f (str): the arguments part of a function prototype
+        args (list): the list of arguments
+    """
     def __init__(self, f):
         self.is_ptr = False
         self.f = f

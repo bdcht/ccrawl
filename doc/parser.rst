@@ -1,7 +1,5 @@
-.. _parser:
-
-The ccrawl.parser module
-========================
+parser
+======
 
 .. automodule:: parser
    :members:

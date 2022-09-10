@@ -1,7 +1,8 @@
+
 .. _core:
 
-The ccrawl.core module
-======================
+core
+====
 
 .. automodule:: core
    :members:

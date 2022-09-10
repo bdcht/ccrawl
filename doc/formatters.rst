@@ -1,7 +1,5 @@
-.. _formatters:
-
-The ccrawl.formatters module
-============================
+formatters
+==========
 
 .. automodule:: formatters
    :members:

@@ -64,7 +64,7 @@ class ccore(object):
     def build(self, db):
         """
         Generic method for building a ctypes instance for this type.
-        Basically just a wrapper for the ext.ctypes_.build function.
+        Basically just a wrapper for the :mod:`ctypes_`.build function.
 
         Parameters:
             db (Proxy): database used to get any other type on which
@@ -184,6 +184,9 @@ class ccore(object):
 class cTypedef(str, ccore):
     """
     Specialized ccore class that is also a 'str' representing a C/C++ typedef.
+    
+    Attributes:
+        identifier: the new typename associated to this typedef.
     """
     _is_typedef = True
 
@@ -214,6 +217,16 @@ class cTypedef(str, ccore):
 class cStruct(list, ccore):
     """
     Specialized ccore class that is also a 'list' representing a C struct.
+
+    Attributes:
+        identifier: the typename associated to this C struct.
+
+    Items of the list represent fields of the structure and are formatted as
+    triplet of the form (t,n,c) where
+    
+       - t is a string that represents the type the field
+       - n is a string that represents the name of the field
+       - c is a string that represents a comment for the field
     """
     _is_struct = True
 
@@ -256,6 +269,19 @@ class cStruct(list, ccore):
 class cClass(list, ccore):
     """
     Specialized ccore class that is also a 'list' representing a C++ class.
+
+    Attributes:
+        identifier: the name associated to this C++ class.
+
+    Items of the list represent attributes of the class and are formatted as
+    triplet of the form (x,y,z) where
+
+       - x is a tuple (q,t) where q is a "parent", "using" or "virtual" keyword
+         and t is "virtual" or a type name,
+       - y is a tuple (mn,n) where mn is the mangled name and n is the full name
+         of the class attribute,
+       - z is a tuple (p,c) where p is a "public"/"protected"/"private"/"friend"
+         indicator and c is a string that represents a comment.
     """
     _is_class = True
 

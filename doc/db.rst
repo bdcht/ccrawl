@@ -1,7 +1,7 @@
 .. _db:
 
-The ccrawl.db module
-====================
+db
+==
 
 .. automodule:: db
    :members:

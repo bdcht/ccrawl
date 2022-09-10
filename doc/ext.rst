@@ -1,7 +1,5 @@
-.. _ext:
-
-The ccrawl.ext package
-======================
+ext
+===
 
 Modules of this package implements the *build* function that allows
 to create an instance of an "external" object from a given type definition.

@@ -150,6 +150,21 @@ A_to_C = {
 __r = 0
 
 def to_ccore(ax,identifier,**kargs):
+    """
+    Translate an amoco StructCore type to a ccrawl.ccore object,
+    thus allowing to export this object to any supported format.
+
+    The interface to amoco's StructCore uses its '.typedef' and '.union'
+    attributes as well as its fields attribute list,
+    where each field must have:
+
+      - a typename attribute
+      - a subnames/subsizes attribute(s) for bitfields
+      - a comment attribute
+      - a count attribute
+      - a name attribute
+
+    """
     from ccrawl.core import ccore
     global __r
     subs = []

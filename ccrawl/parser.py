@@ -8,6 +8,7 @@ import clang.cindex
 import tempfile
 import hashlib
 from itertools import chain
+from functools import wraps
 from collections import Iterable, OrderedDict, defaultdict
 from ccrawl import conf
 from ccrawl.core import (
@@ -31,11 +32,11 @@ CHandlers = {}
 
 
 def declareHandler(kind):
-    """Decorator used to register a handler associated to
+    """
+    Decorator used to register a handler associated to
     a clang cursor kind/type. The decorated handler function
     will be called to process each cursor of this kind.
     """
-
     def decorate(f):
         CHandlers[kind] = f
         return f
@@ -590,8 +591,9 @@ def fix_type_conversion(f, t, cxx, errs):
 
 
 def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=None):
-    """Function that parses the input filename and returns the
-    dictionary of name:object
+    """
+    Function that parses the input filename and returns the
+    dictionary of name:object extracted from this C or C++ file.
     """
     # clang parser cindex options:
     if options is None:

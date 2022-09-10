@@ -1,7 +1,5 @@
-.. _utils:
-
-The ccrawl.utils module
-=======================
+utils
+=====
 
 .. automodule:: utils
    :members:

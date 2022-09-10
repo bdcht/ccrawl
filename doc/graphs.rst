@@ -1,7 +1,5 @@
-.. _graphs:
-
-The ccrawl.graphs module
-========================
+graphs
+======
 
 .. automodule:: graphs
    :members:
