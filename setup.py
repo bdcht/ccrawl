@@ -38,6 +38,7 @@ setup(
         "python-rapidjson",
         "requests",
         "pymongo",
+        "grandalf",
     ],
     package_data={},
     data_files=[],
