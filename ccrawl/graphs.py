@@ -217,7 +217,8 @@ def get_cycles(obj,db,psize=4):
     return R
 
 def parse_accessor(s):
-    if (i:=s.rfind("["))>0:
+    i = s.rfind("[")
+    if i>0:
         a,s = s[i:],s[:i]
         a = int(a[1:-1])
     else:
