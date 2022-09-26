@@ -113,6 +113,8 @@ def TypeDef(cur, cxx, errors=None):
     t = get_uniq_typename(t)
     if t.startswith("struct volatile "):
         t = t.replace("struct volatile ","")
+    elif t.startswith("struct const "):
+        t = t.replace("struct const ","")
     if conf.DEBUG:
         echo("\t" * g_indent + "make unique: %s" % t)
     if conf.VERBOSE:
