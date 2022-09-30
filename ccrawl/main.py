@@ -350,8 +350,9 @@ def search(ctx, ignorecase, rex):
 @cli.group(invoke_without_command=True)
 @click.option("-a", "--and", "ands", type=click.STRING, multiple=True)
 @click.option("-o", "--or", "ors", type=click.STRING, multiple=True)
+@click.argument("key", nargs=-1, type=click.STRING)
 @click.pass_context
-def select(ctx, ands, ors):
+def select(ctx, ands, ors, key):
     """Get document(s) from the remote database
     (or the local database if no remote is found) matching
     multiple constraints.
@@ -375,6 +376,8 @@ def select(ctx, ands, ors):
             click.secho("%s " % l["cls"], nl=False, fg="cyan")
             click.echo("identifer ", nl=False)
             click.secho('"%s"' % l["id"], fg="magenta")
+            for k in key:
+                click.echo("  .%06s: %s"%(k,l.get(k,"")))
     else:
         if conf.DEBUG:
             click.echo("SELECT_COMMAND: %s" % ctx.invoked_subcommand)
