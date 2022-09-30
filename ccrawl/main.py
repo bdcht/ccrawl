@@ -211,18 +211,13 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
     # temporary database cache:
     dbo = {}
     # if no clang params is provided, use defaults:
-    if xclang is None:
-        # keep comments in parser output:
-        args = [
-            "-ferror-limit=0",
-            "-fmodules",
-            "-fbuiltin-module-map",
-        ]
-        # add header directories:
-        # for i in (D for D in src if os.path.isdir(D)):
-        #    args.append("-I%s" % i)
-    else:
-        args = xclang.split(" ")
+    args = [
+        "-ferror-limit=0",
+        "-fmodules",
+        "-fbuiltin-module-map",
+    ]
+    if xclang is not None:
+        args += xclang.split(" ")
     # count source files:
     FILES, INCLUDES = files_and_includes(src, F)
     total = len(FILES)
