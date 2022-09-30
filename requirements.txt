@@ -5,3 +5,4 @@ pyparsing
 tinydb
 pymongo
 requests
+tqdm
