@@ -656,6 +656,8 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
             if err.severity == 3:
                 # common errors when parsing c++ as c:
                 if ("expected ';'" in err.spelling) or ("'namespace'" in err.spelling):
+                    if "asm block" in err.spelling:
+                        continue
                     if conf.config.Collect.cxx:
                         if conf.DEBUG:
                             secho("reparse as c++ input...",fg="cyan")
