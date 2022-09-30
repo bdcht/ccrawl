@@ -470,3 +470,17 @@ else:
 
     def dt_apply_recursive(dt, address):
         dtm.findDataTypes
+
+def find_functions_with_type(lref):
+    fm = currentProgram.getFunctionManager()
+    sref = set(lref)
+    F = []
+    for f in tqdm(fm.getFunctions(True),total=fm.getFunctionCount()):
+        L = find_auto_structs(f)
+        for k,l in L.items():
+            if len(l)>3 and set(l).issubset(sref):
+                F.append((f,(k,l)))
+                secho(f.getName(),fg="green")
+                break
+        secho(f.getName(),fg="yellow")
+    return F
