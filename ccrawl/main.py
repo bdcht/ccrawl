@@ -350,7 +350,7 @@ def search(ctx, ignorecase, rex):
 @cli.group(invoke_without_command=True)
 @click.option("-a", "--and", "ands", type=click.STRING, multiple=True)
 @click.option("-o", "--or", "ors", type=click.STRING, multiple=True)
-@click.argument("key", nargs=-1, type=click.STRING)
+@click.option("-k", "--key", type=click.STRING, multiple=True)
 @click.pass_context
 def select(ctx, ands, ors, key):
     """Get document(s) from the remote database
