@@ -6,10 +6,6 @@ Ccrawl
     :target: http://ccrawl.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-.. image:: https://img.shields.io/lgtm/grade/python/g/bdcht/ccrawl.svg?logo=lgtm&logoWidth=18
-    :target: https://lgtm.com/projects/g/bdcht/ccrawl/context:python
-    :alt: Code Quality
-
 .. image:: https://badge.fury.io/py/ccrawl.svg
     :target: https://badge.fury.io/py/ccrawl
 
