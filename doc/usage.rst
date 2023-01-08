@@ -1,10 +1,10 @@
 Usage
 =====
 
-We now provide a description of the ccrawl command-line tool which defines several sub-commands.
-Of course, the ccrawl package can be used as well as a traditional package within Python scripts.
+We provide here a description of the ccrawl_ command-line tool which defines several sub-commands.
+Of course, this tool can be used as well as a traditional Python package.
 
-ccrawl's initial command consist in building a local database from C/C++ (header) files.
+The first step is to build a local database from C and/or C++ (header) files.
 The libclang_ library is used to extract the following features::
 
  - definitions of macros (#define)
@@ -12,13 +12,13 @@ The libclang_ library is used to extract the following features::
  - definitions of structured types (struct, union, enum, class & template)
  - definitions of function types (prototypes)
 
-Since files are only parsed and not compiled by libclang, the set of included files can be
+Since files are only parsed and not compiled by libclang_, the set of included files can be
 imcomplete and syntax errors only lead to ignored definitions. Of course, many queries do
 require ultimately that all subtypes of a structure have been collected but this is not enforced
-by ccrawl at parsing time. ccrawl will also try to extract comments associated to these features
-when possible.
+by *ccrawl* at parsing time. Note that comments associated to these features are extracted when
+provided by libclang_.
 
-The local database is a TinyDB JSON Storage file. For performance and scaling reasons, ccrawl
+The local database is a TinyDB JSON Storage file. For performance and scaling reasons, ccrawl_
 supports also the use of a remote MongoDB database allowing massive indexing of
 the samples built locally.
 
@@ -87,7 +87,13 @@ The ``collect`` command locally extracts definitions from the provided sources <
                                   libclang are blocking. It is thus mandatory to provide the
                                   complete set of input files and precise clang options such that
                                   clang is able to compile successfully the provided <src> files.
+
                [--clang "<opts>"] pass <opts> string directly to clang as options
+
+               [--output-graph "<filename>"] output the dependency graph of included files in the
+                                  <filename> file (in graphviz's dot format)
+
+               [-C, --no-cxx]     ignore C++ files (i.e. collect only C files)
 
                <src> ...          directory name(s) or file name(s) of C source(s) from which
                                   selected definitions shall be extracted and collected in the
@@ -99,24 +105,51 @@ For example:
 .. code-block:: console
 
     $ cd tests/
-    $ ccrawl -b None -l test.db collect samples/
-    [  6%] samples/classes.hpp                                     [ 12]
-    [ 12%] samples/00_empty.h                                      [  0]
-    [ 18%] samples/simple.h                                        [  2]
-    [ 25%] samples/header.h                                        [ 27]
-    [ 31%] samples/bitfield.h                                      [  2]
-    [ 37%] samples/inclusion_err.h                                 [  2]
-    [ 43%] samples/auto.h                                          [  5]
-    [ 56%] samples/wonza.hpp                                       [ 17]
-    [ 62%] samples/stru.h                                          [  2]
-    [ 68%] samples/derived.hpp                                     [  4]
-    [ 75%] samples/cxxabi.h                                        [ 17]
-    [ 81%] samples/xxx/yyy/somewhere.h                             [ 12]
-    [ 87%] samples/templates.hpp                                   [414]
-    [ 93%] samples/c_linkage.hpp                                   [  1]
-    [100%] samples/fwd_decl.hpp                                    [  2]
-    --------------------------------------------------------------------
-    saving database...                                            [ 505]
+    $ ccrawl -l test.db collect -a -C samples/
+    preprocessing files...
+      system file '/usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/iostream' is used
+      missing include file for 'h1.h'
+      missing include file for 'folder2/x.h'
+      system file '/usr/include/stdlib.h' is used
+      system file '/usr/include/stdio.h' is used
+      system file '/usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/cstddef' is used
+      missing include file for 'missingsys.h'
+    done.
+    [  5%] samples/shahar.cpp                                                                  [ 18]
+    [ 11%] samples/01_volatile.h                                                               [  2]
+    [ 17%] samples/00_empty.h                                                                  [  0]
+    [ 23%] samples/auto.h                                                                      [  7]
+           samples/other/std.h
+    [ 29%] samples/xxx/graph.h                                                                 [  9]
+    [ 35%] samples/inclusion_err.h                                                             [  2]
+           samples/bitfield.h
+    [ 41%] samples/code.c                                                                      [710]
+           /usr/include/stdlib.h
+           /usr/include/stdio.h
+           samples/simple.h
+    [ 47%] samples/stru.h                                                                      [  1]
+    [ 52%] samples/fwd_decl.hpp                                                                [  2]
+    [ 58%] samples/templates.hpp                                                               [413]
+           /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/cstddef
+    [ 64%] samples/cxxabi.h                                                                    [ 17]
+    [ 70%] samples/other/test.c                                                                [ 40]
+           samples/other/../header.h
+           samples/other/h2.h
+    [ 76%] samples/derived.hpp                                                                 [  4]
+    [ 82%] samples/constr.cpp                                                                  [ 21]
+           samples/classes.hpp
+    [ 88%] samples/cxx.cpp                                                                    [2394]
+           samples/wonza.hpp
+           /usr/lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/iostream
+    [ 94%] samples/c_linkage.hpp                                                               [  1]
+    [100%] samples/other/sys.h                                                                 [  0]
+    ------------------------------------------------------------------------------------------------
+    saving database...                                                                        [2776]
+
+
+The resulting local database is stored as a TinyDB 'test.db' file. It contains definitions of all
+C/C++ files in the samples directory. As shown above, the preprocessing step reports missing
+included files as well as included system files.
 
 
 Search
@@ -134,10 +167,10 @@ For example:
 
 .. code-block:: console
 
-    $ ccrawl -b None -l test.db search "_my"
+    $ ccrawl -l test.db search ".*_my"
     found cStruct identifer "struct _mystruct" with matching value
     found cTypedef identifer "mystruct" with matching value
-    found cStruct identifer "struct ?_ba24571a" with matching value
+    found cUnion identifer "union _myunion"
     found cTypedef identifer "myunion" with matching value
 
 
@@ -183,13 +216,15 @@ The ``select`` command performs advanced queries within the local database::
 
 For example::
 
-    $ ccrawl -b None -l test.db select constant -s "MY" 0x10
+    $ ccrawl -l test.db select constant -s "MY" 0x10
     MYCONST
-    $ ccrawl -b None -l test.db select struct -p 8 "*:+104"
+
+    $ ccrawl -l test.db select struct -p 8 "*:+104"
     [####################################]  100%
-    struct _mystruct
     class X::D
-    $ ccrawl -b None -l test.db select -a id="class X::D" struct -p 8 -d "*:+104"
+    struct _mystruct
+
+    $ ccrawl -l test.db select -a id="class X::D" struct -p 8 -d "*:+104"
     struct __layout$X::D {
      void *__vptr$C1;
      int c;
@@ -228,7 +263,7 @@ For example:
 
 .. code-block:: console
 
-    $ ccrawl -b None -l test.db show -r 'struct _mystruct'
+    $ ccrawl -l test.db show -r 'struct _mystruct'
     typedef unsigned char xxx;
     typedef xxx myinteger;
     struct _mystruct;
@@ -270,13 +305,14 @@ For example:
 
 .. code-block:: console
 
-    $ ccrawl -b None -l test.db info 'struct _mystruct'
+    $ ccrawl -l test.db info -p 8 'struct _mystruct'
     identifier: struct _mystruct
     class     : cStruct
     source    : samples/header.h
     tag       : xxx
     size      : 104
     offsets   : [(0, 1), (4, 48), (52, 16), (72, 8), (80, 8), (88, 8), (96, 2)]
+    [using 64 bits pointer size]
 
 
 Graph
@@ -294,7 +330,7 @@ For example (see samples/xxx/graph.h) :
 
 .. code-block:: console
 
-    $ ccrawl -b None -l test.db graph 'struct grG'
+    $ ccrawl -l test.db graph 'struct grG'
     //graph is connected
     //graph has a strongly connected component of size 3
     //graph has a strongly connected component of size 4
@@ -349,5 +385,6 @@ The first lines of the output are comments that indicate if the graph is "connec
 if it has some non-trivial *strongly connected components* (basically cycles).
 
 
+.. _ccrawl: https://www.github.com/bdcht/ccrawl
 .. _libclang: https://clang.llvm.org/doxygen/group__CINDEX.html
 .. _traitlets: https://traitlets.readthedocs.io/en/stable/

@@ -25,9 +25,9 @@ copyright = "2019-2022, bdcht"
 author = "bdcht"
 
 # The short X.Y version
-version = "1.8"
+version = "1.9"
 # The full version, including alpha/beta/rc tags
-release = "v1.8"
+release = "v1.9"
 
 
 # -- General configuration ---------------------------------------------------
@@ -48,6 +48,7 @@ extensions = [
     "sphinx.ext.graphviz",
     "sphinx.ext.inheritance_diagram",
     'traitlets.config.sphinxdoc'
+    'sphinx.ext.autosectionlabel',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -196,3 +197,4 @@ intersphinx_mapping = {'python': ('https://docs.python.org/', None),
                       }
 
 autodoc_member_order = 'bysource'
+autosectionlabel_prefix_document = True

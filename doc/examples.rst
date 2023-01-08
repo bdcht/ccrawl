@@ -5,23 +5,37 @@ Examples
 A simple C case
 ---------------
 
-Make sure you have a *ccrawlrc* file as shown in Installation_, (or remove `-c ccrawlrc`
-in commands below.)
 In a terminal, open file "ccrawl/tests/samples/header.h".
 Open another terminal and within your virtualenv do::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db collect ~/ccrawl/tests/samples
-  [ 50%] /home/user/ccrawl/tests/samples/header.h                                                [ 23]
-  [100%] /home/user/ccrawl/tests/samples/xxx/yyy/somewhere.h                                     [  9]
-  ----------------------------------------------------------------------------------------------------
-  saving database...                                                                             [ 32]
-
+  (venv) user@machine:/tmp % ccrawl -l test1.db collect -C ~/ccrawl/tests/samples
+  preprocessing files...
+    missing include file for 'missingsys.h'
+    missing include file for 'h1.h'
+    missing include file for 'folder2/x.h'
+  done.
+  [  9%] /home/bdcht/code/ccrawl/tests/samples/other/sys.h                          [  0]
+  [ 18%] /home/bdcht/code/ccrawl/tests/samples/auto.h                               [  7]
+         /home/bdcht/code/ccrawl/tests/samples/other/std.h
+  [ 27%] /home/bdcht/code/ccrawl/tests/samples/inclusion_err.h                      [  2]
+         /home/bdcht/code/ccrawl/tests/samples/bitfield.h
+  [ 36%] /home/bdcht/code/ccrawl/tests/samples/header.h                             [ 38]
+         /home/bdcht/code/ccrawl/tests/samples/xxx/yyy/somewhere.h
+  [ 45%] /home/bdcht/code/ccrawl/tests/samples/other/h2.h                           [  1]
+  [ 54%] /home/bdcht/code/ccrawl/tests/samples/xxx/graph.h                          [  9]
+  [ 63%] /home/bdcht/code/ccrawl/tests/samples/cxxabi.h                             [c++]
+  [ 72%] /home/bdcht/code/ccrawl/tests/samples/00_empty.h                           [  0]
+  [ 81%] /home/bdcht/code/ccrawl/tests/samples/01_volatile.h                        [  2]
+  [ 90%] /home/bdcht/code/ccrawl/tests/samples/simple.h                             [  2]
+  [100%] /home/bdcht/code/ccrawl/tests/samples/stru.h                               [  1]
+  ---------------------------------------------------------------------------------------
+  saving database...                                                               [  62]
 
 ccrawl has now collected all "\*.h" files in the samples/ directory.
 
 Let us search for all objects with symbol containing "MY"::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db search "MY"
+  (venv) user@machine:/tmp % ccrawl -l test1.db search "MY"
   found cMacro identifer "MYSTRING"
   found cMacro identifer "MYEXPR"
   found cMacro identifer "MYMACRO"
@@ -29,62 +43,80 @@ Let us search for all objects with symbol containing "MY"::
 
 Search for all typedefs currently in the test1.db local database::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db select -a "cls=cTypedef"
-  found cTypedef identifer "foo1"
+  (venv) user@machine:/tmp % ccrawl -l test1.db select -a "cls=cTypedef"
+  found cTypedef identifer "Std_ReturnType"
+  found cTypedef identifer "_Rxd_In"
+  found cTypedef identifer "WdgIf_ModeType"
+  found cTypedef identifer "Wdg_TriggerLocationPtrType"
+  found cTypedef identifer "Wdg_SetModeLocationPtrType"
+  found cTypedef identifer "Ifx_CPU_SMACON_Bits"
+  found cTypedef identifer "xxx"
   found cTypedef identifer "__u8"
-  found cTypedef identifer "myunion"
+  found cTypedef identifer "myu8"
+  found cTypedef identifer "__u16"
+  found cTypedef identifer "myu16"
   found cTypedef identifer "myinteger"
   found cTypedef identifer "foo"
+  found cTypedef identifer "fox"
+  found cTypedef identifer "foo1"
   found cTypedef identifer "foo2"
-  found cTypedef identifer "unspelled"
-  found cTypedef identifer "myu8"
   found cTypedef identifer "mystruct"
-  found cTypedef identifer "tags"
-  found cTypedef identifer "xxx"
-  found cTypedef identifer "pac3"
+  found cTypedef identifer "unspelled"
   found cTypedef identifer "p_unspelled"
-
+  found cTypedef identifer "tags"
+  found cTypedef identifer "myunion"
+  found cTypedef identifer "pac3"
+  found cTypedef identifer "u8"
+  found cTypedef identifer "bitfield"
+  found cTypedef identifer "sG"
+  found cTypedef identifer "pG"
+  found cTypedef identifer "sA"
+  found cTypedef identifer "pA"
+  found cTypedef identifer "sB"
+  found cTypedef identifer "pB"
+  found cTypedef identifer "X"
 
 Search for all functions prototypes that return a myunion type and have a mystruct type as 2d arg::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db select prototype 0:myunion 2:mystruct
+  (venv) user@machine:/tmp % ccrawl -l test1.db select prototype 0:myunion 2:mystruct
   myunion myFunc(p_unspelled, mystruct);
 
 Search all constants with value 0x10::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db select constant 0x10
+  (venv) user@machine:/tmp % ccrawl -l test1.db select constant 0x10
   MYCONST
 
 Print type "foo2" in C language as then as python ctypes::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show -r foo2
+  (venv) user@machine:/tmp % ccrawl -l test1.db show -r foo2
   typedef void *(*(*foo2[2])(int, void **))[3];
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show -f ctypes -r foo2
+  (venv) user@machine:/tmp % ccrawl -l test1.db show -f ctypes -r foo2
   foo2 = CFUNCTYPE(POINTER(c_void_p*3), c_int, c_void_p)*2
 
 
 Print type "p_unspelled" (without and then with recurssion) in C::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show p_unspelled
-  typedef struct unspelled *p_unspelled;
+  (venv) user@machine:/tmp % ccrawl -l test1.db show p_unspelled
+  typedef struct ?_4e1bacec *p_unspelled;
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show -r p_unspelled
+  (venv) user@machine:/tmp % ccrawl -l test1.db show -r p_unspelled
+  //identifier unk not found
+  typedef unsigned char xxx;
+  typedef xxx myinteger;
+  struct _mystruct;
+  typedef int (*foo)(int, char, unsigned int, void *);
   enum X {
     X_0 = 0,
     X_1 = 1,
     X_2 = 2,
     X_3 = 3
-  }
-
+  };
+  
   struct _bar {
     enum X x;
-  }
-  typedef int (*foo)(int, int, int);
-  struct _mystruct;
-  typedef unsigned char xxx;
-  typedef xxx myinteger;
-
+  };
+  
   struct _mystruct {
     myinteger I;
     int tab[12];
@@ -93,27 +125,27 @@ Print type "p_unspelled" (without and then with recurssion) in C::
     struct _mystruct *next;
     foo func;
     struct _bar bar[2];
-  }
-
-  struct unspelled {
+  };
+  
+  typedef struct  {
     char *c[4];
-    void (*func[2])(myinteger, foo, struct _mystruct *);
+    myinteger (*func[2])(int, foo, struct _mystruct *, int, int, int);
     struct _mystruct stab[18];
     int *x;
     unsigned long long y;
     char (*PtrCharArrayOf3[2])[3];
     union  {
       unsigned int A;
-      myinteger *myi;
       short w[2];
+      myinteger *myi;
+      unk unused;
     } sAB;
-  }
-  typedef struct unspelled *p_unspelled;
+  } *p_unspelled;
 
 
 Print type "struct _mystruct" (without recurssion) in ctypes format::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test1.db show -f ctypes 'struct _mystruct'
+  (venv) user@machine:/tmp % ccrawl -l test1.db show -f ctypes 'struct _mystruct'
   struct__mystruct = type('struct__mystruct',(Structure,),{})
 
   struct__mystruct._fields_ = [("I", myinteger),
@@ -127,162 +159,313 @@ Print type "struct _mystruct" (without recurssion) in ctypes format::
 
 Select data structures with a type of length 8 at offset 88 (bytes)::
 
-  (venv) user@machine:/tmp % ccrawl -l test1.db find struct "88:+8"
-  struct _mystruct {
-    myinteger I;
-    int tab[12];
-    unsigned char p[16];
-    short *s;
-    struct _mystruct *next;
-    foo func;
-    struct _bar bar[2];
-  }
-  identifier __u16 not found
-  identifier __u16 not found
-  identifier struct ts_config not found
-  can't build struct xt_string_info..skipping.
+  (venv) user@machine:/tmp % ccrawl -l test1.db select struct "88:+8"
+  struct _mystruct
 
 
 A more realistic case
 ---------------------
 
-We collect all definitions from */usr/include/openssl* ::
+Let's take a FreeRTOS_ firmware in provided demos: CORTEX_M3_MPS2_QEMU_GCC. Compile the demo,
+and strip the resulting RTOSDemo.axf firmware. We want to show how we can easily identify kernel
+functions by focusing on known OS structures.
 
-  (venv) user@machine:/tmp % time ccrawl -l test2.db collect /usr/include/openssl
-  [  1%] /usr/include/openssl/crypto.h                                               [3400]
-  [  9%] /usr/include/openssl/rc2.h                                                   [ 15]
-  [ 11%] /usr/include/openssl/modes.h                                                 [ 45]
-  [ 12%] /usr/include/openssl/symhacks.h                                              [  9]
-  [ 13%] /usr/include/openssl/rc4.h                                                   [  9]
-  [ 15%] /usr/include/openssl/ecdh.h                                                 [5383]
-  [ 22%] /usr/include/openssl/err.h                                                  [4188]
-  [ 25%] /usr/include/openssl/camellia.h                                              [ 20]
-  [ 26%] /usr/include/openssl/md5.h                                                   [ 20]
-  [ 27%] /usr/include/openssl/pem2.h                                                  [  1]
-  [ 29%] /usr/include/openssl/sha.h                                                   [ 57]
-  [ 30%] /usr/include/openssl/pkcs7.h                                                [5268]
-  [ 31%] /usr/include/openssl/ocsp.h                                                [12040]
-  [ 50%] /usr/include/openssl/cms.h                                                 [11445]
-  [ 51%] /usr/include/openssl/cmac.h                                                 [8949]
-  [ 52%] /usr/include/openssl/md4.h                                                   [ 20]
-  [ 54%] /usr/include/openssl/ssl23.h                                                 [  6]
-  [ 55%] /usr/include/openssl/tls1.h                                                  [828]
-  [ 56%] /usr/include/openssl/pkcs12.h                                              [11278]
-  [ 58%] /usr/include/openssl/whrlpool.h                                              [ 20]
-  [ 59%] /usr/include/openssl/asn1_mac.h                                             [5094]
-  [ 61%] /usr/include/openssl/ssl3.h                                                [13786]
-  [ 73%] /usr/include/openssl/kssl.h                                                  [  1]
-  [ 75%] /usr/include/openssl/seed.h                                                 [3411]
-  [ 76%] /usr/include/openssl/txt_db.h                                               [3895]
-  [ 77%] /usr/include/openssl/engine.h                                              [11832]
-  [ 81%] /usr/include/openssl/krb5_asn.h                                             [2390]
-  [ 83%] /usr/include/openssl/cast.h                                                  [ 15]
-  [ 84%] /usr/include/openssl/des.h                                                  [3649]
-  [ 88%] /usr/include/openssl/ts.h                                                  [12079]
-  [ 90%] /usr/include/openssl/ebcdic.h                                                [353]
-  [ 91%] /usr/include/openssl/aes.h                                                   [ 25]
-  [ 93%] /usr/include/openssl/conf_api.h                                             [3990]
-  [ 94%] /usr/include/openssl/blowfish.h                                              [ 24]
-  [ 95%] /usr/include/openssl/srp.h                                                  [3870]
-  [ 97%] /usr/include/openssl/dso.h                                                  [3509]
-  [ 98%] /usr/include/openssl/ripemd.h                                                [ 20]
-  [100%] /usr/include/openssl/asn1t.h                                                [5185]
-  ----------------------------------------------------------------------------------------
-  saving database...                                                                [17065]
-  ccrawl -c ccrawlrc -l test2.db collect /usr/include/openssl  44,55s user 0,48s system
-  99% cpu 45,435 total
+If you open the firmware with Ghidra_ you will end up with about 180 anonymous functions.
 
-List all identifiers of type cStruct ::
+Let us assume that we don't have the firmware's source code but
+still know that it is build for ARM_CM3 platform and that is uses a FreeRTOS kernel.
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db select -a cls=cStruct
-  found cStruct identifer "struct ?_02144907"
-  found cStruct identifer "struct ASN1_AUX_st"
-  found cStruct identifer "struct err_state_st"
-  found cStruct identifer "struct bn_recp_ctx_st"
-  found cStruct identifer "struct hm_header_st"
-  found cStruct identifer "struct stack_st_ACCESS_DESCRIPTION"
-  found cStruct identifer "struct stack_st_ESS_CERT_ID"
-  found cStruct identifer "struct x509_file_st"
-  [...]
-  found cStruct identifer "struct pem_recip_st"
-  found cStruct identifer "struct ?_4dd5ee76"
-  found cStruct identifer "struct NETSCAPE_X509_st"
+We can thus collect all definitions from a *FreeRTOS* kernel (v202212.00). Let us start by
+running the preprocessing stage on the FreeRTOS kernel C headers ::
 
-Search for all definitions matching a regular expression ::
+  (venv) user@machine:/tmp % unzip FreeRTOSv202212.00.zip; cd FreeRTOSv202212.00/
+  (venv) user@machine:/tmp/FreeRTOSv202212.00 % ccrawl collect --recon FreeRTOS/Source/include FreeRTOS/Source/portable/GCC/ARM_CM3/
+  preprocessing files...
+    missing include file for 'stddef.h'
+    missing include file for 'FreeRTOSConfig.h'
+    system file '/usr/include/stdint.h' is used
+    system file '/usr/include/stdint.h' is used
+  done.
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db search '.*AUTHORITY_KEYID.*'
-  found cMacro identifer "X509V3_F_V2I_AUTHORITY_KEYID"
-  found cStruct identifer "struct X509_crl_st" with matching value
-  found cFunc identifer "X509_check_akid" with matching value
-  found cFunc identifer "AUTHORITY_KEYID_new" with matching value
-  found cFunc identifer "i2d_AUTHORITY_KEYID" with matching value
-  found cTypedef identifer "AUTHORITY_KEYID" with matching value
-  found cStruct identifer "struct x509_st" with matching value
-  found cFunc identifer "AUTHORITY_KEYID_free" with matching value
-  found cStruct identifer "struct AUTHORITY_KEYID_st"
-  found cFunc identifer "d2i_AUTHORITY_KEYID" with matching value
+For sure, we don't have the FreeRTOSConfig.h file which provides the kernel configuration for the demo.
+Also, some files require "stddef.h" and "stdint.h" from the but clearly we shouldn't use the default
+*/usr/include* headers and instead provide the ones from *arm-non-eabi* toolchain.
 
-Let's focus on the definition of 'struct x509_st' ::
+Replace *[...]* with the appropriate path in the command below and collect the sources with::
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db show 'struct x509_st'
-  struct x509_st {
-    X509_CINF *cert_info;
-    X509_ALGOR *sig_alg;
-    ASN1_BIT_STRING *signature;
-    int valid;
-    int references;
-    char *name;
-    CRYPTO_EX_DATA ex_data;
-    long ex_pathlen;
-    long ex_pcpathlen;
-    unsigned long ex_flags;
-    unsigned long ex_kusage;
-    unsigned long ex_xkusage;
-    unsigned long ex_nscert;
-    ASN1_OCTET_STRING *skid;
-    AUTHORITY_KEYID *akid;
-    X509_POLICY_CACHE *policy_cache;
-    struct stack_st_DIST_POINT *crldp;
-    struct stack_st_GENERAL_NAME *altname;
-    NAME_CONSTRAINTS *nc;
-    unsigned char sha1_hash[20];
-    X509_CERT_AUX *aux;
-  }
+  (venv) user@machine:/tmp/FreeRTOSv202212.00 % ccrawl -l freertos.db collect \
+     FreeRTOS/Source/include \
+     FreeRTOS/Source/portable/GCC/ARM_CM3/ \
+     --clang "-I[...]lib/gcc/arm-none-eabi/10.3.1/include -I[...]arm-none-eabi/include"
+  preprocessing files...
+    system file '[...]/arm-none-eabi/10.3.1/include/stdint.h' is used
+    missing include file for 'FreeRTOSConfig.h'
+    system file '[...]/arm-none-eabi/10.3.1/include/stddef.h' is used
+    system file '[...]/arm-none-eabi/10.3.1/include/stdint.h' is used
+  done.
+  [ 12%] FreeRTOS/Source/include/atomic.h                                           [319]
+         [...]/arm-none-eabi/10.3.1/include/stdint.h
+  [ 25%] FreeRTOS/Source/include/StackMacros.h                                      [  2]
+         FreeRTOS/Source/include/stack_macros.h
+  [ 37%] FreeRTOS/Source/include/message_buffer.h                                   [ 21]
+         FreeRTOS/Source/include/stream_buffer.h
+  [ 50%] FreeRTOS/Source/include/FreeRTOS.h                                         [636]
+         [...]/arm-none-eabi/10.3.1/include/stddef.h
+         [...]/arm-none-eabi/10.3.1/include/stdint.h
+         FreeRTOS/Source/include/projdefs.h
+         FreeRTOS/Source/include/portable.h
+  [ 62%] FreeRTOS/Source/include/mpu_prototypes.h                                   [  0]
+  [ 75%] FreeRTOS/Source/include/event_groups.h                                     [114]
+         FreeRTOS/Source/include/timers.h
+  [ 87%] FreeRTOS/Source/include/croutine.h                                         [ 37]
+         FreeRTOS/Source/include/list.h
+  [100%] FreeRTOS/Source/include/semphr.h                                           [135]
+         FreeRTOS/Source/include/queue.h
+  ---------------------------------------------------------------------------------------
+  saving database...                                                                [835]
+  
 
-The recursive output of this structure takes approx. 30s to complete,
-with alerts (in red) about missing definition for various types.
+Let us see how many structures have been collected::
 
-It is also possible to spawn an interactive console with ccrawl
-loaded and configured. For example lets find all prototypes with
-return type 'int' and first argument pointer-to 'EC_KEY' ::
+  (venv) user@machine:/tmp % ccrawl -l freertos.db select -a cls=cStruct
+  found cStruct identifer "struct __fsid_t"
+  found cStruct identifer "struct max_align_t"
+  found cStruct identifer "struct xLIST_ITEM"
+  found cStruct identifer "struct xLIST"
+  found cStruct identifer "struct xTIME_OUT"
+  found cStruct identifer "struct xMEMORY_REGION"
+  found cStruct identifer "struct xTASK_PARAMETERS"
+  found cStruct identifer "struct xTASK_STATUS"
 
-  (venv) user@machine:/tmp % ccrawl -c ccrawlrc -l test2.db
 
+Obviously, anything related to "tasks" is of great interrest: Let's have a look at::
+
+  (venv) user@machine:/tmp % ccrawl -l freertos.db show "struct xTASK_STATUS"
+  struct xTASK_STATUS {
+    TaskHandle_t xHandle;
+    const char *pcTaskName;
+    UBaseType_t xTaskNumber;
+    eTaskState eCurrentState;
+    UBaseType_t uxCurrentPriority;
+    UBaseType_t uxBasePriority;
+    configRUN_TIME_COUNTER_TYPE ulRunTimeCounter;
+    StackType_t *pxStackBase;
+    configSTACK_DEPTH_TYPE usStackHighWaterMark;
+  };
+
+  (venv) user@machine:/tmp % ccrawl -l freertos.db show "TaskHandle_t"
+  typedef struct tskTaskControlBlock *TaskHandle_t;
+
+  (venv) user@machine:/tmp % ccrawl -l freertos.db show "struct tskTaskControlBlock"
+  identifier 'struct tskTaskControlBlock' not found
+
+
+Well, that is weird...we are missing one of the major structure of FreeRTOS.
+What happened ? Let's go back to the FreeRTOS sources and find out: the structure
+is defined in the kernel's *tasks.c* file which has not been collected. Lets collected
+*all* kernel sources, not just headers::
+
+  (venv) user@machine:/tmp/FreeRTOSv202212.00 % rm freertos.db
+  (venv) user@machine:/tmp/FreeRTOSv202212.00 % ccrawl -l freertos.db collect --all \
+     --clang "-I[...]lib/gcc/arm-none-eabi/10.3.1/include -I[...]arm-none-eabi/include" \
+     FreeRTOS/Source/include \
+     FreeRTOS/Source/portable/GCC/ARM_CM3/ \
+     FreeRTOS/Source/*.c
+     [...]
+  ---------------------------------------------------------------------------------------
+  saving database...                                                               [1478]
+
+Now, everything is defined::
+
+  (venv) user@machine:/tmp % ccrawl -l freertos.db show -r "struct xTASK_STATUS"
+  typedef unsigned int __uint32_t;
+  typedef __uint32_t uint32_t;
+  typedef uint32_t StackType_t;
+  typedef unsigned int __uint32_t;
+  typedef __uint32_t uint32_t;
+  typedef uint32_t TickType_t;
+  struct xLIST_ITEM;
+  struct xLIST_ITEM;
+  typedef unsigned long UBaseType_t;
+  struct xMINI_LIST_ITEM {
+    TickType_t xItemValue;
+    struct xLIST_ITEM *pxNext;
+    struct xLIST_ITEM *pxPrevious;
+  };
+  typedef struct xMINI_LIST_ITEM MiniListItem_t;
+  
+  struct xLIST {
+    UBaseType_t uxNumberOfItems;
+    ListItem_t *pxIndex;
+    MiniListItem_t xListEnd;
+  };
+  
+  struct xLIST_ITEM {
+    TickType_t xItemValue;
+    struct xLIST_ITEM *pxNext;
+    struct xLIST_ITEM *pxPrevious;
+    void *pvOwner;
+    struct xLIST *pvContainer;
+  };
+  typedef struct xLIST_ITEM ListItem_t;
+  typedef unsigned char __uint8_t;
+  typedef __uint8_t uint8_t;
+  
+  struct tskTaskControlBlock {
+    StackType_t *pxTopOfStack;
+    ListItem_t xStateListItem;
+    ListItem_t xEventListItem;
+    UBaseType_t uxPriority;
+    StackType_t *pxStack;
+    char pcTaskName[16];
+    uint32_t ulNotifiedValue[1];
+    uint8_t ucNotifyState[1];
+  };
+  typedef struct tskTaskControlBlock *TaskHandle_t;
+  enum eTaskState {
+    eRunning = 0,
+    eReady = 1,
+    eBlocked = 2,
+    eSuspended = 3,
+    eDeleted = 4,
+    eInvalid = 5
+  };
+  typedef enum eTaskState eTaskState;
+  typedef unsigned short __uint16_t;
+  typedef __uint16_t uint16_t;
+  
+  struct xTASK_STATUS {
+    TaskHandle_t xHandle;
+    const char *pcTaskName;
+    UBaseType_t xTaskNumber;
+    eTaskState eCurrentState;
+    UBaseType_t uxCurrentPriority;
+    UBaseType_t uxBasePriority;
+    uint32_t ulRunTimeCounter;
+    StackType_t *pxStackBase;
+    uint16_t usStackHighWaterMark;
+  };
+
+
+Are there any other structures related to tasks ? ::
+  (venv) user@machine:/tmp % ccrawl -v -l freertos.db search "struct .*Task" | grep cTypedef
+  found cTypedef identifer "TaskFunction_t"
+  found cTypedef identifer "StaticTask_t"
+  found cTypedef identifer "TaskHandle_t" with matching value
+  found cTypedef identifer "TaskHookFunction_t"
+  found cTypedef identifer "eTaskState" with matching value
+  found cTypedef identifer "TaskParameters_t"
+  found cTypedef identifer "TaskStatus_t"
+  found cTypedef identifer "tskTCB" with matching value
+
+
+Obviously, locating usage of any of these structures in the firmware would be a good start.
+Let's open the firmware in Ghidra_, start a bridge_ and send these types
+into the *DataType Manager*::
+
+  (venv) user@machine:/tmp % ccrawl -v -l freertos.db export "struct xTASK_STATUS"
+  config file '.ccrawlrc' loaded
+  loading local database freertos.db ...done
+  remote database is: mongodb://xxxxxxxxxxxxxxxxxx
+  ghidra_bridge connection with data type manager ghidra.program.database.data.ProgramDataTypeManager@...
+  importing types in ccrawl category...
+  building data type struct_xTASK_STATUS...done.
+  (venv) user@machine:/tmp % ccrawl -l freertos.db export "StaticTask_t"
+  (venv) user@machine:/tmp %
+
+
+Now we will start the interactive console::
+  (venv) user@machine:/tmp % ccrawl -v -l freertos.db
+  config file '.ccrawlrc' loaded
+  loading local database freertos.db ...done
+  remote database is: mongodb://xxxxxxxxxxxxxxxxxx
                                _ 
     ___ ___ _ __ __ ___      _| |
    / __/ __| '__/ _` \ \ /\ / / |
   | (_| (__| | | (_| |\ V  V /| |
-   \___\___|_|  \__,_| \_/\_/ |_| v1.8.0
+   \___\___|_|  \__,_| \_/\_/ |_| v1.9.0
 
 
-  In [1]: ctx.invoke(prototype,proto=("0:int","1:EC_KEY *"))
+  In [1]: from ccrawl.ext.ghidra import *
+  ghidra_bridge connection with data type manager ghidra.program.database.data.ProgramDataTypeManager@...
+  importing types in ccrawl category...
+  In [2]: fm = currentProgram.getFunctionManager()
+  In [3]: fm.getFunctionCount()
+  Out[3]: 180
+  In [4]: ctx.invoke(info,pointer=4,identifier="struct xTASK_STATUS")
+  identifier: struct xTASK_STATUS
+  class     : cStruct
+  source    : FreeRTOS/Source/include/task.h
+  tag       : 1673023038.7684903
+  size      : 36
+  offsets   : [(0, 4), (4, 4), (8, 4), (12, 1), (16, 4), (20, 4), (24, 4), (28, 4), (32, 2)]
+  [using 32 bits pointer size]
 
-  int ECDH_set_ex_data(EC_KEY *, int, void *);
-  int EC_KEY_set_public_key(EC_KEY *, const EC_POINT *);
-  int EC_KEY_precompute_mult(EC_KEY *, BN_CTX *);
-  int ECDSA_set_method(EC_KEY *, const ECDSA_METHOD *);
-  int i2d_ECParameters(EC_KEY *, unsigned char **);
-  int EC_KEY_set_private_key(EC_KEY *, const BIGNUM *);
-  int EC_KEY_generate_key(EC_KEY *);
-  int ECDSA_set_ex_data(EC_KEY *, int, void *);
-  int i2d_ECPrivateKey(EC_KEY *, unsigned char **);
-  int EC_KEY_set_public_key_affine_coordinates(EC_KEY *, BIGNUM *, BIGNUM *);
-  int i2o_ECPublicKey(EC_KEY *, unsigned char **);
-  int EC_KEY_up_ref(EC_KEY *);
-  int ECDSA_sign_setup(EC_KEY *, BN_CTX *, BIGNUM **, BIGNUM **);
-  int ECDH_set_method(EC_KEY *, const ECDH_METHOD *);
-  int i2d_EC_PUBKEY(EC_KEY *, unsigned char **);
-  int EC_KEY_set_group(EC_KEY *, const EC_GROUP *);
+  In [5]: find_functions_with_type([(0, 4), (4, 4), (8, 4), (12, 1), (16, 4), (20, 4), (24, 4), (28, 4), (32, 2)])
+  Out|5]:
+  [(<_bridged_ghidra.program.database.function.FunctionDB('FUN_00001b64', ...
+    ('param_1',
+     [(0, 4),
+      (4, 4),
+      (8, 4),
+      (12, 1),
+      (16, 4),
+      (20, 4),
+      (24, 4),
+      (28, 4),
+      (32, 2)])),
+   (<_bridged_ghidra.program.database.function.FunctionDB('FUN_00002408', ...
+    ('param_2',
+     [(0, 4),
+      (4, 4),
+      (8, 4),
+      (12, 1),
+      (16, 4),
+      (20, 4),
+      (24, 4),
+      (28, 4),
+      (32, 2)])),
+   (<_bridged_ghidra.program.database.function.FunctionDB('FUN_00002cf4', ...
+    ('param_2', [(0, 4), (4, 4), (8, 4), (16, 4)]))]
+
+
+The script found 3 functions that seem to have parameter of type ``TaskStatus_t*``.
+The first two are likely to be indeed good matches since *all* fields are matching...
+
+What functions could that be ? Let's search for functions that have matching prototypes::
+
+  In [5]: for f in db.search(where("cls") == "cFunc"):
+     ...:     if "TaskStatus_t" in f["val"]["prototype"]:
+     ...:         print(f)
+  {'id': 'vTaskGetInfo',
+   'val': {'prototype': 'void (TaskHandle_t, TaskStatus_t *, BaseType_t, '
+                        'eTaskState)',
+           'params': ['xTask', 'pxTaskStatus', 'xGetFreeStackSpace', 'eState'],
+           'locs': [],
+           'calls': []},
+   'cls': 'cFunc',
+   'src': 'FreeRTOS/Source/include/task.h',
+   'tag': '1673023038.7684903'}
+  {'id': 'uxTaskGetSystemState',
+   'val': {'prototype': 'UBaseType_t (TaskStatus_t *const, const UBaseType_t, '
+                        'uint32_t *const)',
+           'params': ['pxTaskStatusArray', 'uxArraySize', 'pulTotalRunTime'],
+           'locs': [],
+           'calls': []},
+   'cls': 'cFunc',
+   'src': 'FreeRTOS/Source/include/task.h',
+   'tag': '1673023038.7684903'}
+
+
+And it happens that 'FUN_00002408' unstripped name is indeed 'vTaskGetInfo'.
+If we have a look at function 'uxTaskGetSystemState' we can see that its first argument is
+an array of tasks status, so 'FUN_00001b64' is more likely another function which apparently
+has not been collected. The code of 'uxTaskGetSystemState' from the FreeRTOS kernel, shows
+that this function calls 'prvListTasksWithinSingleList' and it happens that this is 'FUN_00001b64'.
 
 
 Et voilà.
+
+.. _FreeRTOS: https://www.freertos.org
+.. _Ghidra: https://ghidra-sre.org/
+.. _bridge: https://github.com/justfoxing/ghidra_bridge

@@ -1,4 +1,4 @@
-libclang==14.0.1
+libclang==14.0.6
 click
 traitlets
 pyparsing
@@ -6,3 +6,4 @@ tinydb
 pymongo
 requests
 tqdm
+grandalf

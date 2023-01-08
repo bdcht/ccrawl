@@ -2,6 +2,7 @@ Installation
 ============
 
 ccrawl is written in Python, it supports versions >=3.8.
+
 It depends on:
 
  - libclang_
@@ -9,10 +10,12 @@ It depends on:
  - traitlets_
  - pyparsing_
  - tinydb_
- - rapidjson_
+ - grandalf_
+ - amoco_
  - pymongo_  (interface for MongoDB)
 
-We recommend to install ccrawl in its own *virtualenv* with included ipython_ :
+We highly recommend to install ccrawl and dependencies in a dedicated *virtualenv*
+with included ipython_ and amoco_ packages :
 
 .. code-block:: console
 
@@ -26,6 +29,12 @@ We recommend to install ccrawl in its own *virtualenv* with included ipython_ :
 
   (venv) user@machine:~/ccrawl % pip install ipython
   [...]
+
+  (venv) user@machine:~/ccrawl % cd ..
+  user@machine:~ % tar xzvf amoco.tgz; cd amoco
+  (venv) user@machine:~/amoco % pip install .
+  [...]
+  (venv) user@machine:~/amoco % cd ../ccrawl
 
   (venv) user@machine:~/ccrawl % pip install .
   [...]
@@ -41,7 +50,7 @@ We recommend to install ccrawl in its own *virtualenv* with included ipython_ :
     ___ ___ _ __ __ ___      _| |
    / __/ __| '__/ _` \ \ /\ / / |
   | (_| (__| | | (_| |\ V  V /| |
-   \___\___|_|  \__,_| \_/\_/ |_| v1.8.0
+   \___\___|_|  \__,_| \_/\_/ |_| v1.9.0
 
 
   In [1]: [^D]
@@ -52,6 +61,7 @@ We recommend to install ccrawl in its own *virtualenv* with included ipython_ :
 .. _traitlets: https://traitlets.readthedocs.io/en/stable/
 .. _pyparsing: https://github.com/pyparsing/pyparsing
 .. _tinydb: https://tinydb.readthedocs.io/en/latest/intro.html
-.. _rapidjson: https://github.com/python-rapidjson/python-rapidjson
+.. _grandalf: https://github.com/bdcht/grandalf
+.. _amoco: https://github.com/bdcht/amoco
 .. _pymongo: https://api.mongodb.com/python/current/
 .. _ipython: https://ipython.org
