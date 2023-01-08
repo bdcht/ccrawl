@@ -73,7 +73,7 @@ class Proxy(object):
             q = self.tag
         for k in kargs:
             q &= where(k) == kargs[k]
-        if self.rdb:
+        if self.rdb and not self.c.localonly:
             return self.rdb.contains(q._hash, **kargs)
         return self.ldb.contains(q)
 
@@ -89,7 +89,7 @@ class Proxy(object):
             q = self.tag & q
         for k in kargs:
             q &= where(k) == kargs[k]
-        if self.rdb:
+        if self.rdb and not self.c.localonly:
             return list(self.rdb.search(q._hash, **kargs))
         return self.ldb.search(q)
 
@@ -103,7 +103,7 @@ class Proxy(object):
             q = self.tag
         for k in kargs:
             q &= where(k) == kargs[k]
-        if self.rdb:
+        if self.rdb and not self.c.localonly:
             return self.rdb.get(q._hash, **kargs)
         return self.ldb.get(q)
 
@@ -134,8 +134,10 @@ class Proxy(object):
         """
         Wrapper for find_matching_types method.
         """
-        if self.rdb is not None:
+        if self.rdb and not self.c.localonly:
             self.rdb.find_matching_types(Locs, req, psize)
+        else:
+            click.secho("find_matching_types is not supported for local database",fg='red')
         return Locs
 
     def close(self):
