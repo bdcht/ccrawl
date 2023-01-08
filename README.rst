@@ -156,6 +156,13 @@ Todo
 Changelog
 =========
 
+- `v1.9`_
+
+  * add major preprocessing feature for improving the collect command
+  * add export command to send type definition in Ghidra
+  * update and improve documentation with FreeRTOS example
+  * add 'find_function_with_type' in ghidra extension module
+
 - `v1.8`_
 
   * add graph command to output (in dot format) the dependency graph for a given root structure
@@ -206,6 +213,7 @@ Changelog
 .. _clang: https://pypi.org/project/clang/
 .. _ctypes: https://docs.python.org/3.7/library/ctypes.html
 .. _amoco: https://github.com/bdcht/amoco
+.. _v1.9: https://github.com/bdcht/ccrawl/releases/tag/v1.9
 .. _v1.8: https://github.com/bdcht/ccrawl/releases/tag/v1.8
 .. _v1.7: https://github.com/bdcht/ccrawl/releases/tag/v1.7
 .. _v1.6: https://github.com/bdcht/ccrawl/releases/tag/v1.6
