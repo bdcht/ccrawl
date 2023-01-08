@@ -2,77 +2,71 @@ from ccrawl.utils import struct_letters, c_type, cxx_type
 from ccrawl.db import where
 from ccrawl.core import ccore
 
-try:
-    from grandalf.graphs import Graph,Vertex,Edge
-    from grandalf.layouts import SugiyamaLayout
-    has_graph = True
+from grandalf.graphs import Graph,Vertex,Edge
+from grandalf.layouts import SugiyamaLayout
 
-    class Node(Vertex):
-        """A Node is a grandalf.Vertex equipped with a label property
-           an improved __repr__ method that displays the Vertex's data
-           and type of data (a ccore instance or a str) and a loc
-           method that reports its index within the graph (unless its
-           not yet part of a graph.)
-        """
+class Node(Vertex):
+    """A Node is a grandalf.Vertex equipped with a label property
+       an improved __repr__ method that displays the Vertex's data
+       and type of data (a ccore instance or a str) and a loc
+       method that reports its index within the graph (unless its
+       not yet part of a graph.)
+    """
 
-        @property
-        def label(self):
-            if self.data:
-                if hasattr(self.data,'identifier'):
-                    return self.data.identifier
-                else:
-                    return self.data
-            return None
-
-        def is_ccore(self):
-            return (ccore in self.data.__class__.mro())
-
-        def loc(self,pre=""):
-            i = self.index
-            if i is None:
-                si = hex(id(self))
+    @property
+    def label(self):
+        if self.data:
+            if hasattr(self.data,'identifier'):
+                return self.data.identifier
             else:
-                si = "%s%d"%(pre,i)
-            return si
+                return self.data
+        return None
 
-        def __repr__(self):
-            i = self.loc("v")
-            n = self.label
-            if n is None:
-                return "<Node %s, data: None>"%i
-            else:
-                t = self.data.__class__.__name__
-                return "<Node %s, data: '%s' (%s)>"%(i,n,t)
+    def is_ccore(self):
+        return (ccore in self.data.__class__.mro())
 
+    def loc(self,pre=""):
+        i = self.index
+        if i is None:
+            si = hex(id(self))
+        else:
+            si = "%s%d"%(pre,i)
+        return si
 
-    class Link(Edge):
-        """A Link is a grandalf.Edge equipped with a label property
-           and an improved __repr__ method.
-        """
-
-        def __init__(self,x,y,data=None):
-            super().__init__(x,y,1.0,data)
-
-        @property
-        def label(self):
-            return self.data or ""
-
-        def __repr__(self):
-            n0, n1 = [v.loc("v") for v in self.v]
-            return "<Link @ %s, %s -> %s>"%(hex(id(self)),n0,n1)
+    def __repr__(self):
+        i = self.loc("v")
+        n = self.label
+        if n is None:
+            return "<Node %s, data: None>"%i
+        else:
+            t = self.data.__class__.__name__
+            return "<Node %s, data: '%s' (%s)>"%(i,n,t)
 
 
-    class CGraph(Graph):
-        """A CGraph is a grandalf.Graph equipped with a
-           an improved __repr__ method.
-        """
+class Link(Edge):
+    """A Link is a grandalf.Edge equipped with a label property
+       and an improved __repr__ method.
+    """
 
-        def __repr__(self):
-            return "<CGraph @ %s, C: %s>"%(hex(id(self)),str([g.order() for g in self.C]))
+    def __init__(self,x,y,data=None):
+        super().__init__(x,y,1.0,data)
+
+    @property
+    def label(self):
+        return self.data or ""
+
+    def __repr__(self):
+        n0, n1 = [v.loc("v") for v in self.v]
+        return "<Link @ %s, %s -> %s>"%(hex(id(self)),n0,n1)
 
 
-except ImportError:
-    has_graph = False
+class CGraph(Graph):
+    """A CGraph is a grandalf.Graph equipped with a
+       an improved __repr__ method.
+    """
+
+    def __repr__(self):
+        return "<CGraph @ %s, C: %s>"%(hex(id(self)),str([g.order() for g in self.C]))
 
 
 def build(obj,db,V=None,g=None):
@@ -83,13 +77,12 @@ def build(obj,db,V=None,g=None):
     Optional arguments V and g allow to extend the current dict of Node (V)
     and a CGraph (g) from another given object.
     """
-    if has_graph:
-        obj.unfold(db)
-        if V is None:
-            V = {}
-        if g is None:
-            g = CGraph()
-        do_graph(obj,V,g)
+    obj.unfold(db)
+    if V is None:
+        V = {}
+    if g is None:
+        g = CGraph()
+    do_graph(obj,V,g)
     return g
 
 def do_graph(obj,V,g):
