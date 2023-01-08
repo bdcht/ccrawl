@@ -475,7 +475,7 @@ def find_functions_with_type(lref):
     fm = currentProgram.getFunctionManager()
     sref = set(lref)
     F = []
-    for f in tqdm(fm.getFunctions(True),total=fm.getFunctionCount()):
+    for f in fm.getFunctions(True):
         L = find_auto_structs(f)
         for k,l in L.items():
             if len(l)>3 and set(l).issubset(sref):
