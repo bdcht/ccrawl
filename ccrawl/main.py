@@ -62,9 +62,7 @@ def spawn_console(ctx):
 
 @click.group(invoke_without_command=True)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="display more infos")
-@click.option(
-    "-q", "--quiet", is_flag=True, default=False, help="don't display anything"
-)
+@click.option("-q", "--quiet", is_flag=True, default=False, help="don't display anything")
 @click.option("-b", "--db", help="url for the remote database")
 @click.option(
     "-l",
@@ -107,6 +105,7 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
         c.Database.url = db
     if local:
         c.Database.local = local
+        c.Database.localonly = True
     if conf.VERBOSE:
         click.echo("loading local database %s ..." % c.Database.local, nl=False)
     try:
@@ -893,6 +892,30 @@ def server(ctx):
     from ccrawl.srv.main import run
 
     run(ctx)
+
+# export command:
+# ------------------------------------------------------------------------------
+
+@cli.command()
+@click.option("-f", "--format", "form",
+              type=click.STRING,
+              default="ghidra",
+              show_default=True,
+              multiple=False,
+              help="export to given format")
+@click.argument("identifier", nargs=1, type=click.STRING)
+@click.pass_context
+def export(ctx,form,identifier):
+    db = ctx.obj["db"]
+    Q = where('id')==identifier
+    if db.contains(db.tag & Q):
+        l = db.get(db.tag & Q)
+        x = ccore.from_db(l)
+        if form=="ghidra":
+            from ccrawl.ext.ghidra import build
+            build(x,db)
+        else:
+            click.echo("format '%s' not supported."%form)
 
 # graph command:
 # ------------------------------------------------------------------------------
