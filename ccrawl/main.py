@@ -6,7 +6,7 @@ from ccrawl import conf
 from ccrawl.formatters import formats
 from ccrawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL, ENUM_DECL
 from ccrawl.parser import CLASS_DECL, FUNCTION_DECL, MACRO_DEF
-from ccrawl.parser import parse
+from ccrawl.parser import preprocess,parse
 from ccrawl.core import ccore
 from ccrawl.utils import c_type
 from ccrawl.db import Proxy, Query, where
@@ -151,14 +151,13 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
 @click.option("-f", "--functions", is_flag=True, help="collect functions")
 @click.option("-m", "--macros", is_flag=True, help="collect macros")
 @click.option("-s", "--strict", is_flag=True, help="strict mode")
-@click.option(
-    "--auto-include",
-    "autoinclude",
-    default=True,
-    is_flag=True,
-    help="try to guess -I path(s) for each input file",
-)
+@click.option("-n", "--recon", is_flag=True, help="run only the preprocessing stage")
 @click.option("--clang", "xclang", help="parameters passed to clang")
+@click.option(
+    "--output-graph", "outgraph",
+    type=str,
+    help="output dependency graph of collected files")
+@click.option("-C", "--no-cxx","nocxx", is_flag=True, help="ignore C++ files")
 @click.argument(
     "src",
     nargs=-1,
@@ -166,7 +165,7 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     # help='directory/files with definitions to collect',
 )
 @click.pass_context
-def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, src):
+def collect(ctx, allc, types, functions, macros, strict, recon, xclang, outgraph, nocxx, src):
     """
     Collects types (struct,union,class,...) definitions,
     functions prototypes and/or macro definitions from SRC files/directory.
@@ -182,15 +181,13 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
     that lead to the compilation of all input source (i.e. clang diagnostics
     errors are not bypassed).
     """
+    # take into account options in config:
     c = conf.config
-    cxx = c.Collect.cxx
-    F = Fh = lambda f: f.endswith(".h") or (cxx and f.endswith(".hpp"))
     K = None
     c.Collect.strict |= strict
     c.Collect.allc |= allc
-    if allc is True:
-        F = lambda f: (f.endswith(".c") or (cxx and f.endswith(".cpp")) or Fh(f))
-    elif types or functions or macros:
+    c.Collect.cxx = not nocxx
+    if types or functions or macros:
         K = []
         if types:
             K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL, CLASS_DECL, ENUM_DECL]
@@ -198,18 +195,15 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
             K += [FUNCTION_DECL]
         if macros:
             K += [MACRO_DEF]
+    # set tag value:
     tag = ctx.obj["tag"]
     if ctx.obj["tag"] is None:
         tag = str(time.time())
     else:
         tag = ctx.obj["db"].tag._hash[-1]
-    # filters:
-    ctx.obj["F"] = F
-    # selected kinds of cursors to collect:
-    ctx.obj["K"] = K
     # temporary database cache:
     dbo = {}
-    # if no clang params is provided, use defaults:
+    # set defaults clang frontend parameters:
     args = [
         "-ferror-limit=0",
         "-fmodules",
@@ -217,20 +211,37 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
     ]
     if xclang is not None:
         args += xclang.split(" ")
-    # count source files:
-    FILES, INCLUDES = files_and_includes(src, F)
+    # preprocess all files to compute their dependency graph
+    # allowing to order them and possibly add include directive for each file:
+    FILES,G = preprocess_files(src, args, c.Collect.cxx, c.Collect.allc)
+    if outgraph:
+        L = ["digraph ccrawl {"]
+        for g in G.C:
+            for v in g.V():
+                L.append('"%s"'%v.data)
+            for e in g.E():
+                L.append('"%s" -> "%s" [label="%s"]'%(e.v[0].data,e.v[1].data,e.data))
+        L.append('}')
+        with open(outgraph,"w") as dot:
+            dot.write('\n'.join(L))
+    if recon is True:
+        return 0
     total = len(FILES)
+    already_done = set()
     W = c.Terminal.width - 12
     # parse and collect all sources:
-    if autoinclude:
-        args.extend(INCLUDES)
-    while len(FILES) > 0:
+    n = 0
+    for filename,directives in FILES.items():
         t0 = time.time()
-        filename = FILES.pop()
         if not c.Terminal.quiet:
-            p = ((total - len(FILES)) * 100.0) / total
+            n += 1
+            p = (n * 100.0) / total
             click.echo(("[%3d%%] %s " % (p, filename)).ljust(W), nl=False)
-        l = parse(filename, args, kind=K, tag=tag)
+        if filename in already_done:
+            continue
+        else:
+            already_done.add(filename)
+        l = parse(filename, args+directives, kind=K, tag=tag)
         t1 = time.time()
         if c.Terminal.timer:
             click.secho("(%.2f+" % (t1 - t0), nl=False, fg="cyan")
@@ -238,8 +249,7 @@ def collect(ctx, allc, types, functions, macros, strict, autoinclude, xclang, sr
             return -1
         if len(l) > 0:
             # remove already processed/included files
-            already_done = set([el["src"] for el in l])
-            FILES.difference_update(already_done)
+            already_done.union(set([el["src"] for el in l]))
             # aggregate cFunc instances and remove duplicates in dbo:
             for x in l:
                 if x["cls"] == "cFunc":
@@ -274,30 +284,29 @@ def do_collect(ctx, src):
         macros=False,
         strict=False,
         xclang=None,
+        outgraph="",
         src=src,
     )
 
 
-def files_and_includes(src, F):
+def preprocess_files(src,args,cxx=False,allc=False):
+    click.echo("preprocessing files...",nl=False)
+    F = Fh = lambda f: f.endswith(".h") or (cxx and f.endswith(".hpp"))
+    if allc is True:
+        F = lambda f: (f.endswith(".c") or (cxx and f.endswith(".cpp")) or Fh(f))
     # count source files:
     FILES = set()
-    HDIRS = set()
     for D in src:
         if os.path.isdir(D):
             for dirname, subdirs, files in os.walk(D.rstrip("/")):
-                has_headers = False
                 for f in filter(F, files):
                     filename = "%s/%s" % (dirname, f)
                     FILES.add(filename)
-                    has_headers = True
-                if has_headers:
-                    HDIRS.add("-I%s/" % dirname)
         elif os.path.isfile(D) and F(D):
             FILES.add(D)
-    # preprocess files to detect all #include directives
-    # and update or re-order the INCLUDES set:
-    INCLUDES = list(HDIRS)
-    return FILES, INCLUDES
+    res,G = preprocess(FILES,args)
+    click.echo("done.")
+    return res,G
 
 
 # search command:

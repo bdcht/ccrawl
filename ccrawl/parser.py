@@ -11,6 +11,7 @@ from itertools import chain
 from functools import wraps
 from collections import Iterable, OrderedDict, defaultdict
 from ccrawl import conf
+from ccrawl import graphs
 from ccrawl.core import (
     cFunc,
     cMacro,
@@ -607,7 +608,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
         # (preprocessor options not exported in the python bindings):
         RetainExcludedConditionalBlocks = 0x8000
         KeepGoing = 0x200
-        options |= RetainExcludedConditionalBlocks
+        #options |= RetainExcludedConditionalBlocks
         options |= KeepGoing
     if args is None:
         # mandatory if only libclang python binding is installed, since then the llvm-headers
@@ -672,7 +673,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
                 # we keep it here just in case.
                 if conf.VERBOSE:
                     secho(err.format(), bg="red", err=True)
-                raise StandardError
+                raise ValueError
     except Exception:
         if not conf.QUIET:
             secho("[err]", fg="red")
@@ -717,6 +718,10 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
                         defs[x["id"]] = x
     if not conf.QUIET:
         secho(("[%3d]" % len(defs)).rjust(12), fg="green" if not cxx else "cyan")
+        for i in diag_get_missing(filename, tu):
+            secho("       %s"%i,fg="red")
+        for i in diag_get_incs(filename, tu):
+            secho("       %s"%i[0],fg="magenta")
     return defs.values()
 
 
@@ -754,7 +759,7 @@ def parse_debug(filename, cxx=False):
     ## (preprocessor options not exported in the python bindings):
     RetainExcludedConditionalBlocks = 0x8000
     KeepGoing = 0x200
-    options |= RetainExcludedConditionalBlocks
+    #options |= RetainExcludedConditionalBlocks
     options |= KeepGoing
     _args = [
         "-ferror-limit=0",
@@ -819,3 +824,147 @@ def deepflatten(cur, ltypes=Iterable):
             sub = c.get_children()
             r = chain(sub, r)
             yield c
+
+def preprocess(files,args=None):
+    if conf.DEBUG:
+        import pprint
+        echo("")
+        pprint.pp(files)
+    G = graphs.Graph()
+    V = {}
+    F = []
+    M = [""]
+    # create all vertices for files:
+    # f is a relative path to the file from current dir
+    for f in files:
+        basename = os.path.basename(f)
+        # a vertex will hold the relative path, so a vertex
+        # maps exactly to file,
+        v = graphs.Vertex(f)
+        # the dict V holds the vertices by their basenames,
+        # so each value can be a list (for example a/x.h and b/x.h
+        # are remembered as V["x.h"] = [Vertex("a/x.h"), Vertex("b/x.h")]
+        if basename not in V:
+            V[basename] = [v]
+        else:
+            V[basename].append(v)
+        if conf.DEBUG:
+            echo("vertex: %s (basename: %s)"%(v.data,basename))
+        G.add_vertex(v)
+        # F is just the list of files out of the 'files' set,
+        # to make sure we parseincludes them in the order that was provided...
+        F.append((f,v))
+    # now try to "link" them based on inclusion:
+    for (filename,v) in F:
+        missing,incs = parseincludes(filename,args)
+        for i in missing:
+            bni = os.path.basename(i)
+            dni = os.path.dirname(i)
+            E = []
+            if bni in V:
+                for x in V[bni]:
+                    I = os.path.dirname(x.data)
+                    if I.endswith(dni):
+                        j = I.rfind(dni)
+                        e = graphs.Edge(v,x,data="-I%s"%I[:j])
+                        e.data = e.data.rstrip('/')
+                        E.append(e)
+                    else:
+                        if conf.DEBUG:
+                            secho("vertex '%s' doesn't end with %s ??"%(I,dni),fg='red')
+            if len(E)>1:
+                M.append("multiple include found for '%s'..."%i)
+            if len(E)>0:
+                e = E[0]
+                if conf.DEBUG:
+                    secho("%s -> %s : '%s'"%(e.v[0].data,
+                                             e.v[1].data,
+                                             e.data), fg='magenta')
+                G.add_edge(e)
+            else:
+                M.append("missing include file for '%s'"%i)
+        for (n,i) in incs:
+            bni = os.path.basename(n)
+            dni = os.path.dirname(n)
+            try:
+                e = graphs.Edge(v,V[os.path.basename(n)][0],data="-I%s"%dni)
+                if conf.DEBUG:
+                    secho("%s -> %s : '%s'"%(e.v[0].data, e.v[1].data, e.data))
+                G.add_edge(e)
+            except Exception:
+                if i.startswith("<"):
+                    M.append("system file '%s' is used"%n)
+                else:
+                    M.append("file '%s' was included but is filtered out"%bni)
+    # echo preprocessing messages:
+    if (not conf.QUIET) and len(M)>1:
+        secho('\n  '.join(M),fg='yellow')
+    # finally, walk the graph to order the files and define their include path:
+    FILES = {}
+    for g in G.C:
+        for r in g.roots():
+            FILES[r.data] = list(set((e.data for e in g.sE)))
+    return (FILES,G)
+
+
+def diag_get_missing(filename,tu):
+    missing = []
+    for err in tu.diagnostics:
+        if err.category_number==1:
+            l = str(err.format())
+            sta = l.find("error: ")
+            sto = l.find(" file not found")
+            if sta==-1 or sto==-1:
+                continue
+            if l[:len(filename)]==filename:
+                missing.append(l[sta+8:sto-1])
+    return missing
+
+def diag_get_incs(filename,tu):
+    incs = []
+    for t in tu.get_includes():
+        if t.depth==1:
+            x = tu.get_extent(filename, [(t.location.line,1),(t.location.line+1,1)])
+            toks = tu.get_tokens(extent=x)
+            next(toks)
+            next(toks)
+            inc = next(toks).spelling
+            if inc=='<':
+                while inc[-1]!='>':
+                    inc += next(toks).spelling
+            incs.append((t.include.name,inc))
+    return incs
+
+def parseincludes(filename,args=None):
+    KeepGoing = 0x200
+    options = TranslationUnit.PARSE_INCOMPLETE | KeepGoing
+    if args is None:
+        _args = ["-ferror-limit=0","-fmodules","-fbuiltin-module-map"]
+    else:
+        _args = args
+    if conf.config.Collect.cxx:
+        cxx_args = ["-x", "c++", "-std=c++11"]
+        if filename.endswith(".hpp") or filename.endswith(".cpp"):
+            _args.extend(cxx_args)
+    cxx = "c++" in _args
+    unsaved_files = []
+    index = Index.create()
+    if conf.DEBUG:
+        echo("parseincludes(%s)..."%filename,nl="")
+    tu = index.parse(filename, _args, unsaved_files, options)
+    # get all missing includes from diagnostics:
+    missing = diag_get_missing(filename,tu)
+    # get all found includes:
+    incs = diag_get_incs(filename,tu)
+    if conf.DEBUG:
+        echo("done.")
+        secho("missing:%s"%missing,fg='cyan')
+        secho("incs   :%s"%incs,fg='green')
+    return (missing,incs)
+
+
+
+
+
+
+
