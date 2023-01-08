@@ -28,7 +28,7 @@ def cTypedef_C(obj, db, recursive):
             x = obj.from_db(db.get(Q))
             pre = x.show(db, recursive, form="C") + "\n"
         else:
-            secho("identifier %s not found" % t.lbase, fg="red", err=True)
+            secho("//identifier %s not found" % t.lbase, fg="red", err=True)
     # if t base is an anonymous type, we replace its anon name
     # by its struct/union definition in t:
     if recursive and "?_" in t.lbase:
@@ -120,7 +120,7 @@ def cStruct_C(obj, db, recursive):
                                 # R.insert(0,xrl)
                                 R.append(xrl)
             else:
-                secho("identifier %s not found" % r.lbase, fg="red", err=True)
+                secho("//identifier %s not found" % r.lbase, fg="red", err=True)
         # finally add field type and name to the structure lines:
         S.append(u"  {};".format(r.show(n)))
     # join R and S:
@@ -215,7 +215,7 @@ def cClass_C(obj, db, recursive):
                             if xrl and xrl not in R:
                                 R.append(xrl)
             else:
-                secho("identifier %s not found" % r.lbase, fg="red", err=True)
+                secho("//identifier %s not found" % r.lbase, fg="red", err=True)
         # finally add field type and name to the structure lines:
         fo = ""
         if qal:
