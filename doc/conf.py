@@ -47,7 +47,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.graphviz",
     "sphinx.ext.inheritance_diagram",
-    'traitlets.config.sphinxdoc'
+    'traitlets.config.sphinxdoc',
     'sphinx.ext.autosectionlabel',
 ]
 
