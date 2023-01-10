@@ -347,7 +347,8 @@ Now, everything is defined::
   };
 
 
-Are there any other structures related to tasks ? ::
+Are there any other structures related to tasks?::
+
   (venv) user@machine:/tmp % ccrawl -v -l freertos.db search "struct .*Task" | grep cTypedef
   found cTypedef identifer "TaskFunction_t"
   found cTypedef identifer "StaticTask_t"
@@ -375,6 +376,7 @@ into the *DataType Manager*::
 
 
 Now we will start the interactive console::
+
   (venv) user@machine:/tmp % ccrawl -v -l freertos.db
   config file '.ccrawlrc' loaded
   loading local database freertos.db ...done
