@@ -471,16 +471,33 @@ else:
     def dt_apply_recursive(dt, address):
         dtm.findDataTypes
 
-def find_functions_with_type(lref):
+def find_functions_with_type(lref,nbfields=-1,sta=None,sto=None):
     fm = currentProgram.getFunctionManager()
+    if nbfields==-1:
+        nbfields = len(lref)
     sref = set(lref)
     F = []
-    for f in fm.getFunctions(True):
-        L = find_auto_structs(f)
+    if sta:
+        I = fm.getFunctionsNoStubs(toAddr(sta),True)
+    else:
+        I = fm.getFunctionsNoStubs(True)
+    for f in I:
+        if sto and not (f.getEntryPoint().getOffset() < sto):
+            break
+        if conf.VERBOSE:
+            found=False
+            print("%s... "%(f.getName()),end='')
+        try:
+            L = find_auto_structs(f)
+        except:
+            continue
         for k,l in L.items():
-            if len(l)>3 and set(l).issubset(sref):
+            if len(l)>=nbfields and set(l).issubset(sref):
                 F.append((f,(k,l)))
-                secho(f.getName(),fg="green")
+                if conf.VERBOSE:
+                    secho("found.",fg="green")
+                    found=True
                 break
-        secho(f.getName(),fg="yellow")
+        if conf.VERBOSE and not found:
+            secho("not found.",fg="yellow")
     return F
