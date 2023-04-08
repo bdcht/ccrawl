@@ -9,7 +9,8 @@ import tempfile
 import hashlib
 from itertools import chain
 from functools import wraps
-from collections import Iterable, OrderedDict, defaultdict
+from collections.abc import Iterable
+from collections import OrderedDict, defaultdict
 from ccrawl import conf
 from ccrawl import graphs
 from ccrawl.core import (
