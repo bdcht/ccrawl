@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import shutil
 import click
 from ccrawl import conf
 from ccrawl.formatters import formats
@@ -95,7 +96,7 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     debug = c.Terminal.debug
     c.Terminal.verbose = verbose | debug
     c.Terminal.quiet |= quiet
-    c.Terminal.width = click.get_terminal_size()[0]
+    c.Terminal.width = shutil.get_terminal_size()[0]
     if conf.VERBOSE:
         if c.src:
             click.echo("config file '%s' loaded" % c.f)
@@ -186,7 +187,7 @@ def collect(ctx, allc, types, functions, macros, strict, recon, xclang, outgraph
     K = None
     c.Collect.strict |= strict
     c.Collect.allc |= allc
-    c.Collect.cxx = not nocxx
+    c.Collect.cxx &= not nocxx
     if types or functions or macros:
         K = []
         if types:
