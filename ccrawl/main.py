@@ -187,7 +187,7 @@ def collect(ctx, allc, types, functions, macros, strict, recon, xclang, outgraph
     K = None
     c.Collect.strict |= strict
     c.Collect.allc |= allc
-    c.Collect.cxx = not nocxx
+    c.Collect.cxx &= not nocxx
     if types or functions or macros:
         K = []
         if types:

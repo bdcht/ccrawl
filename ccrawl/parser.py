@@ -668,6 +668,10 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
                         break
                     elif conf.config.Collect.skipcxx:
                         secho("[c++]".rjust(12), fg="yellow")
+                        if conf.DEBUG:
+                            echo("includes:")
+                            for t in tu.get_includes():
+                                secho(("  "*t.depth)+t.include.name,fg="yellow")
                         return []
             elif err.severity == 4:
                 # this should not happen anymore thanks to -M -MG opts...
