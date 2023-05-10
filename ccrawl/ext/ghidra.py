@@ -331,9 +331,15 @@ else:
         ifc.setOptions(opt)
         ifc.openProgram(f.getProgram())
         res = ifc.decompileFunction(f, 1000, monitor)
+        Locs = {}
+        if res is None:
+            secho("error: function '%s' not decompiled." % f, fg="red")
+            return Locs
         hf = res.getHighFunction()
         lsm = hf.getLocalSymbolMap()
-        Locs = {}
+        if lsm is None:
+            secho("error: High function has no SymbolMap." % f, fg="red")
+            return Locs
         for n, s in lsm.getNameToSymbolMap().items():
             S = []
             t = s.getDataType()
