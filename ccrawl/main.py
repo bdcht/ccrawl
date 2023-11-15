@@ -148,9 +148,6 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     is_flag=True,
     # help='collect data from all files rather than headers only'
 )
-@click.option("-t", "--types", is_flag=True, help="collect types")
-@click.option("-f", "--functions", is_flag=True, help="collect functions")
-@click.option("-m", "--macros", is_flag=True, help="collect macros")
 @click.option("-s", "--strict", is_flag=True, help="strict mode")
 @click.option("-n", "--recon", is_flag=True, help="run only the preprocessing stage")
 @click.option("--clang", "xclang", help="parameters passed to clang")
@@ -188,14 +185,6 @@ def collect(ctx, allc, types, functions, macros, strict, recon, xclang, outgraph
     c.Collect.strict |= strict
     c.Collect.allc |= allc
     c.Collect.cxx &= not nocxx
-    if types or functions or macros:
-        K = []
-        if types:
-            K += [TYPEDEF_DECL, STRUCT_DECL, UNION_DECL, CLASS_DECL, ENUM_DECL]
-        if functions:
-            K += [FUNCTION_DECL]
-        if macros:
-            K += [MACRO_DEF]
     # set tag value:
     tag = ctx.obj["tag"]
     if ctx.obj["tag"] is None:
@@ -916,6 +905,8 @@ def server(ctx):
 @click.argument("identifier", nargs=1, type=click.STRING)
 @click.pass_context
 def export(ctx,form,identifier):
+    """Export the given type to the Ghidra database
+    """
     db = ctx.obj["db"]
     Q = where('id')==identifier
     if db.contains(db.tag & Q):
