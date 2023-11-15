@@ -342,7 +342,8 @@ else:
         #dut = ghidra.app.decompiler.component.DecompilerUtils
         ifc.setOptions(opt)
         ifc.openProgram(f.getProgram())
-        res = ifc.decompileFunction(f, 1000, monitor)
+        mon = ghidra.util.task.WrappingTaskMonitor(monitor)
+        res = ifc.decompileFunction(f, 0, mon)
         Locs = {}
         if res is None:
             secho("error: function '%s' not decompiled." % f, fg="red")
