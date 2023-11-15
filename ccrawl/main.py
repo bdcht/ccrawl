@@ -231,7 +231,7 @@ def collect(ctx, allc, types, functions, macros, strict, recon, xclang, outgraph
             continue
         else:
             already_done.add(filename)
-        l = parse(filename, args+directives, kind=K, tag=tag)
+        l = parse(filename, args+directives, kind=K, tag=tag, config=c)
         t1 = time.time()
         if c.Terminal.timer:
             click.secho("(%.2f+" % (t1 - t0), nl=False, fg="cyan")

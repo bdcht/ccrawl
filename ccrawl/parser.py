@@ -597,7 +597,7 @@ def fix_type_conversion(f, t, cxx, errs):
 # ------------------------------------------------------------------------------
 
 
-def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=None):
+def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=None, config=None):
     """
     Function that parses the input filename and returns the
     dictionary of name:object extracted from this C or C++ file.
@@ -624,14 +624,17 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
         ]
     else:
         _args = args[:]
-    if conf.config is None:
-        conf.config = conf.Config()
+    if config is None:
+        try:
+            config = conf.config.Collect
+        except AttributeError:
+            config = conf.Collect(c=None)
     cxx_args = ["-x", "c++", "-std=c++11", "-fno-delayed-template-parsing"]
-    if conf.config.Collect.cxx:
+    if config.cxx:
         if filename.endswith(".hpp") or filename.endswith(".cpp"):
             _args.extend(cxx_args)
     cxx = "c++" in _args
-    if not conf.config.Collect.strict:
+    if not config.strict:
         # in non strict mode, we allow missing includes
         fd, depf = tempfile.mkstemp(prefix="ccrawl-")
         os.close(fd)
@@ -648,7 +651,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
     else:
         for k in kind:
             assert k in CHandlers
-    if conf.config.Collect.allc is False:
+    if config.allc is False:
         options |= TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     defs = OrderedDict()
     index = Index.create()
@@ -663,13 +666,13 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
                 if ("expected ';'" in err.spelling) or ("'namespace'" in err.spelling):
                     if "asm block" in err.spelling:
                         continue
-                    if conf.config.Collect.cxx:
+                    if config.cxx:
                         if conf.DEBUG:
                             secho("reparse as c++ input...",fg="cyan")
                         cxx = True
                         tu = index.parse(filename, _args + cxx_args, unsaved_files, options)
                         break
-                    elif conf.config.Collect.skipcxx:
+                    elif config.skipcxx:
                         secho("[c++]".rjust(12), fg="yellow")
                         if conf.DEBUG:
                             echo("includes:")
@@ -691,7 +694,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
     else:
         if conf.VERBOSE:
             echo(":")
-    if not conf.config.Collect.strict:
+    if not config.strict:
         os.remove(depf)
     # walk down all AST to get all top-level cursors:
     pool = [(c, []) for c in tu.cursor.get_children()]
@@ -733,13 +736,13 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
     return defs.values()
 
 
-def parse_string(s, args=None, options=0):
+def parse_string(s, args=None, options=0, tag=None, config=None):
     """Crawl wrapper to parse an input string rather than file."""
     # create a tmp filename (file can be removed immediately)
     fd, tmph = tempfile.mkstemp(prefix="ccrawl-", suffix=".h")
     os.close(fd)
     os.remove(tmph)
-    return parse(tmph, args, [(tmph, s)], options)
+    return parse(tmph, args, [(tmph, s)], options, tag=tag, config=config)
 
 
 def selected_errs(r):
