@@ -156,6 +156,7 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     type=str,
     help="output dependency graph of collected files")
 @click.option("-C", "--no-cxx","nocxx", is_flag=True, help="ignore C++ files")
+@click.option("--cxx", is_flag=True, help="parse as C++")
 @click.argument(
     "src",
     nargs=-1,
@@ -163,7 +164,7 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     # help='directory/files with definitions to collect',
 )
 @click.pass_context
-def collect(ctx, allc, types, functions, macros, strict, recon, xclang, outgraph, nocxx, src):
+def collect(ctx, allc, strict, recon, xclang, outgraph, nocxx, cxx, src):
     """
     Collects types (struct,union,class,...) definitions,
     functions prototypes and/or macro definitions from SRC files/directory.
@@ -185,6 +186,8 @@ def collect(ctx, allc, types, functions, macros, strict, recon, xclang, outgraph
     c.Collect.strict |= strict
     c.Collect.allc |= allc
     c.Collect.cxx &= not nocxx
+    if cxx:
+        c.Collect.cxx = True
     # set tag value:
     tag = ctx.obj["tag"]
     if ctx.obj["tag"] is None:
