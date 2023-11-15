@@ -387,7 +387,7 @@ def search(ctx, ignorecase, rex):
         return None
     look = lambda v: cx.search(str(v))
     Q = where("id").matches(rex, flags=flg)
-    if db.rdb:
+    if db.rdb and not db.c.localonly :
         Q |= where("val").matches(rex, flags=flg)
         Q |= where("use").matches(rex, flags=flg)
     else:
