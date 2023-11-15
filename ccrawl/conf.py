@@ -67,7 +67,7 @@ class Database(Configurable):
     "Configurable parameters related to the database"
     local = Unicode(
         "/tmp/ccrawl.db", config=True
-    )  # local tiny database name is ccrawl.db
+    )  # local tiny database defaults to /tmp/ccrawl.db
     url = Unicode("mongodb://localhost:27017", config=True)  # use mongodb server
     localonly = Bool(False, config=True)  # use local even if a mongodb server is defined
     user = Unicode("", config=True)  # don't define a mongodb user
