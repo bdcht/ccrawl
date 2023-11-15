@@ -7,7 +7,7 @@ from ccrawl import conf
 from ccrawl.formatters import formats
 from ccrawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL, ENUM_DECL
 from ccrawl.parser import CLASS_DECL, FUNCTION_DECL, MACRO_DEF
-from ccrawl.parser import preprocess,parse
+from ccrawl.parser import preprocess,parse,parse_string
 from ccrawl.core import ccore
 from ccrawl.utils import c_type
 from ccrawl.db import Proxy, Query, where
@@ -297,6 +297,67 @@ def preprocess_files(src,args,cxx=False,allc=False):
     res,G = preprocess(FILES,args)
     click.echo("done.")
     return res,G
+
+# convert command:
+# ------------------------------------------------------------------------------
+
+
+@cli.command()
+@click.option(
+    "-f",
+    "--format",
+    "form",
+    type=click.Choice(formats),
+    default="amoco",
+    show_default=True,
+    help="output identifier data translated in chosen format",
+)
+@click.option("--cxx", "cxx", is_flag=True, default=False)
+@click.option("--clang", "xclang", help="parameters passed to clang")
+@click.argument("inp", type=click.File('r'))
+@click.pass_context
+def convert(ctx, form, cxx, xclang, inp):
+    """
+    Convert a C/C++ standalone input (just use '-' for stdin) to
+    the given supported format (default is ctypes) written to stdout.
+    """
+    K = None
+    # will collect all (including functions' bodies, in strict mode)
+    c = conf.Collect(strict=True,allc=True,cxx=cxx,skipcxx=not cxx)
+    # set tag value:
+    tag = str(time.time())
+    # temporary database cache:
+    dbo = {}
+    # set defaults clang frontend parameters:
+    args = [
+        "-ferror-limit=0",
+        "-fmodules",
+        "-fbuiltin-module-map",
+    ]
+    if xclang is not None:
+        args += xclang.split(" ")
+    prv_q = conf.QUIET
+    conf.QUIET = True
+    l = parse_string(inp.read(),args, tag=tag, config=c)
+    conf.QUIET = prv_q
+    if l is None and not conf.QUIET:
+        click.secho("error while parsing input",gf='red')
+        return
+    for x in l:
+         if x["cls"] == "cFunc":
+             kpad = x["id"] + x["val"]["prototype"]
+             if (kpad not in dbo) or (x["val"]["locs"] or x["val"]["calls"]):
+                 dbo[kpad] = x
+         else:
+             kpad = x["id"] + x["src"]
+             dbo[kpad] = x
+    db = Proxy(conf.Database(local='',url='',localonly=True))
+    db.insert_multiple(dbo.values())
+    db.close()
+    for l in dbo.values():
+        x = ccore.from_db(l)
+        click.echo(x.show(db, r=False, form=form))
+
 
 
 # search command:
