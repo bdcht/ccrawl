@@ -24,7 +24,7 @@ def test_00_cmd_collect(configfile, dbfile):
 def test_01_cmd_search(configfile, dbfile):
     runner = CliRunner()
     result = runner.invoke(
-        cli, ["-l", dbfile, "-b", "None", "-c", configfile, "search", r".*\?_\w+"]
+        cli, ["-l", dbfile, "-c", configfile, "search", r".*\?_\w+"]
     )
     assert result.exit_code == 0
     l = result.output.split("\n")
@@ -36,16 +36,16 @@ def test_01_cmd_search(configfile, dbfile):
 def test_02_cmd_select(configfile, dbfile):
     runner = CliRunner()
     result = runner.invoke(
-        cli, ["-l", dbfile, "-b", "None", "-c", configfile, "select", "constant", "10"]
+        cli, ["-l", dbfile, "-c", configfile, "select", "constant", "10"]
     )
     assert result.exit_code == 0
-    assert result.output == "C1\n"
+    assert result.output == "\nC1\n"
 
 
 def test_03_cmd_select(configfile, dbfile):
     runner = CliRunner(mix_stderr=False)
     result = runner.invoke(
-        cli, ["-l", dbfile, "-b", "None", "-c", configfile, "select", "struct", "*:1"]
+        cli, ["-l", dbfile, "-c", configfile, "select", "struct", "*:1"]
     )
     assert result.exit_code == 0
     l = result.stdout.strip().split("\n")
@@ -61,8 +61,6 @@ def test_04_cmd_show(configfile, dbfile):
         [
             "-l",
             dbfile,
-            "-b",
-            "None",
             "-c",
             configfile,
             "show",
@@ -83,8 +81,6 @@ def test_05_cmd_graph(configfile, dbfile):
         [
             "-l",
             dbfile,
-            "-b",
-            "None",
             "-c",
             configfile,
             "graph",
