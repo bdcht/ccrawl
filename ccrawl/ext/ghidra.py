@@ -319,6 +319,18 @@ else:
         return ghidra.program.model.data.LongDoubleDataType()
 
     def find_auto_structs(f):
+        """find variables (parameter or local) that are pointers
+           dereferenced at specific offsets and return the list of
+           offsets and length of dereferenced type.
+
+           Note/Bug:
+             A combination of either Ghidra 10.3, Python 3.10
+             makes the call to ifc.decompileFunction() wrongly return a
+             None value if the ghidra_bridge is run in background.
+             Could be caused by a change in the Ghidra decompiler
+             and the way it can be called from a separate thread...
+             If this happens, run the bridge if foreground.
+        """
         if isinstance(f, str):
             try:
                 f = getGlobalFunctions(f)[0]
