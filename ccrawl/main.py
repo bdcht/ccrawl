@@ -269,21 +269,21 @@ def do_collect(ctx, src):
     ctx.invoke(
         collect,
         allc=False,
-        types=False,
-        functions=False,
-        macros=False,
         strict=False,
+        recon=False,
         xclang=None,
         outgraph="",
+        nocxx=False,
         src=src,
     )
 
 
 def preprocess_files(src,args,cxx=False,allc=False):
     click.echo("preprocessing files...",nl=False)
-    F = Fh = lambda f: f.endswith(".h") or (cxx and f.endswith(".hpp"))
-    if allc is True:
-        F = lambda f: (f.endswith(".c") or (cxx and f.endswith(".cpp")) or Fh(f))
+    p = "[hHcCiI]" if allc else "[hH]"
+    if cxx: p += "|(hpp)|(cpp)"
+    rexh = re.compile(".+\.("+p+")$",flags=re.IGNORECASE)
+    F = lambda f: rexh.search(f)
     # count source files:
     FILES = set()
     for D in src:
