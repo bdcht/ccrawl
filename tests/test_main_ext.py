@@ -12,8 +12,6 @@ def test_ctypes_01(dbfile):
         [
             "-l",
             dbfile,
-            "-b",
-            "None",
             "collect",
             "--clang",
             '"-I%s/samples"' % inc,
@@ -45,10 +43,9 @@ def test_ctypes_02(dbfile):
         [
             "-l",
             dbfile,
-            "-b",
-            "None",
             "collect",
             "-a",
+            "--cxx",
             os.path.join(inc, "samples/shahar.cpp"),
         ],
     )
@@ -80,7 +77,7 @@ def test_amoco_01(dbfile):
     inc = os.path.dirname(__file__)
     result = runner.invoke(
         cli,
-        ["-l", dbfile, "-b", "None", "collect", os.path.join(inc, "samples/header.h")],
+        ["-l", dbfile, "collect", os.path.join(inc, "samples/header.h")],
     )
     assert result.exit_code == 0
     conf.config = conf.Config()
