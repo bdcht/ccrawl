@@ -342,14 +342,17 @@ def SetStructured(cur, S, errors=None):
                     errs.append(r)
         if errs and bitfield_error:
             # fixing the extent. Clang is buggy and has forgotten the bitfield tokens...
-            T = [(t.kind, t.spelling, t.location) for t in f.get_tokens()]
-            off = alltoks.index(T[0])
             fix = None
-            for k, s, l in alltoks[off:]:
-                if k == TokenKind.PUNCTUATION and s == ";":
-                    if l.offset > T[-1][2].offset:
-                        fix = l.offset
-                        break
+            T = [(t.kind, t.spelling, t.location) for t in f.get_tokens()]
+            try:
+                off = alltoks.index(T[0])
+                for k, s, l in alltoks[off:]:
+                    if k == TokenKind.PUNCTUATION and s == ";":
+                        if l.offset > T[-1][2].offset:
+                            fix = l.offset
+                            break
+            except (IndexError,ValueError):
+                pass
             if fix is not None:
                 x = f._extent
                 e = clang.cindex.SourceLocation.from_offset(f._tu, x.end.file, fix)
@@ -966,10 +969,4 @@ def parseincludes(filename,args=None):
         secho("missing:%s"%missing,fg='cyan')
         secho("incs   :%s"%incs,fg='green')
     return (missing,incs)
-
-
-
-
-
-
 
