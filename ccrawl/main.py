@@ -231,7 +231,7 @@ def collect(ctx, allc, types, functions, macros, strict, recon, xclang, outgraph
             continue
         else:
             already_done.add(filename)
-        l = parse(filename, args+directives, kind=K, tag=tag, config=c)
+        l = parse(filename, args+directives, kind=K, tag=tag, config=c.Collect)
         t1 = time.time()
         if c.Terminal.timer:
             click.secho("(%.2f+" % (t1 - t0), nl=False, fg="cyan")
@@ -318,8 +318,10 @@ def preprocess_files(src,args,cxx=False,allc=False):
 @click.pass_context
 def convert(ctx, form, cxx, xclang, inp):
     """
-    Convert a C/C++ standalone input (just use '-' for stdin) to
+    Convert a C standalone input (just use '-' for stdin) to
     the given supported format (default is ctypes) written to stdout.
+    This command uses the C parser in 'strict' mode (syntax errors are not ignored.)
+    Use option --cxx to force clang to consider the input as C++.
     """
     K = None
     # will collect all (including functions' bodies, in strict mode)
