@@ -520,3 +520,36 @@ def find_functions_with_type(lref,nbfields=-1,sta=None,sto=None):
         if conf.VERBOSE and not found:
             secho("not found.",fg="yellow")
     return F
+
+def colorize_gdb_tracefile(tfilename,tpnum,frame=None,offset=0,c=(0x22,0x22,0x44)):
+    from amoco.system.gdb_tfile import GDBTrace
+    state = b.remote_eval('state')
+    ColorizingService = ghidra.app.plugin.core.colorizer.ColorizingService
+    service = state.getTool().getService(ColorizingService)
+    service.clearAllBackgroundColors()
+    addrset = ghidra.program.model.address.AddressSet()
+    with open(tfilename,'rb') as f:
+        trace = GDBTrace(f)
+        pc = trace.get_code_ptr().attrib
+        msk = (1<<(int(pc['bitsize'])))-1
+        col = trace.get_collected_registers(tpnum,frame,pc['name'])
+    b.remote_exec('from java.awt import Color')
+    color = b.remote_eval('Color')(*c)
+    S = set()
+    for state in col:
+         address = (state[pc['name']]+offset)&msk
+         S.add(address)
+    tot = len(S)
+    if conf.VERBOSE:
+        secho("trace length: %d"%tot,fg='blue')
+    i=0
+    for address in sorted(S):
+        if conf.VERBOSE:
+            secho("[%d/%d] address: 0x%08x"%(i,tot,address),fg='yellow')
+        addrset.add(toAddr(address))
+        i += 1
+        #setBackgroundColor(toAddr(address),color)
+    transaction_id = currentProgram.startTransaction("colorize_gdb_tracefile")
+    setBackgroundColor(addrset,color)
+    currentProgram.endTransaction(transaction_id,True)
+    return transaction_id
