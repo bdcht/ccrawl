@@ -385,7 +385,7 @@ Now we will start the interactive console::
     ___ ___ _ __ __ ___      _| |
    / __/ __| '__/ _` \ \ /\ / / |
   | (_| (__| | | (_| |\ V  V /| |
-   \___\___|_|  \__,_| \_/\_/ |_| v1.9.0
+   \___\___|_|  \__,_| \_/\_/ |_| v1.10
 
 
   In [1]: from ccrawl.ext.ghidra import *

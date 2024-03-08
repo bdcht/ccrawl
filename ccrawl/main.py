@@ -285,7 +285,7 @@ def preprocess_files(src,args,cxx=False,allc=False):
     click.echo("preprocessing files...",nl=False)
     p = "[hHcCiI]" if allc else "[hH]"
     if cxx: p += "|(hpp)|(cpp)"
-    rexh = re.compile(".+\.("+p+")$",flags=re.IGNORECASE)
+    rexh = re.compile(r".+\.("+p+")$",flags=re.IGNORECASE)
     F = lambda f: rexh.search(f)
     # count source files:
     FILES = set()

@@ -344,9 +344,15 @@ else:
         ifc.openProgram(f.getProgram())
         mon = ghidra.util.task.WrappingTaskMonitor(monitor)
         res = ifc.decompileFunction(f, 0, mon)
+        Locs = {}
+        if res is None:
+            secho("error: function '%s' not decompiled." % f, fg="red")
+            return Locs
         hf = res.getHighFunction()
         lsm = hf.getLocalSymbolMap()
-        Locs = {}
+        if lsm is None:
+            secho("error: High function has no SymbolMap." % f, fg="red")
+            return Locs
         for n, s in lsm.getNameToSymbolMap().items():
             S = []
             t = s.getDataType()
