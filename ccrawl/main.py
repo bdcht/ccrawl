@@ -914,7 +914,8 @@ def stats(ctx,structs):
     P = db.search(db.tag & (where("cls") == "cTemplate"))
     click.echo("       .cTemplate : %d" % len(P))
     click.echo("structures:")
-    l, s = max(((len(s["val"]), s["id"]) for s in S))
+    from itertools import chain
+    l, s = max(((len(s["val"]), s["id"]) for s in chain(C,S)))
     click.echo("  max fields: %d (in '%s')" % (l, s))
     if structs:
         from ccrawl.ext.amoco import build
