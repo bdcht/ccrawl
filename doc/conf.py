@@ -49,6 +49,7 @@ extensions = [
     "sphinx.ext.inheritance_diagram",
     'traitlets.config.sphinxdoc',
     'sphinx.ext.autosectionlabel',
+    'sphinxcontrib.ansi',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -92,7 +93,7 @@ if not on_rtd:
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "default"
+#html_theme = "default"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -130,7 +131,7 @@ latex_elements = {
     # 'papersize': 'letterpaper',
     # The font size ('10pt', '11pt' or '12pt').
     #
-    # 'pointsize': '10pt',
+    'pointsize': '10pt',
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
@@ -161,7 +162,7 @@ man_pages = [(master_doc, "ccrawl", "ccrawl Documentation", [author], 1)]
 #  dir menu entry, description, category)
 texinfo_documents = [
     (
-        master_doc,
+        "index",
         "ccrawl",
         "ccrawl Documentation",
         author,
