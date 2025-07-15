@@ -10,3 +10,4 @@ pymongo
 requests
 tqdm
 sphinxcontrib-ansi
+sphinx-rtd-size

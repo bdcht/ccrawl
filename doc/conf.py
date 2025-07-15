@@ -50,7 +50,10 @@ extensions = [
     'traitlets.config.sphinxdoc',
     'sphinx.ext.autosectionlabel',
     'sphinxcontrib.ansi',
+    'sphinx_rtd_size',
 ]
+
+sphinx_rtd_size = "90%"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -100,10 +103,6 @@ if not on_rtd:
 # documentation.
 #
 # html_theme_options = {}
-html_theme_options = {
-    'body_max_width' : 'none',
-    'page_width': 'auto',
-}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
