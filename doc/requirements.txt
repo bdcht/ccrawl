@@ -1,5 +1,11 @@
+libclang==14.0.6
 click
 ccrawl
 libclang
 traitlets
 grandalf
+pyparsing
+tinydb
+pymongo
+requests
+tqdm
