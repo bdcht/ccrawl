@@ -102,7 +102,9 @@ if not on_rtd:
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+ html_theme_options = {
+         'code_font_size': '8pt',
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
