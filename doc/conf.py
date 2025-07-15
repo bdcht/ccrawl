@@ -53,7 +53,7 @@ extensions = [
     'sphinx_rtd_size',
 ]
 
-sphinx_rtd_size = "90%"
+sphinx_rtd_size = "110%"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
