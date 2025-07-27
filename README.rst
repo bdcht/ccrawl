@@ -156,6 +156,13 @@ Todo
 Changelog
 =========
 
+- `v1.11`_
+
+  * update ext.ghidra interface for 12.0_DEV (pyghidra)
+  * update __init__.py to let 'import ccrawl' load useful stuff in interactive sessions
+  * update db module with load() and test if remote mongodb database is down
+  * update doc
+
 - `v1.10`_
 
   * add convert command to translate some C input (from stdin) to other supported formats
@@ -220,6 +227,7 @@ Changelog
 .. _clang: https://pypi.org/project/clang/
 .. _ctypes: https://docs.python.org/3.7/library/ctypes.html
 .. _amoco: https://github.com/bdcht/amoco
+.. _v1.11: https://github.com/bdcht/ccrawl/releases/tag/v1.11
 .. _v1.10: https://github.com/bdcht/ccrawl/releases/tag/v1.10
 .. _v1.9: https://github.com/bdcht/ccrawl/releases/tag/v1.9
 .. _v1.8: https://github.com/bdcht/ccrawl/releases/tag/v1.8

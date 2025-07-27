@@ -64,7 +64,7 @@ class ccore(object):
     def build(self, db):
         """
         Generic method for building a ctypes instance for this type.
-        Basically just a wrapper for the :mod:`ctypes_`.build function.
+        Basically just a wrapper for the :mod:`ctypes_.build` function.
 
         Parameters:
             db (Proxy): database used to get any other type on which

@@ -50,6 +50,18 @@ class Proxy(object):
             except Exception:
                 self.rdb = None
 
+    def load(self, dbfile):
+        try:
+            ldb = TinyDB(dbfile, storage=CachingMiddleware(JSONStorage))
+        except Exception:
+            click.secho("failed to load db '%s'"%dbfile, fg="red")
+        else:
+            click.echo("opening local db '%s'"%dbfile)
+            self.ldb.close()
+            self.ldb = ldb
+            self.c.local = dbfile
+            self.c.localonly = True
+
     def set_tag(self, tag=None):
         """
         Sets the global "tag" added to all queries performed by the Proxy to filter
@@ -178,7 +190,8 @@ class MongoDB(object):
         from pymongo import MongoClient
 
         self.url = url
-        self.client = MongoClient(url)
+        self.client = MongoClient(url, serverSelectionTimeoutMS = 300)
+        self.client.server_info()
         self.db = self.client.get_database("ccrawl")
 
     def __repr__(self):
