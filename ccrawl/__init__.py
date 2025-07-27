@@ -8,7 +8,7 @@ if hasattr(sys, 'ps1') or sys.flags.interactive:
     conf.config = c = conf.Config()
     from .core import ccore
 
-    from .db import Proxy,TinyDB,Query,where
+    from .db import Proxy,Query,where
     from .utils import c_type
     db = Proxy(c.Database)
 
@@ -42,7 +42,7 @@ if hasattr(sys, 'ps1') or sys.flags.interactive:
 
     if 'ghidra.pyghidra.interpreter' in sys.modules:
         from .ext.ghidra import *
-    __all__ = ["core","db","parser","utils"]
+    __all__ = ["core","parser","utils"]
 
 else:
     __all__ = []
