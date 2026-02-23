@@ -18,14 +18,16 @@ def declareGhidraHandler(kind, *alt):
     return decorate
 
 
-# Attach to existing Ghidra context or create a headless one:
-ghidra = pyghidra.get_current_interpreter() or pyghidra.start(verbose=True)
+if not pyghidra.started():
+    secho("Starting pyghidra headless...", fg="green")
+    pyghidra.start(verbose=True)
 
-state = ghidra.getState()
-currentProgram = state.getCurrentProgram()
+import ghidra
 
-if conf.config.Ghidra.manager == "program":
+try:
+    currentProgram = pyghidra.get_current_interpreter().currentProgram
     dtm = currentProgram.getDataTypeManager()
+    eqt = currentProgram.getEquateTable()
     if conf.VERBOSE:
         secho("ccrawl is using data type manager %s" % dtm, fg="blue")
     tr = dtm.startTransaction("ccrawl")
@@ -34,21 +36,25 @@ if conf.config.Ghidra.manager == "program":
     dtm.endTransaction(tr, True)
     if conf.VERBOSE:
         secho("importing types in ccrawl category...", fg="blue")
-else:
+except (NameError,AttributeError):
     dtm = ghidra.program.model.data.StandAloneDataTypeManager(
         conf.config.Ghidra.category
     )
+    eqt = None
     if conf.VERBOSE:
         secho(
             "ccrawl is using a standalone data type manager", fg="blue"
         )
     catp = dtm.getRootCategory()
 
-eqt = currentProgram.getEquateTable()
 
 def build(obj, db):
     n = str(obj.identifier.replace("?_", "").replace(" ", "_"))
     if obj._is_macro:
+        if eqt is None:
+            secho("macro conversion needs an opened program (ignored)",
+                  fg="magenta")
+            return None
         e = eqt.getEquate(obj.identifier)
         if e is None:
             s = obj.replace(" ", "")
