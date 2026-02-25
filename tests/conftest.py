@@ -135,3 +135,10 @@ def dbfile():
     os.close(fd)
     yield fname
     os.remove(fname)
+
+@pytest.fixture(autouse=True, scope="session")
+def dbfilexx():
+    fd, fname = tempfile.mkstemp(".db", prefix="ccrawl-testxx-")
+    os.close(fd)
+    yield fname
+    os.remove(fname)

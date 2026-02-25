@@ -52,7 +52,7 @@ if hasattr(sys, 'ps1') or sys.flags.interactive:
         # loading our external ghidra utils:
         from .ext.ghidra import *
 
-        def import(ldbfile, identifier):
+        def export(ldbfile, identifier):
             db.load(ldbfile)
             l = db.ldb.get(db.tag & (where("id")==identifier))
             build(ccore.from_db(l),db)

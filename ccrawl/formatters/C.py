@@ -163,7 +163,7 @@ def cClass_C(obj, db, recursive):
             r = cxx_type(n)
             e = r.lbase
             if Q and (e not in recursive):
-                q = db.tag & (where("id") == e)
+                q = db.tag & (where("id")==e)
                 x = obj.from_db(db.get(q)).show(db, recursive, form="C")
                 R.append(x)
                 recursive.add(e)
@@ -185,13 +185,17 @@ def cClass_C(obj, db, recursive):
         # get "element base" part of type t:
         e = r.lbase
         # is t a nested class ?
-        nested = r.ns.split("::")[-1].startswith(classname)
+        nested = False
+        L = r.ns.split("::")
+        if (e not in recursive) and len(L)>1 and L[-2]==classname:
+            nested = True
         # is t a nested enum ?
         nested |= e.startswith("enum ?_")
         # query field element raw base type if needed:
         if Q and ((e not in recursive) or nested):
             # prepare query
-            q = db.tag & (where("id") == e)
+            rex = r"(?:(?:class|struct)\s+)?(?:.*::)?%s$"%re.escape(e)
+            q = db.tag & (where("id").matches(rex))
             # deal with nested type:
             if nested:
                 q &= where("src") == tn.lbase

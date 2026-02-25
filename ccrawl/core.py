@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from re import escape
 from ccrawl import formatters
 from ccrawl.utils import struct_letters, c_type, cxx_type
 from ccrawl.db import where
@@ -82,10 +83,24 @@ class ccore(object):
         """
         x = ccore._cache_.get(elt, None)
         if x is None:
-            data = db.get(where("id") == elt)
+            # we have a new type to search in the db...
+            # and have to deal now with the c++ cases where the elt
+            # is the short name of the type without namespace qualifier and
+            # usually without the 'class' or 'struct' keyword.
+            rex = r"(?:(?:class|struct)\s+)?(?:.*::)?%s$"%escape(elt)
+            L = db.search(where("id").matches(rex))
+            data = None
+            for t in L:
+                tid = t["id"]
+                pos = tid.find(elt)
+                if pos==0 or (pos>0 and tid[pos-1] in ' :'):
+                    data = t
+                    break
             if data:
                 x = ccore.from_db(data)
                 ccore._cache_[elt] = x
+                if x.identifier != elt:
+                    ccore._cache_[x.identifier] = x
             else:
                 self.subtypes[elt] = None
                 return
@@ -271,7 +286,8 @@ class cClass(list, ccore):
     Specialized ccore class that is also a 'list' representing a C++ class.
 
     Attributes:
-        identifier: the name associated to this C++ class.
+        identifier: the name associated to this C++ class, as it appears
+                    in the definition source file.
 
     Items of the list represent attributes of the class and are formatted as
     triplet of the form (x,y,z) where
