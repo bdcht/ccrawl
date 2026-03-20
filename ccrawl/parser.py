@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import pdb
 import os
 import re
 from click import echo, secho
@@ -7,6 +8,7 @@ from clang.cindex import CursorKind, TokenKind, TranslationUnit, Index
 import clang.cindex
 import tempfile
 import hashlib
+import json
 from itertools import chain
 from functools import wraps
 from collections.abc import Iterable
@@ -17,6 +19,7 @@ from ccrawl.core import (
     cFunc,
     cMacro,
     cTypedef,
+    cTypealias,
     cStruct,
     cUnion,
     cClass,
@@ -61,6 +64,7 @@ FUNC_TEMPLATE = CursorKind.FUNCTION_TEMPLATE
 CLASS_TEMPLATE = CursorKind.CLASS_TEMPLATE
 CLASS_TPSPEC = CursorKind.CLASS_TEMPLATE_PARTIAL_SPECIALIZATION
 NAMESPACE = CursorKind.NAMESPACE
+ALIAS_DECL = CursorKind.TYPE_ALIAS_DECL
 
 # handlers:
 
@@ -128,6 +132,19 @@ def TypeDef(cur, cxx, errors=None):
 def TypeRef(cur, cxx, errors=None):
     echo("\t" * g_indent + cur.spelling)
     return cur.spelling, None
+
+
+@declareHandler(ALIAS_DECL)
+def AliasDecl(cur, cxx, errors=None):
+    identifier = cur.type.spelling
+    dt = cur.underlying_typedef_type
+    t = fix_type_conversion(cur, dt.spelling, cxx, errors)
+    t = get_uniq_typename(t)
+    if conf.DEBUG:
+        echo("\t" * g_indent + "make unique: %s" % t)
+    if conf.VERBOSE:
+        secho("  cTypealias: %s" % identifier)
+    return identifier, cTypealias(t)
 
 
 @declareHandler(STRUCT_DECL)
@@ -207,16 +224,27 @@ def EnumDecl(cur, cxx, errors=None):
         secho("  %s: %s" % (S.__class__.__name__, typename))
     return typename, S
 
+def get_template_params(cur):
+    p = []
+    for x in cur.get_children():
+        match x.kind:
+            case CursorKind.TEMPLATE_TYPE_PARAMETER:
+                p.append("typename %s" % x.spelling)
+                print("template type param tokens:",end=' ')
+                print([r.spelling for r in get_all_tokens(x)])
+            case CursorKind.TEMPLATE_TEMPLATE_PARAMETER:
+                pp = get_template_params(x)
+                p.append("template %s typename %s" % (str(pp),x.spelling))
+            case CursorKind.TEMPLATE_NON_TYPE_PARAMETER:
+                p.append("%s %s" % (x.type.spelling, x.spelling))
+                print("template non type param tokens:",end=' ')
+                print([r.spelling for r in get_all_tokens(x)])
+    return p
 
 @declareHandler(CLASS_TEMPLATE)
 def ClassTemplate(cur, cxx, errors=None):
     identifier = cur.displayname
-    p = []
-    for x in cur.get_children():
-        if x.kind == CursorKind.TEMPLATE_TYPE_PARAMETER:
-            p.append("typename %s" % x.spelling)
-        elif x.kind == CursorKind.TEMPLATE_NON_TYPE_PARAMETER:
-            p.append("%s %s" % (x.type.spelling, x.spelling))
+    p = get_template_params(cur)
     # now we need this to distinguish struct/union/class template:
     # damn libclang!! children here should really allow for
     # this by having a STRUCT_DECL, UNION_DECL or CLASS_DECL !
@@ -236,7 +264,11 @@ def ClassTemplate(cur, cxx, errors=None):
     SetStructured(cur, S, errors)
     if conf.VERBOSE:
         secho("  cTemplate/%s: %s" % (S.__class__.__name__, identifier))
-    return identifier, cTemplate(params=p, cClass=S)
+    tpl = cTemplate(params=p, cClass=S)
+    if S.local:
+        tpl.local = S.local
+    tpl["partial_specialization"] = False
+    return identifier, tpl
 
 
 @declareHandler(FUNC_TEMPLATE)
@@ -247,12 +279,7 @@ def FuncTemplate(cur, cxx, errors=None):
     proto = cur.type.spelling
     if conf.DEBUG:
         echo("\t" * g_indent + proto)
-    p = []
-    for x in cur.get_children():
-        if x.kind == CursorKind.TEMPLATE_TYPE_PARAMETER:
-            p.append("typename %s" % x.spelling)
-        elif x.kind == CursorKind.TEMPLATE_NON_TYPE_PARAMETER:
-            p.append("%s %s" % (x.type.spelling, x.spelling))
+    p = get_template_params(cur)
     f = re.sub(r"__attribute__.*", "", proto)
     if conf.VERBOSE:
         secho("  cTemplate/cFunc: %s" % identifier)
@@ -311,6 +338,9 @@ def CodeDef(cur, cxx, errors=None):
     return locs, calls
 
 
+def get_all_tokens(cur):
+    return [t for t in cur._tu.get_tokens(extent=cur.extent)]
+
 def SetStructured(cur, S, errors=None):
     global g_indent
     S._in = str(cur.extent.start.file)
@@ -366,6 +396,7 @@ def SetStructured(cur, S, errors=None):
             CLASS_DECL,
             FUNC_TEMPLATE,
             CLASS_TEMPLATE,
+            ALIAS_DECL,
         ):
             identifier, slocal = CHandlers[f.kind](f, S._is_class, errs)
             if f.kind == FUNC_TEMPLATE:
@@ -726,14 +757,15 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
                 ident, cobj = kv
                 if cobj:
                     for x in cobj.to_db(ident, tag, cur.location.file.name):
-                        defs[x["id"]] = x
+                        xid = hashlib.md5(json.dumps(x).encode("ascii")).hexdigest()
+                        defs[xid] = x
     if not conf.QUIET:
         secho(("[%3d]" % len(defs)).rjust(12), fg="green" if not cxx else "cyan")
         for i in diag_get_missing(filename, tu):
             secho("       %s"%i,fg="red")
         for i in diag_get_incs(filename, tu):
             secho("       %s"%i[0],fg="magenta")
-    return defs.values()
+    return defs
 
 
 def parse_string(s, args=None, options=0, tag=None, config=None):
@@ -819,7 +851,8 @@ def parse_debug(filename, cxx=False):
                 ident, cobj = kv
                 if cobj:
                     for x in cobj.to_db(ident, "debug", cur.location.file.name):
-                        defs[x["id"]] = x
+                        xid = hashlib.md5(json.dumps(x).encode('ascii')).hexdigest()
+                        defs[xid] = x
     conf.DEBUG = old
     return pool, defs
 

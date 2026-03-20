@@ -38,10 +38,9 @@ def test_from_db_2(db_doc2):
 
     class DB(object):
         def get(self, id):
-            if isinstance(id, type(Q)):
-                id = id._hash[-1]
-            if id == "yyyy":
                 return db_doc2[1]
+        def search(self, id):
+                return [db_doc2[1]]
 
     x.unfold(DB())
     assert "yyyy" in x.subtypes

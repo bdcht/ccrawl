@@ -40,12 +40,19 @@ def test_classM(configfile,dbfilexx):
     db = Proxy(c.Database)
     x = ccore.from_db(db.get(where("id")=="class M"))
     x.unfold(db)
-    assert 'class T' in x.subtypes
-    t = x.subtypes['class T']
-    assert 'class S' in t.subtypes
-    s = t.subtypes['class S']
+    assert 'T' in x.subtypes
+    t = x.subtypes['T']
+    assert 'S' in t.subtypes
+    s = t.subtypes['S']
     assert 'std::basic_string<char>' in s.subtypes
-    assert 'struct oldstruct' in s.subtypes
+    assert 'oldstruct' in s.subtypes
+
+def test_L2(configfile,dbfilexx):
+    c = conf.Config(configfile)
+    c.Database.url = u""
+    c.Database.local = dbfilexx
+    db = Proxy(c.Database)
+    x = ccore.from_db(db.get(where("id")=="L2"))
 
 
 

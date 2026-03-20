@@ -92,7 +92,7 @@ def cxx_sources():
 
 @pytest.fixture
 def db_doc1():
-    doc = {"id": "xxx", "cls": "cTypedef", "val": "int"}
+    doc = {"id": "xxx", "cls": "cTypedef", "val": "int", "tag": "doc1", "src": "test"}
     return doc
 
 
@@ -103,8 +103,10 @@ def db_doc2():
             "id": "struct X",
             "cls": "cStruct",
             "val": [["char", "a", "comment a"], ["yyyy", "b", "comment b"]],
+            "tag": "doc2",
+            "src": "test"
         },
-        {"id": "yyyy", "cls": "cTypedef", "val": "int *"},
+        {"id": "yyyy", "cls": "cTypedef", "val": "int *", "tag":"doc2", "src":"test"},
     ]
     return docs
 

@@ -114,7 +114,7 @@ def test_cxx_type_11():
     assert not t.is_method
     assert t.dim == 0
     assert t.kw == "class"
-    assert t.ns == "X::"
+    assert t.ns == ['X']
     assert t.lbase == "class X::Y"
     assert t.show_base() == "Y"
     assert t.show_base(kw=True) == "class Y"
@@ -150,5 +150,5 @@ def test_cxx_type_15():
 
 def test_cxx_type_16():
     t = cxx_type("struct A::B::C::D")
-    assert t.ns == "A::B::C::"
+    assert "::".join(t.ns) == "A::B::C"
     assert t.show_base() == "D"

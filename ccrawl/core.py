@@ -1,9 +1,10 @@
+from functools import cache
 from collections import OrderedDict
+from itertools import pairwise
 from re import escape
 from ccrawl import formatters
-from ccrawl.utils import struct_letters, c_type, cxx_type
-from ccrawl.db import where
-
+from ccrawl.utils import pp, struct_letters, c_type, cxx_type
+from ccrawl.db import where,Query
 
 class ccore(object):
     """
@@ -17,9 +18,10 @@ class ccore(object):
       - enum
       - macro
       - func
-      - class
-      - template
-      - namespace
+      - class     (c++)
+      - template  (c++)
+      - namespace (c++)
+      - alias     (c++)
 
     Attributes:
         formatter (function): a function used to print the object
@@ -52,7 +54,7 @@ class ccore(object):
             self.set_formatter(form)
         return self.formatter(db, r)
 
-    def unfold(self, db, limit=None):
+    def unfold(self, db, ctx=None):
         """
         Generic method that fetches recursively from the given database
         all other types on which this type depends. The method is recursive
@@ -76,35 +78,88 @@ class ccore(object):
 
         return ctypes_.build(self, db)
 
-    def add_subtype(self, db, elt, limit=None):
+    def add_subtype(self, db, elt, ctx):
         """
         Generic method that fetches item 'elt' from the database and
         adds it to the subtypes of this type before unfolding it.
+        (takes into account the namespaces and templates that possibly describe
+        this underlying type in c++.)
         """
-        x = ccore._cache_.get(elt, None)
-        if x is None:
-            # we have a new type to search in the db...
-            # and have to deal now with the c++ cases where the elt
-            # is the short name of the type without namespace qualifier and
-            # usually without the 'class' or 'struct' keyword.
-            rex = r"(?:(?:class|struct)\s+)?(?:.*::)?%s$"%escape(elt)
-            L = db.search(where("id").matches(rex))
+        if elt not in ctx:
+            xt = cxx_type(elt)
+            t = xt.show_base(kw=False,ns=False,tp=False)
+            # we start by adding the needed namespace(s).
+            # This is needed because a namespace could actually be a
+            # type or template-specialization in which case we wont
+            # necessary get them from just unfolding our base type.
+            for e in xt.ns:
+                self.add_subtype(db, e, ctx)
+                last_ns = ctx[e]
+                while last_ns._is_typedef:
+                    last_ns = last_ns.subtypes[str(last_ns)]
+            # let's search at least for the most basic typename:
+            # but allow any keywords and namespace:
+            r = r"(?:(?:class|struct|enum)\s+)?(?:.*::)?%s"%escape(t)
+            if xt.tp:
+                # add any template args if we are searching for a template
+                # or fully specialized class
+                r += r"(?:<.*>)$"
+                Q = where("cls").one_of(("cTemplate","cClass"))
+                Q &= where("id").matches(r)
+                tpargs = xt.tp_args()
+                for e in (arg for arg in tpargs if arg not in ctx):
+                    if isinstance(e,str):
+                        self.add_subtype(db, e, ctx)
+            else:
+                r += r"(?:<.*>)?$"
+                Q = where("id").matches(r)
+            L = db.search(Q)
             data = None
-            for t in L:
-                tid = t["id"]
-                pos = tid.find(elt)
-                if pos==0 or (pos>0 and tid[pos-1] in ' :'):
-                    data = t
+            candidates = []
+            # now we want the best match...
+            for e in L:
+                et = cxx_type(e['id'])
+                # any exact match wins the race:
+                if et == xt:
+                    candidates = [e]
                     break
+                # skip template args count mismatch:
+                if xt.tp and len(tpargs)!=len(et.tp_args()):
+                    continue
+                if e["cls"]=="cTemplate":
+                    c = e["val"]["cClass"]
+                    if len(c)==0:
+                        # skip primary template declarations
+                        continue
+                    candidates.append(e)
+                else:
+                    # full spec (classes) are prepended to have
+                    # higher priority:
+                    if xt.tp:
+                        candidates.insert(0,e)
+            if len(candidates)>1:
+                # if we have several candidates, probably template-based,
+                # we have to choose the correct specialisation...
+                # TODO
+                pass
+            for data in candidates:
+                break
             if data:
                 x = ccore.from_db(data)
-                ccore._cache_[elt] = x
-                if x.identifier != elt:
-                    ccore._cache_[x.identifier] = x
+                ctx[elt] = x
+                # add variant w/o keyword w/namespace etc
+                ctx[xt.show_base(kw=False,ns=True)] = x
+                # add name from the exact identifier found in db
+                et = cxx_type(x.identifier)
+                ctx[et.show_base(kw=False,ns=True)] = x
+                # also add the bare template name to cache:
+                if x._is_template and not x["partial_specialization"]:
+                    ctx[et.show_base(kw=False,ns=True,tp=False)] = x
+                if not x._is_namespace:
+                    self.subtypes[elt] = x.unfold(db, ctx)
             else:
+                ctx[elt] = {}
                 self.subtypes[elt] = None
-                return
-        self.subtypes[elt] = x.unfold(db, limit)
 
     def graph(self,db,V=None,g=None):
         """
@@ -137,24 +192,17 @@ class ccore(object):
 
     @staticmethod
     def getcls(name):
-        if name == "cTypedef":
-            return cTypedef
-        if name == "cStruct":
-            return cStruct
-        if name == "cUnion":
-            return cUnion
-        if name == "cEnum":
-            return cEnum
-        if name == "cMacro":
-            return cMacro
-        if name == "cFunc":
-            return cFunc
-        if name == "cClass":
-            return cClass
-        if name == "cTemplate":
-            return cTemplate
-        if name == "cNamespace":
-            return cNamespace
+        match name:
+            case "cTypedef"  : return cTypedef
+            case "cStruct"   : return cStruct
+            case "cUnion"    : return cUnion
+            case "cEnum"     : return cEnum
+            case "cMacro"    : return cmacro
+            case "cFunc"     : return cFunc
+            case "cClass"    : return cClass
+            case "cTemplate" : return cTemplate
+            case "cNamespace": return cNamespace
+            case "cTypealias": return cTypealias
 
     def to_db(self, identifier, tag, src):
         """
@@ -171,9 +219,11 @@ class ccore(object):
             doc["tag"] = tag
         data = [doc]
         if hasattr(self, "local"):
-            for i, x in iter(self.local.items()):
+            ns = cxx_type(identifier)
+            lsrc = "%s::%s"%(src,ns.show(kw=False))
+            for i, x in self.local.items():
                 if x:
-                    data.extend(x.to_db(i, tag, identifier))
+                    data.extend(x.to_db(i, tag, lsrc))
         return data
 
     @staticmethod
@@ -190,6 +240,9 @@ class ccore(object):
         val = ccore.getcls(data["cls"])(data["val"])
         val.identifier = identifier
         val.subtypes = None
+        val.tag = data["tag"]
+        par = data["src"].find("::")
+        val.ns = data["src"][par+2:] if par>0 else ""
         return val
 
 
@@ -205,25 +258,33 @@ class cTypedef(str, ccore):
     """
     _is_typedef = True
 
-    def unfold(self, db, limit=None, ctx=None):
+    def unfold(self, db, ctx=None):
         """
         Unfolding a typedef simply adds its underlying type definition to subtypes.
         """
+        ctx = ctx or OrderedDict(struct_letters)
+        ctx[self.identifier] = self
         if self.subtypes is None:
             self.subtypes = OrderedDict()
-            ctype = c_type(self)
-            if limit != None:
-                if limit <= 0 and ctype.is_ptr:
-                    return self
+            ctype = cxx_type(self) # cxx_type is a child of c_type
             elt = ctype.lbase
-            if elt not in struct_letters:
-                if limit:
-                    limit -= 1
-                self.add_subtype(db, elt, limit)
+            if elt not in ctx:
+                # add_subtype is always given the more complete elt string
+                # incuding keyword, namespace and/or template. It will
+                # manage to fill the ccore._cache_ with variants
+                self.add_subtype(db, elt, ctx)
         return self
 
     def __eq__(self, other):
         return str(self) == str(other)
+
+    def __hash__(self):
+        return hash(str(self))
+
+
+class cTypealias(cTypedef):
+    """A c++ "using" alias declaration is nothing more than a typedef."""
+    pass
 
 
 # ------------------------------------------------------------------------------
@@ -245,25 +306,19 @@ class cStruct(list, ccore):
     """
     _is_struct = True
 
-    def unfold(self, db, limit=None):
+    def unfold(self, db, ctx=None):
         """
         Unfolding a struct adds all its fields' types to subtypes.
         """
+        ctx = ctx or OrderedDict(struct_letters)
+        ctx[self.identifier] = self
         if self.subtypes is None:
             self.subtypes = OrderedDict()
-            T = list(struct_letters.keys())
-            T.append(self.identifier)
             for (t, n, c) in self:
                 ctype = c_type(t)
-                if limit != None:
-                    if limit <= 0 and ctype.is_ptr:
-                        continue
                 elt = ctype.lbase
-                if elt not in T:
-                    T.append(elt)
-                    if limit:
-                        limit -= 1
-                    self.add_subtype(db, elt, limit)
+                if elt not in ctx:
+                    self.add_subtype(db, elt, ctx)
         return self
 
     def index_of(self,n):
@@ -301,28 +356,33 @@ class cClass(list, ccore):
     """
     _is_class = True
 
-    def unfold(self, db, limit=None):
+    def unfold(self, db, ctx=None):
+        # ctx is our internal list of known types, so we start with
+        # the raw types and ourself
+        ctx = ctx or OrderedDict(struct_letters)
+        n = cxx_type(self.identifier).show_base(kw=False, ns=True)
+        ctx[n] = self
         if self.subtypes is None:
             self.subtypes = OrderedDict()
-            T = list(struct_letters.keys())
-            T.append(self.identifier)
+            # now for each field we will search db for a matching type:
             for (x, y, _) in self:
                 qal, t = x
                 mn, n = y
                 if qal == "parent":
-                    elt = [n]
+                    elts = [n]
                 elif qal == "using":
-                    elt = t
+                    elts = t
                 else:
                     if mn or ("virtual" in qal):
+                        # we skip types related to methods since they
+                        # have no influence of the class layout
                         continue
-                    elt = cxx_type(t)
-                    elt = elt.show_base(kw=True, ns=True)
-                    elt = [elt]
-                for e in elt:
-                    if e not in T:
-                        T.append(e)
-                        self.add_subtype(db, e, limit)
+                    elts = [t]
+                for t in elts:
+                    xxt = cxx_type(t)
+                    elt = xxt.show_base(kw=False, ns=True)
+                    if elt not in ctx:
+                        self.add_subtype(db, elt, ctx)
         return self
 
     def build(self, db):
@@ -464,22 +524,16 @@ class cUnion(list, ccore):
     """
     _is_union = True
 
-    def unfold(self, db, limit=None):
+    def unfold(self, db, ctx=None):
+        ctx = ctx or OrderedDict(struct_letters)
+        ctx[self.identifier] = self
         if self.subtypes is None:
             self.subtypes = OrderedDict()
-            T = list(struct_letters.keys())
-            T.append(self.identifier)
             for (t, n, c) in self:
                 ctype = c_type(t)
-                if limit != None:
-                    if limit <= 0 and ctype.is_ptr:
-                        continue
                 elt = ctype.lbase
-                if elt not in T:
-                    T.append(elt)
-                    if limit:
-                        limit -= 1
-                    self.add_subtype(db, elt, limit)
+                if elt not in ctx:
+                    self.add_subtype(db, elt, ctx)
         return self
 
     def index_of(self,n):
@@ -535,18 +589,17 @@ class cFunc(dict, ccore):
             return t.pstack[-1].args
         return []
 
-    def unfold(self, db, limit=None):
+    def unfold(self, db, ctx=None):
+        ctx = ctx or OrderedDict(struct_letters)
         if self.subtypes is None:
             self.subtypes = OrderedDict()
-            T = list(struct_letters.keys())
             rett = self.restype()
             args = self.argtypes()
             args.insert(0, rett)
             for t in args:
                 elt = c_type(t).lbase
-                if elt not in T:
-                    T.append(elt)
-                    self.add_subtype(db, elt)
+                if elt not in ctx:
+                    self.add_subtype(db, elt, ctx)
         return self
 
     def __eq__(self, other):
@@ -572,6 +625,49 @@ class cTemplate(dict, ccore):
     def get_template(self):
         return "<%s>" % (",".join(self["params"]))
 
+    def get_typenames(self):
+        param = pp.nestedExpr('[',']',ignoreExpr=None)
+        TN = []
+        for t in self['params']:
+            p = param.parse_string("[%s]"%t)[0]
+            for t,tn in pairwise(p):
+                if t=="typename":
+                    TN.append(tn)
+        return TN
+
+    def unfold(self, db, ctx=None):
+        ctx = ctx or OrderedDict(struct_letters)
+        n = cxx_type(self.identifier).show_base(kw=False, ns=True)
+        ctx[n] = self
+        if self.subtypes is None:
+            self.subtypes = OrderedDict()
+            for t in self.get_typenames():
+                ctx[t] = True
+            for (x, y, _) in self['cClass']:
+                qal, t = x
+                mn, n = y
+                if qal == "parent":
+                    elts = [n]
+                elif qal == "using":
+                    elts = t
+                else:
+                    if mn or ("virtual" in qal):
+                        # we skip types related to methods since they
+                        # have no influence of the class layout
+                        continue
+                    elts = [t]
+                for t in elts:
+                    xxt = cxx_type(t)
+                    elt = xxt.show_base(kw=False, ns=True)
+                    btn = xxt.show_base(kw=False, ns=False, tp=False)
+                    if btn in ctx:
+                        continue
+                    if elt not in ctx:
+                        self.add_subtype(db, elt, ctx)
+            for t in self.get_typenames():
+                del ctx[t]
+        return self
+
 
 # ------------------------------------------------------------------------------
 
@@ -582,13 +678,13 @@ class cNamespace(list, ccore):
     """
     _is_namespace = True
 
-    def unfold(self, db, limit=None):
+    def unfold(self, db, ctx=None):
+        ctx = ctx or OrderedDict(struct_letters)
+        ctx[self.identifier] = self
         if self.subtypes is None:
             self.subtypes = OrderedDict()
-            T = list(struct_letters.keys())
-            T.append(self.identifier)
             for elt in self:
-                self.add_subtype(db, elt)
+                self.add_subtype(db, elt, ctx)
         return self
 
     def __eq__(self, other):

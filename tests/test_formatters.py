@@ -8,7 +8,7 @@ from ccrawl.formatters import *
 def test_format_C(configfile, c_header):
     c = conf.Config(configfile)
     conf.config = c
-    defs = list(parse(c_header, tag="test"))
+    defs = list(parse(c_header, tag="test").values())
     x = ccore.from_db(defs[0])
     assert x._is_macro
     assert x.show(form="C") == "#define MYCONST  0x10;"
@@ -37,7 +37,7 @@ def test_format_C(configfile, c_header):
 def test_format_ctypes(configfile, c_header):
     c = conf.Config(configfile)
     conf.config = c
-    defs = list(parse(c_header, tag="test"))
+    defs = list(parse(c_header, tag="test").values())
     x = ccore.from_db(defs[0])
     assert x._is_macro
     assert x.show(form="ctypes") == "MYCONST = 16"
@@ -72,7 +72,7 @@ struct__mystruct._fields_ = [("I", myinteger),
 def test_format_amoco(configfile, c_header):
     c = conf.Config(configfile)
     conf.config = c
-    defs = list(parse(c_header, tag="test"))
+    defs = list(parse(c_header, tag="test").values())
     x = ccore.from_db(defs[0])
     assert x._is_macro
     assert x.show(form="amoco") == "MYCONST = 0x10"

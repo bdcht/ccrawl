@@ -242,16 +242,9 @@ def collect(ctx, allc, strict, recon, xclang, outgraph, nocxx, cxx, src):
             return -1
         if len(l) > 0:
             # remove already processed/included files
-            already_done.union(set([el["src"] for el in l]))
+            already_done.union(set([el["src"] for el in l.values()]))
             # aggregate cFunc instances and remove duplicates in dbo:
-            for x in l:
-                if x["cls"] == "cFunc":
-                    kpad = x["id"] + x["val"]["prototype"]
-                    if (kpad not in dbo) or (x["val"]["locs"] or x["val"]["calls"]):
-                        dbo[kpad] = x
-                else:
-                    kpad = x["id"] + x["src"]
-                    dbo[kpad] = x
+            dbo.update(l)
         t2 = time.time()
         if c.Terminal.timer:
             click.secho("%.2f)" % (t2 - t1), fg="cyan")

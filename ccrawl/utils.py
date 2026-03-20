@@ -48,9 +48,17 @@ rawtypes = pp.Optional(prefix) + pp.Or(T)
 pstars = pp.Group(pp.Regex(r"\*+") + pp.Optional(const, default=""))
 ampers = pp.Regex("&+")
 # define structured types (struct,union,enum):
-symbol = pp.Regex(r"[?]?[A-Za-z_:<>][A-Za-z0-9_:<>$]*")
+tpl = pp.nestedExpr("<",">",content=pp.Regex(r"[^<>]+"),ignoreExpr=None)
+symbol = pp.Regex(r"[?]?[A-Za-z_][A-Za-z0-9_$]*")+pp.Optional(tpl,default="")
+def flatten_symbol(r):
+    if not r[1]:
+        return r[0]
+    else:
+        return r[0]+flatten(r[1].asList(),'<%s>','')
+symbol.setParseAction(flatten_symbol)
 structured = pp.oneOf("struct union enum class")
-strucdecl = pp.Optional(prefix) + pp.Optional(structured) + symbol
+strucdecl =  pp.Optional(prefix) + pp.Optional(structured) 
+strucdecl += pp.DelimitedList(symbol,'::',combine=True)
 # define objecttype:
 objecttype = pp.Or([rawtypes, strucdecl])
 # define arrays:
@@ -118,9 +126,13 @@ class c_type(object):
                 pass
             elif w == "volatile":
                 self.lvolatile = True
+            elif isinstance(w,list):
+                # on a template arguments
+                lbase.insert(-1,flatten(w,sep="<%s>",pad=""))
             else:
                 lbase.append(w)
-        self.lbase = " ".join(lbase)
+                lbase.append(" ")
+        self.lbase = "".join(lbase).strip()
         r = r.replace("[]", "*")
         r = "(%s)" % r
         try:
@@ -152,7 +164,7 @@ class c_type(object):
         s.append("{0.lbase}>".format(self))
         return " ".join(s)
 
-    def show_base(self, kw=False, ns=False):
+    def show_base(self, kw=False, ns=False, tp=True):
         """
         returns the string that represents the base type
         with possibly additional 'const' and 'unsigned'
@@ -205,26 +217,37 @@ class cxx_type(c_type):
     """
     def __init__(self, decl):
         super().__init__(decl)
+        full_typename = pp.DelimitedList(symbol,'::')
         # get namespaces:
         self.kw = ""
-        self.ns = ""
-        k = self.lbase.find(" ")
-        if k > 0:
-            self.kw = self.lbase[:k]
-        x = self.lbase.rfind("::")
-        if x > 0:
-            self.ns = self.lbase[k + 1 : x + 2]
+        self.ns = []
+        self.tp = ""
+        try:
+            self.kw = structured.parse_string(self.lbase)[0]
+            k = self.lbase.find(" ")
+        except Exception:
+            k = -1
+        r = full_typename.parse_string(self.lbase[k+1:]).asList()
+        t = r.pop()
+        self.ns = r
+        sta = t.find('<')
+        sto = t.rfind('>')
+        if sta>0 and sto>0:
+            self.tp = t[sta:sto+1]
 
     @property
     def is_method(self):
         return fargs in [type(p) for p in self.pstack]
 
-    def show_base(self, kw=False, ns=False):
+    def show_base(self, kw=False, ns=False, tp=True):
         lbase = self.lbase
         if not kw:
             lbase = lbase.replace(self.kw, "", 1)
-        if not ns:
-            lbase = lbase.replace(self.ns, "", 1)
+        if not ns and self.ns:
+            ns = "::".join(self.ns) + "::"
+            lbase = lbase.replace(ns, "", 1)
+        if not tp:
+            lbase = lbase.replace(self.tp, "", 1)
         s = [lbase]
         if self.lunsigned:
             s.insert(0, "unsigned")
@@ -250,6 +273,23 @@ class cxx_type(c_type):
         extra = " : %d" % self.lbfw if self.lbfw else ""
         s = ("%s %s" % (self.show_base(kw, ns), self.show_ptr(name))).strip()
         return s + extra
+
+    def tp_args(self):
+        if self.tp:
+            R = []
+            for r in tpl.parseString(self.tp).asList()[0]:
+                if isinstance(r,list):
+                    R[-1] = R[-1]+flatten(r,'<%s>','')
+                else:
+                    el = strucdecl|intp|pp.Empty()
+                    R += pp.DelimitedList(el).parse_string(r).as_list()
+            return R
+        return None
+
+    def __eq__(self, other):
+        et = self.show_base(ns=True)
+        ot = other.show_base(ns=True)
+        return et==ot
 
 
 # ------------------------------------------------------------------------------
@@ -374,14 +414,14 @@ def pstack(plist, cls=c_type):
     return S
 
 
-def flatten(args):
+def flatten(args,sep='(%s)',pad=" "):
     s = []
     for x in args:
         if not isinstance(x, list):
             s.append(x)
         else:
-            s.append(flatten(x))
-    return "(%s)" % (" ".join(s))
+            s.append(flatten(x,sep,pad))
+    return sep % (pad.join(s))
 
 
 def indent(txt, l=4):

@@ -40,7 +40,7 @@ def test_parser_c(configfile, c_header):
     c.Collect.strict = False
     c.Collect.cxx = False
     conf.config = c
-    defs = list(parse(c_header, tag="test"))
+    defs = list(parse(c_header, tag="test").values())
     assert defs[0]["cls"] == "cMacro"
     assert defs[0]["id"] == "MYCONST"
     assert defs[0]["tag"] == "test"
@@ -57,7 +57,7 @@ def test_parser_cxx(configfile, cxx_myclass):
     c.Collect.strict = False
     c.Collect.cxx = True
     conf.config = c
-    defs = list(parse_string(cxx_myclass))
+    defs = list(parse_string(cxx_myclass,tag="test").values())
     assert len(defs) == 1
     x = ccore.from_db(defs[0])
     assert x._is_class
