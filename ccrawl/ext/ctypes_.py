@@ -1,4 +1,5 @@
 from ccrawl import conf
+from ccrawl.core import ccore
 from ccrawl.formatters.ctypes_ import toCTypes
 from ccrawl.utils import c_type, cxx_type, fargs, pp
 from click import secho
@@ -73,7 +74,7 @@ def build(obj, db, Types={}, _bstack=[]):
     if obj.subtypes is None:
         obj.unfold(db)
     for subtype in obj.subtypes.values() or []:
-        if early_exit or (subtype is None):
+        if early_exit or not isinstance(subtype,ccore):
             continue
         build(subtype, db, Types, _bstack)
     if obj._is_typedef:

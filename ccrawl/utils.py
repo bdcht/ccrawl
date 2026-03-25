@@ -17,6 +17,9 @@ struct_letters = {
     "ssize_t": "n",
     "size_t": "N",
     "wchar_t": "L",
+    "bool": "?",
+    "float complex": "F",
+    "double complex": "D",
 }
 
 # C and C++ type declaration parsers:

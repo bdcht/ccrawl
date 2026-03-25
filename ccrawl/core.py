@@ -160,6 +160,8 @@ class ccore(object):
             else:
                 ctx[elt] = {}
                 self.subtypes[elt] = None
+        else:
+            self.subtypes[elt] = ctx[elt]
 
     def graph(self,db,V=None,g=None):
         """
@@ -197,7 +199,7 @@ class ccore(object):
             case "cStruct"   : return cStruct
             case "cUnion"    : return cUnion
             case "cEnum"     : return cEnum
-            case "cMacro"    : return cmacro
+            case "cMacro"    : return cMacro
             case "cFunc"     : return cFunc
             case "cClass"    : return cClass
             case "cTemplate" : return cTemplate
@@ -268,11 +270,10 @@ class cTypedef(str, ccore):
             self.subtypes = OrderedDict()
             ctype = cxx_type(self) # cxx_type is a child of c_type
             elt = ctype.lbase
-            if elt not in ctx:
-                # add_subtype is always given the more complete elt string
-                # incuding keyword, namespace and/or template. It will
-                # manage to fill the ccore._cache_ with variants
-                self.add_subtype(db, elt, ctx)
+            # add_subtype is always given the more complete elt string
+            # incuding keyword, namespace and/or template. It will
+            # manage to fill the ctx with variants
+            self.add_subtype(db, elt, ctx)
         return self
 
     def __eq__(self, other):
@@ -317,8 +318,7 @@ class cStruct(list, ccore):
             for (t, n, c) in self:
                 ctype = c_type(t)
                 elt = ctype.lbase
-                if elt not in ctx:
-                    self.add_subtype(db, elt, ctx)
+                self.add_subtype(db, elt, ctx)
         return self
 
     def index_of(self,n):
@@ -360,7 +360,7 @@ class cClass(list, ccore):
         # ctx is our internal list of known types, so we start with
         # the raw types and ourself
         ctx = ctx or OrderedDict(struct_letters)
-        n = cxx_type(self.identifier).show_base(kw=False, ns=True)
+        n = cxx_type(self.identifier).show_base(ns=True)
         ctx[n] = self
         if self.subtypes is None:
             self.subtypes = OrderedDict()
@@ -380,9 +380,8 @@ class cClass(list, ccore):
                     elts = [t]
                 for t in elts:
                     xxt = cxx_type(t)
-                    elt = xxt.show_base(kw=False, ns=True)
-                    if elt not in ctx:
-                        self.add_subtype(db, elt, ctx)
+                    elt = xxt.show_base(ns=True)
+                    self.add_subtype(db, elt, ctx)
         return self
 
     def build(self, db):
@@ -416,16 +415,15 @@ class cClass(list, ccore):
             # we start by handling parent classes:
             if qal == "parent":
                 n = cxx_type(n)
-                nn = n.show_base()
-                name = n.show_base(True, True)
-                x = ccore._cache_.get(name, None)
+                nn = n.show_base(ns=True)
+                x = self.subtypes.get(nn, None)
                 try:
                     if x._is_typedef:
-                        x = ccore._cache_.get(x, None)
+                        x = x.subtypes.get(x, None)
                 except Exception:
                     pass
                 if x is None:
-                    raise TypeError("unkown type '%s'" % n)
+                    raise TypeError("unkown type '%s'" % nn)
                 assert x._is_class
                 # get layout of the parent class:
                 vtbl, m, v = x.cStruct_build_info(db)
@@ -468,8 +466,7 @@ class cClass(list, ccore):
         vptr, M, V = self.cStruct_build_info(db)
         if len(M) > 0 and vptr:
             if not M[0][1].startswith("__vptr"):
-                n = cxx_type(self.identifier)
-                x.append(("void *", "__vptr$%s" % n.show_base(), ""))
+                x.append(("void *", "__vptr$%s" % name.show_base(), ""))
         for t, n in M:
             x.append((t.show(), n, ""))
         for nn, v in V.items():
@@ -532,8 +529,7 @@ class cUnion(list, ccore):
             for (t, n, c) in self:
                 ctype = c_type(t)
                 elt = ctype.lbase
-                if elt not in ctx:
-                    self.add_subtype(db, elt, ctx)
+                self.add_subtype(db, elt, ctx)
         return self
 
     def index_of(self,n):
@@ -598,8 +594,7 @@ class cFunc(dict, ccore):
             args.insert(0, rett)
             for t in args:
                 elt = c_type(t).lbase
-                if elt not in ctx:
-                    self.add_subtype(db, elt, ctx)
+                self.add_subtype(db, elt, ctx)
         return self
 
     def __eq__(self, other):
@@ -650,8 +645,12 @@ class cTemplate(dict, ccore):
                     elts = [n]
                 elif qal == "using":
                     elts = t
+                elif qal == "friend":
+                    # we skip friend decl since they only indicate
+                    # that those friends can access our attributes
+                    continue
                 else:
-                    if mn or ("virtual" in qal):
+                    if mn or ("virtual" in qal) :
                         # we skip types related to methods since they
                         # have no influence of the class layout
                         continue
@@ -662,10 +661,10 @@ class cTemplate(dict, ccore):
                     btn = xxt.show_base(kw=False, ns=False, tp=False)
                     if btn in ctx:
                         continue
-                    if elt not in ctx:
-                        self.add_subtype(db, elt, ctx)
+                    self.add_subtype(db, elt, ctx)
             for t in self.get_typenames():
-                del ctx[t]
+                if t in ctx:
+                    del ctx[t]
         return self
 
 

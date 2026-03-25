@@ -1,4 +1,5 @@
 from click import secho
+from ccrawl.core import ccore
 from ccrawl.formatters.amoco import id_amoco, c_type, cxx_type, fieldformat
 from pyparsing import ParseException
 
@@ -34,9 +35,8 @@ else:
         if obj.subtypes is None:
             obj.unfold(db)
         for subtype in (obj.subtypes.values() or []):
-            if subtype is None:
-                continue
-            build(subtype, db, _bstack)
+            if isinstance(subtype,ccore):
+                build(subtype, db, _bstack)
         if obj._is_typedef:
             t = c_type(obj)
             rn, n = fieldformat(t)
@@ -145,6 +145,13 @@ A_to_C = {
   'L' : 'unsigned long',
   'q' : 'long long',
   'Q' : 'unsigned long long',
+  'n' : 'ssize_t',
+  'N' : 'size_t',
+  '?' : 'bool',
+  'f' : 'float',
+  'd' : 'double',
+  'F' : 'float complex',
+  'D' : 'double complex',
 }
 
 __r = 0

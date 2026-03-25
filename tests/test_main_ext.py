@@ -4,7 +4,7 @@ from click.testing import CliRunner
 from ccrawl.main import *
 
 
-def test_ctypes_01(dbfile):
+def test_ctypes_01(configfile,dbfile):
     runner = CliRunner()
     inc = os.path.dirname(__file__)
     result = runner.invoke(
@@ -12,9 +12,11 @@ def test_ctypes_01(dbfile):
         [
             "-l",
             dbfile,
+            "-c",
+            configfile,
             "collect",
             "--clang",
-            '"-I%s/samples"' % inc,
+            "-I%s/samples/xxx" % inc,
             os.path.join(
                 inc,
                 "samples/header.h",
@@ -35,14 +37,16 @@ def test_ctypes_01(dbfile):
     ccore._cache_ = {}
 
 
-def test_ctypes_02(dbfile):
+def test_ctypes_02(configfile,dbfilexx):
     runner = CliRunner()
     inc = os.path.dirname(__file__)
     result = runner.invoke(
         cli,
         [
             "-l",
-            dbfile,
+            dbfilexx,
+            "-c",
+            configfile,
             "collect",
             "-a",
             "--cxx",
@@ -52,7 +56,7 @@ def test_ctypes_02(dbfile):
     assert result.exit_code == 0
     conf.config = conf.Config()
     conf.config.Database.url = u""
-    conf.config.Database.local = dbfile
+    conf.config.Database.local = dbfilexx
     db = Proxy(conf.config.Database)
     x = ccore.from_db(db.get(where("id") == "struct K"))
     assert x._is_class
@@ -72,12 +76,24 @@ def test_ctypes_02(dbfile):
     assert f[10][0] == "h"
 
 
-def test_amoco_01(dbfile):
+def test_amoco_01(configfile,dbfile):
     runner = CliRunner()
     inc = os.path.dirname(__file__)
     result = runner.invoke(
         cli,
-        ["-l", dbfile, "collect", os.path.join(inc, "samples/header.h")],
+        [
+            "-l",
+            dbfile,
+            "-c",
+            configfile,
+            "collect",
+            "--clang",
+            "-I%s/samples/xxx" % inc,
+            os.path.join(
+                inc,
+                "samples/header.h",
+            ),
+        ],
     )
     assert result.exit_code == 0
     conf.config = conf.Config()

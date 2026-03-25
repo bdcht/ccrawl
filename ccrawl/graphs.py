@@ -101,14 +101,13 @@ def do_graph(obj,V,g):
     else:
         v = Node(obj)
         V[obj.identifier] = v
-    if obj._is_struct or obj._is_union:
+    if obj._is_struct or obj._is_union or obj._is_class:
         # we walk the struct/union fields to
         # set the edge's data from the field's accessor
         def _walk(o):
             for (t,n,c) in o:
-                ct = c_type(t)
-                elt = ct.lbase
-                # we ignore raw C types (int, float, ...)
+                ct = cxx_type(t)
+                elt = ct.show_base(ns=True)
                 if elt in o.subtypes:
                     # get the ccore oect for this type:
                     x = o.subtypes[elt]
@@ -117,10 +116,9 @@ def do_graph(obj,V,g):
         # otherwise we walk from the subtypes:
         def _walk(o):
             for elt,x in o.subtypes.items():
-                # (ignoring raw C types also)
-                if elt in o.subtypes:
+                if isinstance(o,ccore):
                     if o._is_typedef:
-                        ct = c_type(o)
+                        ct = cxx_type(o)
                         l = ct.show_ptr("")
                     else:
                         l = None
@@ -144,9 +142,7 @@ def do_graph(obj,V,g):
         # if not done already, add node and recurse if possible:
         if elt not in V:
             V[elt] = vd
-            if x is not None:
-                assert vd.data==x
-                assert x.identifier==elt
+            if isinstance(x,ccore):
                 do_graph(x,V,g)
 
 def get_typegraph_cycles_params(g,r=None):

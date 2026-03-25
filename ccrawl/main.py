@@ -564,8 +564,6 @@ def struct(ctx, pdef, pointer, conds):
             x = ccore.from_db(l)
             name = x.identifier
             try:
-                if x._is_class:
-                    x = x.as_cStruct(db)
                 ax = amoco.build(x,db)
                 t = ax()
                 F,SZ = zip(*(t.offsets(psize=pointer)))

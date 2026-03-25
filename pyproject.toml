@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[bdist.wheel]
+universal = 0
+
+[tool.ruff.lint]
+ignore = ["E402", #Module level import not at top of file
+          "E731", #Do not assign a `lambda` expression, use a `def`
+          "E741", #Ambiguous variable name
+          "E743", #Ambiguous function name
+         ]
+
+[tool.ruff.format]
+indent-style = "space"
