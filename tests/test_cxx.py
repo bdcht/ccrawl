@@ -53,6 +53,19 @@ def test_L2(configfile,dbfilexx):
     c.Database.local = dbfilexx
     db = Proxy(c.Database)
     x = ccore.from_db(db.get(where("id")=="L2"))
+    t = str(x)
+    assert t=='L1::Level2<bars::Bar>'
+    x.unfold(db)
+    assert 'L1' in x.subtypes
+    assert 'bars' in x.subtypes
+    assert 'bars::Bar' in x.subtypes
+    assert t in x.subtypes
+    xt = x.subtypes[t]
+    assert xt.identifier == 'struct Level2<T1>'
+    assert xt.ns == 'Level1<T0>'
+    l1 = x.subtypes['L1']
+    assert 'struct Level1<bars::Bar<void>>' in l1.subtypes
+    assert 'bars::Bar<void>' in l1.subtypes
 
 
 
