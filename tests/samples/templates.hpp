@@ -39,7 +39,7 @@ template<class T1>
 class A<T1*, Foo<char>, 8> {};
 
 template<>
-class A<int, sA<char>, 8> {};
+class A<int, sA<char>, (2<<3) > {};
 
 struct Printer { // generic functor
     std::ostream& os;
@@ -53,21 +53,21 @@ namespace bars {
     template<typename T>
     class Bar {
      T t;
-    }
+    };
     
     template<>
     class Bar<void> {
         sA<int> t;
-    }
+    };
     
     template<typename T1, typename T2 = Foo<char>>
     class Bar2 {
      T1 t1;
      T2 t2;
-     sA<Foo<T2>, 100> sa;
-    }
+     sA<Foo<T2>, (100>>2) > sa;
+    };
 
-}
+};
 
 template <typename T0>                         // Level 0: T0 is type-parameter-0-0
 struct Level1 {

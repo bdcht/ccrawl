@@ -30,7 +30,7 @@ setup(
         "pytest",
     ],
     install_requires=[
-        "libclang==14.0.1",
+        "libclang==18.1.1",
         "click",
         "traitlets",
         "pyparsing",

@@ -224,25 +224,82 @@ def EnumDecl(cur, cxx, errors=None):
         secho("  %s: %s" % (S.__class__.__name__, typename))
     return typename, S
 
+
+def get_cur_source(cur):
+    start = cur.extent.start.offset
+    end   = cur.extent.end.offset
+    with open(cur.location.file.name, 'r') as f:
+        f.seek(start)
+        return f.read(end-start)
+
+def parse_template_type_parameter(x):
+    toks = [r.spelling for r in get_all_tokens(x)]
+    is_pack = '...' in toks
+    param = cTemplate.template_type_param(pack=is_pack)
+    param['tn'] = x.type.spelling
+    if '=' in toks:
+        off = toks.index('=')+1
+        param['df'] = ''.join(toks[off:])
+    param['src'] = get_cur_source(x)
+    return param
+
+def parse_template_non_type_parameter(x):
+    toks = [r.spelling for r in get_all_tokens(x)]
+    is_pack = '...' in toks
+    param = cTemplate.template_non_type_param(pack=is_pack)
+    param['ty'] = x.type.spelling
+    param['nm'] = x.spelling
+    if '=' in toks:
+        off = toks.index('=')+1
+        param['df'] = ''.join(toks[off:])
+    param['src'] = get_cur_source(x)
+    return param
+
+def parse_template_template_parameter(x):
+    global g_indent
+    toks = [r.spelling for r in get_all_tokens(x)]
+    pp = get_template_params(x)
+    param = cTemplate.template_template_param(tp=pp)
+    s = get_cur_source(x)
+    is_pack = '...' in toks
+    param['pack'] = is_pack
+    param['tn'] = x.spelling
+    if '=' in toks:
+        off = toks.index('=')+1
+        param['df'] = ''.join(toks[off:])
+    param['src'] = s
+    return param
+
 def get_template_params(cur):
+    global g_indent
     p = []
+    if conf.DEBUG:
+        echo("\t"*g_indent + "template params:")
+        g_indent += 1
     for x in cur.get_children():
         match x.kind:
             case CursorKind.TEMPLATE_TYPE_PARAMETER:
-                p.append("typename %s" % x.spelling)
-                print("template type param tokens:",end=' ')
-                print([r.spelling for r in get_all_tokens(x)])
-            case CursorKind.TEMPLATE_TEMPLATE_PARAMETER:
-                pp = get_template_params(x)
-                p.append("template %s typename %s" % (str(pp),x.spelling))
+                if conf.DEBUG:
+                    echo("\t"*g_indent + str(x.kind) + "=" + str(x.spelling))
+                p.append(parse_template_type_parameter(x))
             case CursorKind.TEMPLATE_NON_TYPE_PARAMETER:
-                p.append("%s %s" % (x.type.spelling, x.spelling))
-                print("template non type param tokens:",end=' ')
-                print([r.spelling for r in get_all_tokens(x)])
+                if conf.DEBUG:
+                    echo("\t"*g_indent + str(x.kind) + "=" + str(x.spelling))
+                p.append(parse_template_non_type_parameter(x))
+            case CursorKind.TEMPLATE_TEMPLATE_PARAMETER:
+                if conf.DEBUG:
+                    echo("\t"*g_indent + str(x.kind) + "=" + str(x.spelling))
+                p.append(parse_template_template_parameter(x))
+            case _:
+                break
+    if conf.DEBUG:
+        g_indent -= 1
     return p
 
 @declareHandler(CLASS_TEMPLATE)
 def ClassTemplate(cur, cxx, errors=None):
+    global g_indent
+    g_indent += 1
     identifier = cur.displayname
     p = get_template_params(cur)
     # now we need this to distinguish struct/union/class template:
@@ -263,26 +320,28 @@ def ClassTemplate(cur, cxx, errors=None):
     S = cClass()
     SetStructured(cur, S, errors)
     if conf.VERBOSE:
-        secho("  cTemplate/%s: %s" % (S.__class__.__name__, identifier))
+        secho("\t"*g_indent + "cTemplate/%s: %s" % (S.__class__.__name__, identifier))
     tpl = cTemplate(params=p, cClass=S)
     if S.local:
         tpl.local = S.local
     tpl["partial_specialization"] = False
+    g_indent -= 1
     return identifier, tpl
 
 
 @declareHandler(FUNC_TEMPLATE)
 def FuncTemplate(cur, cxx, errors=None):
+    global g_indent
+    p = get_template_params(cur)
     identifier = cur.spelling
     if conf.DEBUG:
         echo("\t" * g_indent + identifier)
     proto = cur.type.spelling
     if conf.DEBUG:
         echo("\t" * g_indent + proto)
-    p = get_template_params(cur)
     f = re.sub(r"__attribute__.*", "", proto)
     if conf.VERBOSE:
-        secho("  cTemplate/cFunc: %s" % identifier)
+        secho("\t"*g_indent + "cTemplate/cFunc: %s" % identifier)
     return identifier, cTemplate(params=p, cFunc=cFunc(prototype=f))
 
 
@@ -660,7 +719,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
             config = conf.config.Collect
         except AttributeError:
             config = conf.Collect(c=None)
-    cxx_args = ["-x", "c++", "-std=c++11", "-fno-delayed-template-parsing"]
+    cxx_args = ["-x", "c++", "-std=c++17", "-fno-delayed-template-parsing"]
     if config.cxx:
         if filename.endswith(".hpp") or filename.endswith(".cpp"):
             _args.extend(cxx_args)
@@ -811,7 +870,7 @@ def parse_debug(filename, cxx=False):
     ]
     _args += ["-M", "-MG", "-MF%s" % ".depf"]
     if cxx:
-        _args += ["-x", "c++", "-std=c++11", "-fno-delayed-template-parsing"]
+        _args += ["-x", "c++", "-std=c++17", "-fno-delayed-template-parsing"]
     _args += [
         "-I.",
         "-I./xxx",
@@ -987,7 +1046,7 @@ def parseincludes(filename,args=None):
     else:
         _args = args
     if conf.config.Collect.cxx:
-        cxx_args = ["-x", "c++", "-std=c++11"]
+        cxx_args = ["-x", "c++", "-std=c++17"]
         if filename.endswith(".hpp") or filename.endswith(".cpp"):
             _args.extend(cxx_args)
     cxx = "c++" in _args

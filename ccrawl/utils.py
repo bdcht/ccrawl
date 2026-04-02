@@ -51,7 +51,8 @@ rawtypes = pp.Optional(prefix) + pp.Or(T)
 pstars = pp.Group(pp.Regex(r"\*+") + pp.Optional(const, default=""))
 ampers = pp.Regex("&+")
 # define structured types (struct,union,enum):
-tpl = pp.nestedExpr("<",">",content=pp.Regex(r"[^<>]+"),ignoreExpr=None)
+tpl_ignored = pp.Regex("\(.*\)")('ign_exp')|pp.Regex('".*"')('ign_str')
+tpl = pp.nested_expr("<",">", ignore_expr=tpl_ignored)
 symbol = pp.Regex(r"[?]?[A-Za-z_][A-Za-z0-9_$]*")+pp.Optional(tpl,default="")
 def flatten_symbol(r):
     if not r[1]:
@@ -78,7 +79,7 @@ cvref = pp.Or((cvqual, ampers))
 # nested_c captures "pointer to function/array" part of the declaration.
 # this is the tricky part due to the nesting mix of pointer grouping vs.
 # function prototyping using both parenthesis as delimiters!
-nested_par = pp.nestedExpr(content=pp.Regex(r"[^()]+"), ignoreExpr=None)
+nested_par = pp.nested_expr(content=pp.Regex(r"[^()]+"))
 nested_c = pp.OneOrMore(nested_par)
 
 
@@ -284,7 +285,7 @@ class cxx_type(c_type):
                 if isinstance(r,list):
                     R[-1] = R[-1]+flatten(r,'<%s>','')
                 else:
-                    el = strucdecl|intp|pp.Empty()
+                    el = strucdecl|intp|tpl_ignored|pp.Empty()
                     R += pp.DelimitedList(el).parse_string(r).as_list()
             return R
         return None

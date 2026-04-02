@@ -108,7 +108,7 @@ class ccore(object):
                 Q &= where("id").matches(r)
                 tpargs = xt.tp_args()
                 for e in (arg for arg in tpargs if arg not in ctx):
-                    if isinstance(e,str):
+                    if isinstance(e,str) and e[0] not in '("':
                         self.add_subtype(db, e, ctx)
             else:
                 r += r"(?:<.*>)?$"
@@ -124,8 +124,10 @@ class ccore(object):
                     candidates = [e]
                     break
                 # skip template args count mismatch:
-                if xt.tp and len(tpargs)!=len(et.tp_args()):
-                    continue
+                etpargs = et.tp_args()
+                if xt.tp and len(tpargs)!=len(etpargs):
+                    if not etpargs or not e['val']['params'][-1]['pack']:
+                        continue
                 if e["cls"]=="cTemplate":
                     c = e["val"]["cClass"]
                     if len(c)==0:
@@ -608,7 +610,51 @@ class cTemplate(dict, ccore):
     """
     Specialized ccore class that is also a 'dict' representing a C++ template.
     """
+    def __init__(self,*args,**kargs):
+        for arg in args:
+            self.update(arg)
+        self.update(kargs)
+        P = self['params']
+        for i,p in enumerate(P):
+            if   'tp' in p:
+                P[i] = self.template_template_param(p)
+            elif 'ty' in p:
+                P[i] = self.template_non_type_param(p)
+            else:
+                P[i] = self.template_type_param(p)
+
     _is_template = True
+    class template_type_param(dict):
+        def __str__(self):
+            s = "typename"
+            if self['pack']:
+                s+='...'
+            if tn:=self.get('tn',None):
+                s += " %s"%tn
+            if df:=self.get('df',None):
+                s += " = %s"%df
+            return s
+
+    class template_template_param(dict):
+        def __str__(self):
+            s = "template <%s> typename"%self['tp']
+            if self['pack']:
+                s+='...'
+            s += " %s"%self['tn']
+            if df:=self.get('df',None):
+                s += " = %s"%df
+            return s
+
+    class template_non_type_param(dict):
+        def __str__(self):
+            s = self['ty']
+            if self['pack']:
+                s+='...'
+            if nm:=self.get('nm',None):
+                s += " %s"%nm
+            if df:=self.get('df',None):
+                s += " = %s"%df
+            return s
 
     def get_basename(self):
         if self.get("partial_specialization", False):
@@ -618,16 +664,13 @@ class cTemplate(dict, ccore):
         return self.identifier[:i]
 
     def get_template(self):
-        return "<%s>" % (",".join(self["params"]))
+        return "<%s>" % (", ".join((p['src'] for p in self["params"])))
 
     def get_typenames(self):
-        param = pp.nestedExpr('[',']',ignoreExpr=None)
         TN = []
-        for t in self['params']:
-            p = param.parse_string("[%s]"%t)[0]
-            for t,tn in pairwise(p):
-                if t=="typename":
-                    TN.append(tn)
+        for p in self['params']:
+            if tn:=p.get('tn',None):
+                TN.append(tn)
         return TN
 
     def unfold(self, db, ctx=None):
