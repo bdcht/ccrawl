@@ -50,9 +50,10 @@ rawtypes = pp.Optional(prefix) + pp.Or(T)
 # define pointer indicators:
 pstars = pp.Group(pp.Regex(r"\*+") + pp.Optional(const, default=""))
 ampers = pp.Regex("&+")
-# define structured types (struct,union,enum):
-tpl_ignored = pp.Regex("\(.*\)")('ign_exp')|pp.Regex('".*"')('ign_str')
+# define template indicators:
+tpl_ignored = pp.Regex(r"\(.*\)")('ign_exp')|pp.Regex('".*"')('ign_str')
 tpl = pp.nested_expr("<",">", ignore_expr=tpl_ignored)
+# define generic symbol with optional template:
 symbol = pp.Regex(r"[?]?[A-Za-z_][A-Za-z0-9_$]*")+pp.Optional(tpl,default="")
 def flatten_symbol(r):
     if not r[1]:
@@ -60,6 +61,7 @@ def flatten_symbol(r):
     else:
         return r[0]+flatten(r[1].asList(),'<%s>','')
 symbol.setParseAction(flatten_symbol)
+# define structured types (struct,union,enum):
 structured = pp.oneOf("struct union enum class")
 strucdecl =  pp.Optional(prefix) + pp.Optional(structured) 
 strucdecl += pp.DelimitedList(symbol,'::',combine=True)
@@ -71,8 +73,10 @@ intp.setParseAction(lambda r: int(r[0]))
 bitfield = pp.Optional(prefix) + symbol + pp.Suppress("#") + intp
 arraydecl = pp.Suppress("[") + intp + pp.Suppress("]")
 arrazdecl = pp.Suppress("[") + pp.Or((intp, symbol)) + pp.Suppress("]")
-pointer = pp.Optional(pstars, default="") + pp.Optional(arraydecl, default=0)
-pointerxx = pp.Optional(ampers, default="") + pp.Optional(arrazdecl, default=0)
+arraylist = pp.OneOrMore(arraydecl)
+arrazlist = pp.OneOrMore(arrazdecl)
+pointer = pp.Optional(pstars, default="") + pp.Optional(arraylist)
+pointerxx = pp.Optional(ampers, default="") + pp.Optional(arrazlist)
 cvref = pp.Or((cvqual, ampers))
 #
 # definitions for nested_c ----------------------------------------------------
@@ -362,6 +366,7 @@ class fargs(object):
             return "%s %s" % (self.f, self.cvr)
         return self.f
 
+# one tricky function ;)
 
 def pstack(plist, cls=c_type):
     """returns the 'stack' of pointers-to array-N-of pointer-to
@@ -374,17 +379,17 @@ def pstack(plist, cls=c_type):
             # we are declaring either a pointer or array,
             # or an array of pointers to previously stacked objs
             p0 = plist[0]
-            p, a = pointer.parseString(p0)
+            p, *A = pointer.parseString(p0)
             if p:
                 S.append(ptr(*p))
-            if a:
+            for a in reversed(A):
                 S.append(arr(a))
-            if not (p or a):
+            if not (p or A):
                 if cxx:
-                    r, a = pointerxx.parseString(p0)
+                    r, *A = pointerxx.parseString(p0)
                     if r:
                         S.append(ptr(r[0], ""))
-                    if a:
+                    for a in reversed(A):
                         S.append(arr(a))
                     plist.pop(0)
                 else:
@@ -399,8 +404,8 @@ def pstack(plist, cls=c_type):
         r = plist.pop()
         if not isinstance(r, list):
             try:
-                r = arraydecl.parseString(r)[0]
-                S.append(arr(r))
+                for a in reversed(arraylist.parseString(r)):
+                    S.append(arr(a))
             except pp.ParseException:
                 if cxx:
                     cvr = cvref.parseString(r)[0]

@@ -107,6 +107,10 @@ def test_c_type_10():
     assert t.lbfw == 3
     assert t.show("x") == "int x : 3"
 
+def test_c_type_mat():
+    t = c_type("char [3][5]")
+    assert t.dim == 3
+
 
 def test_cxx_type_11():
     t = cxx_type("class X::Y &")
@@ -152,3 +156,4 @@ def test_cxx_type_16():
     t = cxx_type("struct A::B::C::D")
     assert "::".join(t.ns) == "A::B::C"
     assert t.show_base() == "D"
+

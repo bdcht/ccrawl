@@ -43,7 +43,7 @@ def test_02_cmd_select(configfile, dbfile):
 
 
 def test_03_cmd_select(configfile, dbfile):
-    runner = CliRunner(mix_stderr=False)
+    runner = CliRunner()
     result = runner.invoke(
         cli, ["-l", dbfile, "-c", configfile, "select", "struct", "*:1"]
     )
