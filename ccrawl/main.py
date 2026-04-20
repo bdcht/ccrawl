@@ -3,6 +3,7 @@ import re
 import time
 import shutil
 import click
+import json
 from ccrawl import conf
 from ccrawl.formatters import formats
 from ccrawl.parser import TYPEDEF_DECL, STRUCT_DECL, UNION_DECL, ENUM_DECL
@@ -150,6 +151,12 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
 )
 @click.option("-s", "--strict", is_flag=True, help="strict mode")
 @click.option("-n", "--recon", is_flag=True, help="run only the preprocessing stage")
+@click.option(
+    "-f",
+    "--files",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    help="path to preprocessed files",
+)
 @click.option("--clang", "xclang", help="parameters passed to clang")
 @click.option(
     "--output-graph", "outgraph",
@@ -164,7 +171,7 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     # help='directory/files with definitions to collect',
 )
 @click.pass_context
-def collect(ctx, allc, strict, recon, xclang, outgraph, nocxx, cxx, src):
+def collect(ctx, allc, strict, recon, files, xclang, outgraph, nocxx, cxx, src):
     """
     Collects types (struct,union,class,...) definitions,
     functions prototypes and/or macro definitions from SRC files/directory.
@@ -204,21 +211,32 @@ def collect(ctx, allc, strict, recon, xclang, outgraph, nocxx, cxx, src):
     ]
     if xclang is not None:
         args += xclang.split(" ")
-    # preprocess all files to compute their dependency graph
-    # allowing to order them and possibly add include directive for each file:
-    FILES,G = preprocess_files(src, args, c.Collect.cxx, c.Collect.allc)
-    if outgraph:
-        L = ["digraph ccrawl {"]
-        for g in G.C:
-            for v in g.V():
-                L.append('"%s"'%v.data)
-            for e in g.E():
-                L.append('"%s" -> "%s" [label="%s"]'%(e.v[0].data,e.v[1].data,e.data))
-        L.append('}')
-        with open(outgraph,"w") as dot:
-            dot.write('\n'.join(L))
-    if recon is True:
-        return 0
+    if not files:
+        # preprocess all files to compute their dependency graph
+        # allowing to order them and possibly add include directive for each file:
+        FILES,G = preprocess_files(src, args, c.Collect.cxx, c.Collect.allc)
+        if outgraph:
+            L = ["digraph ccrawl {"]
+            for g in G.C:
+                for v in g.V():
+                    L.append('"%s"'%v.data)
+                for e in g.E():
+                    L.append('"%s" -> "%s" [label="%s"]'%(e.v[0].data,e.v[1].data,e.data))
+            L.append('}')
+            with open(outgraph,"w") as dot:
+                dot.write('\n'.join(L))
+        if recon is True:
+            fn = "ccrawl_%s.files"%tag
+            with open(fn,"w") as ppfiles:
+                json.dump(FILES,ppfiles)
+                if not c.Terminal.quiet:
+                    click.secho("preprocessed files dumped in '%s'"%fn,fg="green")
+            return 0
+    else:
+        with open(files,'r') as ppfiles:
+            FILES = json.load(ppfiles)
+            if not c.Terminal.quiet:
+                click.secho("preprocessed files loaded.")
     total = len(FILES)
     already_done = set()
     W = c.Terminal.width - 12
@@ -275,7 +293,8 @@ def do_collect(ctx, src):
 
 
 def preprocess_files(src,args,cxx=False,allc=False):
-    click.echo("preprocessing files...",nl=False)
+    if not c.Terminal.quiet:
+        click.echo("preprocessing files...")
     p = "[hHcCiI]" if allc else "[hH]"
     if cxx: p += "|(hpp)|(cpp)"
     rexh = re.compile(r".+\.("+p+")$",flags=re.IGNORECASE)
@@ -288,8 +307,14 @@ def preprocess_files(src,args,cxx=False,allc=False):
                 for f in filter(F, files):
                     filename = "%s/%s" % (dirname, f)
                     FILES.add(filename)
+                    if not c.Terminal.quiet:
+                        click.echo(filename,nl=False)
+                        click.echo('\r',nl=False)
         elif os.path.isfile(D) and F(D):
             FILES.add(D)
+            if not c.Terminal.quiet:
+                click.echo(D,nl=False)
+                click.echo('\r',nl=False)
     res,G = preprocess(FILES,args)
     click.echo("done.")
     return res,G
@@ -463,7 +488,7 @@ def prototype(ctx, proto):
     L = db.search(db.tag & Q, cls="cFunc")
     R = []
     with click.progressbar(L) as pL:
-        for l in L:
+        for l in pL:
             x = ccore.from_db(l)
             P = [c_type(t).show() for t in x.argtypes()]
             P.insert(0, c_type(x.restype()).show())

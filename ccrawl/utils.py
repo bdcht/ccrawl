@@ -1,8 +1,5 @@
+import pdb
 import pyparsing as pp
-
-
-# ccrawl low-level utilities:
-# ------------------------------------------------------------------------------
 
 struct_letters = {
     "...": None,
@@ -22,133 +19,182 @@ struct_letters = {
     "double complex": "D",
 }
 
-# C and C++ type declaration parsers:
-# ------------------------------------------------------------------------------
-# notes:
-# this part of ccrawl was a coding nightmare...I was aware that parsing C is
-# difficult and this was precisely why I'd use clang. Still, libclang's AST
-# only provides the C type string. I first thought it was going to be easy to
-# correctly parse this "simple" subpart of C...well, its not. And for C++ its
-# even worse! Try playing with cdecl.org and see how funny this can be ;)
-#
-# ccrawl C type parser is implemented with below 'nested_c' pyparsing object.
-# It captures nested parenthesis expressions that allows to define complex C
-# types that represent pointer-to array-of ... function prototypes returning a
-# C type.
-#
-# definitions for objecttype --------------------------------------------------
-# the elementary type related to the parsed string.
-# define 'raw' types:
-unsigned = pp.Keyword("unsigned") | pp.Keyword("signed")
-const = pp.Keyword("const")
-volatile = pp.Keyword("volatile")
-noexcept = pp.Keyword("noexcept")
-prefix = pp.ZeroOrMore(pp.Or((const, volatile, unsigned)))
-cvqual = pp.Or((const, volatile, const + volatile, noexcept))
-T = [pp.Keyword(t) for t in struct_letters]
-rawtypes = pp.Optional(prefix) + pp.Or(T)
-# define pointer indicators:
-pstars = pp.Group(pp.Regex(r"\*+") + pp.Optional(const, default=""))
-ampers = pp.Regex("&+")
-# define template indicators:
-tpl_ignored = pp.Regex(r"\(.*\)")('ign_exp')|pp.Regex('".*"')('ign_str')
-tpl = pp.nested_expr("<",">", ignore_expr=tpl_ignored)
-# define generic symbol with optional template:
-symbol = pp.Regex(r"[?]?[A-Za-z_][A-Za-z0-9_$]*")+pp.Optional(tpl,default="")
-def flatten_symbol(r):
-    if not r[1]:
-        return r[0]
-    else:
-        return r[0]+flatten(r[1].asList(),'<%s>','')
-symbol.setParseAction(flatten_symbol)
-# define structured types (struct,union,enum):
-structured = pp.oneOf("struct union enum class")
-strucdecl =  pp.Optional(prefix) + pp.Optional(structured) 
-strucdecl += pp.DelimitedList(symbol,'::',combine=True)
-# define objecttype:
-objecttype = pp.Or([rawtypes, strucdecl])
-# define arrays:
-intp = pp.Regex(r"[1-9][0-9]*")
-intp.setParseAction(lambda r: int(r[0]))
-bitfield = pp.Optional(prefix) + symbol + pp.Suppress("#") + intp
-arraydecl = pp.Suppress("[") + intp + pp.Suppress("]")
-arrazdecl = pp.Suppress("[") + pp.Or((intp, symbol)) + pp.Suppress("]")
-arraylist = pp.OneOrMore(arraydecl)
-arrazlist = pp.OneOrMore(arrazdecl)
-pointer = pp.Optional(pstars, default="") + pp.Optional(arraylist)
-pointerxx = pp.Optional(ampers, default="") + pp.Optional(arrazlist)
-cvref = pp.Or((cvqual, ampers))
-#
-# definitions for nested_c ----------------------------------------------------
-# nested_c captures "pointer to function/array" part of the declaration.
-# this is the tricky part due to the nesting mix of pointer grouping vs.
-# function prototyping using both parenthesis as delimiters!
-nested_par = pp.nested_expr(content=pp.Regex(r"[^()]+"))
-nested_c = pp.OneOrMore(nested_par)
+import pyparsing as pp
 
+# Basics
+ident = pp.Regex(r"[?]?[A-Za-z_][A-Za-z0-9_$]*")
+specifiers = pp.oneOf("const volatile unsigned signed struct class enum")
+pstars = pp.Combine(pp.OneOrMore('*')) + pp.Optional("const",default="")
+pstars.set_parse_action(lambda r: ptr(*r))
+ampers = pp.Combine(pp.OneOrMore('&'))
+ampers.set_parse_action(lambda r: ptr(*r,''))
+ellipsis = pp.Literal("...")
+cvqual = pp.OneOrMore(specifiers) | pp.Keyword("noexcept")
+cvref = cvqual | ampers
 
-class c_type(object):
-    """
-    The c_type object parses a C type string and decomposes it into
-    several parts. 
+# Expressions and Operators
+# We need to handle basic math/logic used in template params
+# Note: we use pp.infixNotation or a simple word set for expressions
+binary_ops = pp.oneOf("<< >> + - * / % & | ^ == != <= >= && ||")
+expr_term = pp.Word(pp.alphanums + "_") | pp.Regex(r"'.*'") | pp.Regex(r'".*"')
 
-    The parser is implemented with below 'nested_c' pyparsing object.
-    It captures nested parenthesis expressions that allows to define complex C
-    types that represent pointer-to array-of ... function prototypes returning a
-    C type.
+# A basic expression can be a single term or terms joined by operators
+# This handles <N + 1> or <1 << 3>
+expression = pp.Combine(expr_term + pp.ZeroOrMore(binary_ops + expr_term))
 
-    Attributes:
-        lbase (str): base typename
-        lbfw (int): type has a bitfield length (0 means type is not a bitfield)
-        lconst (bool): type has a 'const' keyword
-        unsigned (bool): type has an 'unsigned' keyword
-        volatile (bool): type has a 'volatile' keyword
-        pstack (list): list of "pointers stack" (see :ref:`pstack` function)
-        is_ptr (bool): True if the pstack contains a :class:`ptr` object.
-        dim (int): dimension if the type is an array (or 0.)
-    """
+# 2. Forward Declarations
+type_instance = pp.Forward()
+template_spec = pp.Forward()
 
-    def __init__(self, decl):
-        # get final element type:
-        bf = decl.rfind("#")
-        if bf > 0:
-            try:
-                x = bitfield.parseString(decl)
-            except Exception:
-                x, r = (pp.Group(objecttype) + pp.restOfLine).parseString(decl[:bf])
-                self.lbfw = 0
-            else:
-                r = ""
-                self.lbfw = x.pop()
-        else:
-            x, r = (pp.Group(objecttype) + pp.restOfLine).parseString(decl)
-            self.lbfw = 0
+# Base Type & Declarators
+base_name = pp.Combine(pp.Optional("::") + ident + pp.ZeroOrMore("::" + ident))
+base_type = pp.Group(
+    pp.Optional(ellipsis) + pp.ZeroOrMore(specifiers) +
+    base_name("base_name") +
+    pp.Optional(template_spec)("template")
+)("base_type")
+base_type.set_parse_action(lambda r: c_base_type(r[0]))
+
+# Suffixes
+array_spec = (pp.Suppress("[") +
+              pp.Optional(pp.Word(pp.alphanums + "_"),default=None) +
+              pp.Suppress("]"))
+array_spec.set_parse_action(lambda r: arr(r[0]) if r[0] is not None else ptr('*',''))
+
+# Updated params_spec to handle C-style variadics (...,)
+params_spec = pp.Group(
+    pp.Suppress("(") +
+    pp.Optional(
+        pp.delimitedList(type_instance | ellipsis)) +
+    pp.Suppress(")")
+)
+params_spec.set_parse_action(lambda r: fargs(r[0]))
+
+# Declarator (Handling pointers and pack expansion suffix)
+declarator = pp.Forward()
+nested_decl = (pp.Group(pp.Suppress("(") + declarator + pp.Suppress(")")) +
+                       pp.ZeroOrMore(array_spec | params_spec))
+# We add ellipsis here to handle "Args..."
+declarator << pp.OneOrMore(pstars | ampers | nested_decl | array_spec)
+
+# The Unified Argument (Type or Expression)
+# We allow the argument to be a full type_instance OR a mathematical expression
+arg_value = pp.Group(type_instance("ti") | expression | pp.Word(pp.nums))
+
+# Default Values (e.g., T = int)
+# An argument can be "Value" or "Value = DefaultValue"
+template_arg = (
+    arg_value("arg") +
+    pp.Optional(pp.Suppress("=") + arg_value("default"))
+    ).set_parse_action(lambda r: c_template_arg(r))
+
+template_spec << (
+    pp.Suppress("<") +
+    pp.Optional(pp.delimitedList(template_arg | ellipsis)) +
+    pp.Suppress(">")
+)
+template_spec.set_parse_action(lambda r: c_template(r.as_list()))
+
+pstack_spec = pp.Group(pp.Optional(declarator) +
+               pp.ZeroOrMore(array_spec | params_spec)
+              ) + pp.Optional(cvref)("cvref")
+def create_pstack(r):
+    s = pstack(r[0].as_list())
+    if r.cvref:
+        s[-1].cvr = r[1]
+    return s
+pstack_spec.set_parse_action(create_pstack)
+
+# Our final top-level element: the type_instance.
+type_instance << pp.Group(
+    base_type +
+    pp.Optional(pstack_spec, default=None)("pstack") +
+    pp.Optional(ellipsis)("pack_expansion")
+    )
+
+class c_base_type:
+    def __init__(self, x):
         lbase = []
         self.lconst = self.lunsigned = self.lvolatile = False
+        self.kw = ''
         for w in x:
-            if w == "const":
-                self.lconst = True
-            elif w == "unsigned":
-                self.lunsigned = True
-            elif w == "signed":
-                pass
-            elif w == "volatile":
-                self.lvolatile = True
-            elif isinstance(w,list):
-                # on a template arguments
-                lbase.insert(-1,flatten(w,sep="<%s>",pad=""))
-            else:
-                lbase.append(w)
-                lbase.append(" ")
-        self.lbase = "".join(lbase).strip()
-        r = r.replace("[]", "*")
-        r = "(%s)" % r
-        try:
-            nest = nested_c.parseString(r).asList()[0]
-        except Exception as e:
-            print("c_type: error while parsing '%s'" % r)
-            raise e
-        self.pstack = pstack(nest, self.__class__)
+            match w:
+                case "const":
+                    self.lconst = True
+                case "unsigned":
+                    self.lunsigned = True
+                case "signed":
+                    pass
+                case "volatile":
+                    self.lvolatile = True
+                case str():
+                    if w in ("struct", "union", "enum", "class"):
+                        self.kw = w
+                    lbase.append(w)
+        self.tp = x.template
+        self.lbase = " ".join(lbase)
+        self.ns = x.base_name.split("::")[:-1]
+    def __str__(self):
+        s = self.lbase+str(self.tp)
+        if self.lunsigned:
+            s = "unsigned "+s
+        if self.lconst:
+            s = "const "+s
+        return s
+    def __repr__(self):
+        return "<%s '%s'>"%(self.__class__.__name__,str(self))
+    def __eq__(self,other):
+        return str(self)==str(other)
+
+class c_type_instance:
+    def __init__(self, x):
+        self._pr = x
+        self.base_type = x.base_type
+        self.pack_expansion = x.pack_expansion
+        # now deal with the ptr/arr/fargs stack:
+        self.pstack = x.pstack.as_list() if x.pstack else []
+
+    @property
+    def lbase(self):
+        return self.base_type.lbase
+    @property
+    def lconst(self):
+        return self.base_type.lconst
+    @property
+    def lunsigned(self):
+        return self.base_type.lunsigned
+    @property
+    def lvolatile(self):
+        return self.base_type.lvolatile
+
+    def __str__(self):
+        base = str(self.base_type)
+        if self.pack_expansion:
+            base += self.pack_expansion
+        return "{} {}".format(base, self.show_ptr('')).strip()
+
+    def show_ptr(self, name):
+        """
+        returns the string that represents the pointers stack,
+        with optional name parameter used as the name of the
+        function (in case of a prototype).
+        """
+        s = name
+        stripok = False
+        for p in reversed(self.pstack):
+            match p:
+                case ptr():
+                    s = "({}{})".format(p, s)
+                    stripok = True
+                case arr():
+                    s = "{}{}".format(s, str(p))
+                    stripok = False
+                case fargs():
+                    s = "{}{}".format(s, str(p))
+                    stripok = False
+        if stripok:
+            s = s[1:-1]
+        return s
 
     @property
     def is_ptr(self):
@@ -165,12 +211,28 @@ class c_type(object):
     def __repr__(self):
         s = ["<%s" % self.__class__.__name__]
         s.extend(reversed([str(p) for p in self.pstack]))
-        if self.lconst:
-            s.append("const ")
-        if self.lunsigned:
-            s.append("unsigned ")
-        s.append("{0.lbase}>".format(self))
+        s.append(str(self.base_type)+">")
         return " ".join(s)
+
+class c_type(c_type_instance):
+    def __init__(self, decl):
+        bf = decl.rfind("#")
+        if bf>0:
+            bitfield = (base_type +
+                        pp.Suppress("#") + pp.Regex(r"[1-9][0-9]*"))
+            try:
+                x = bitfield.parseString(decl)
+            except Exception:
+                x, r = (type_instance + pp.restOfLine).parse_string(decl[:bf])
+                self.lbfw = 0
+            else:
+                r = ""
+                self.lbfw = int(x.pop(),0)
+        else:
+            x, r = (type_instance + pp.restOfLine).parse_string(decl)
+            self.lbfw = 0
+        # set the parsed type_instance:
+        super().__init__(x)
 
     def show_base(self, kw=False, ns=False, tp=True):
         """
@@ -179,31 +241,7 @@ class c_type(object):
         keywords (if kw is True) and namespace(s) indicators
         (if ns is True).
         """
-        s = [self.lbase]
-        if self.lunsigned:
-            s.insert(0, "unsigned")
-        if self.lconst:
-            s.insert(0, "const")
-        return " ".join(s)
-
-    def show_ptr(self, name):
-        """
-        returns the string that represents the pointers stack,
-        with optional name parameter used as the name of the
-        function (in case of a prototype).
-        """
-        s = name
-        stripok = False
-        for p in reversed(self.pstack):
-            if p.is_ptr:
-                s = "({}{})".format(p, s)
-                stripok = True
-            else:
-                s = "{}{}".format(s, str(p))
-                stripok = False
-        if stripok:
-            s = s[1:-1]
-        return s
+        return str(self.base_type)
 
     def show(self, name=""):
         """
@@ -214,68 +252,32 @@ class c_type(object):
         s = ("%s %s" % (self.show_base(), self.show_ptr(name))).strip()
         return s + extra
 
-
-# C++ type declaration parser:
-# ------------------------------------------------------------------------------
-
 class cxx_type(c_type):
-    """
-    cxx_type extends c_type with extracting the namespace parts of the fully
-    qualified name of the C++ type.
-    """
     def __init__(self, decl):
         super().__init__(decl)
-        full_typename = pp.DelimitedList(symbol,'::')
-        # get namespaces:
-        self.kw = ""
-        self.ns = []
-        self.tp = ""
-        try:
-            self.kw = structured.parse_string(self.lbase)[0]
-            k = self.lbase.find(" ")
-        except Exception:
-            k = -1
-        r = full_typename.parse_string(self.lbase[k+1:]).asList()
-        t = r.pop()
-        self.ns = r
-        sta = t.find('<')
-        sto = t.rfind('>')
-        if sta>0 and sto>0:
-            self.tp = t[sta:sto+1]
+        self.kw = self.base_type.kw
+        self.ns = self.base_type.ns
+        self.tp = self.base_type.tp
 
     @property
     def is_method(self):
         return fargs in [type(p) for p in self.pstack]
 
     def show_base(self, kw=False, ns=False, tp=True):
-        lbase = self.lbase
+        lbase = str(self.base_type)
         if not kw:
             lbase = lbase.replace(self.kw, "", 1)
         if not ns and self.ns:
             ns = "::".join(self.ns) + "::"
             lbase = lbase.replace(ns, "", 1)
         if not tp:
-            lbase = lbase.replace(self.tp, "", 1)
+            lbase = lbase.replace(str(self.tp), "", 1)
         s = [lbase]
-        if self.lunsigned:
+        if self.base_type.lunsigned:
             s.insert(0, "unsigned")
-        if self.lconst:
+        if self.base_type.lconst:
             s.insert(0, "const")
         return " ".join(s).strip()
-
-    def show_ptr(self, name):
-        s = name
-        stripok = False
-        for p in reversed(self.pstack):
-            if p.is_ptr:
-                s = "({}{})".format(p, s)
-                stripok = True
-            else:
-                s = "{}{}".format(s, str(p))
-                stripok = False
-        if stripok:
-            s = s[1:-1]
-        return s
 
     def show(self, name="", kw=True, ns=True):
         extra = " : %d" % self.lbfw if self.lbfw else ""
@@ -283,25 +285,34 @@ class cxx_type(c_type):
         return s + extra
 
     def tp_args(self):
-        if self.tp:
-            R = []
-            for r in tpl.parseString(self.tp).asList()[0]:
-                if isinstance(r,list):
-                    R[-1] = R[-1]+flatten(r,'<%s>','')
-                else:
-                    el = strucdecl|intp|tpl_ignored|pp.Empty()
-                    R += pp.DelimitedList(el).parse_string(r).as_list()
-            return R
-        return None
+        return [str(a) for a in self.tp.args] if self.tp else []
 
     def __eq__(self, other):
         et = self.show_base(ns=True)
         ot = other.show_base(ns=True)
         return et==ot
 
+class c_template:
+    def __init__(self, args):
+        self.args = args
+    def __str__(self):
+        return "<%s>"%(", ".join((str(arg) for arg in self.args)))
+    def __repr__(self):
+        return "<%s '%s'>"%(self.__class__.__name__,str(self))
 
-# ------------------------------------------------------------------------------
-
+class c_template_arg:
+    def __init__(self, x):
+        self.value = c_type_instance(x.arg.ti) if x.arg.ti else x.arg
+        self.default = x.default
+        if hasattr(x.default,'ti'):
+            self.default = c_type_instance(x.default.ti)
+    def __str__(self):
+        s = str(self.value)
+        if self.default:
+            s += " = %s"%self.default
+        return s
+    def __repr__(self):
+        return "<%s '%s'>"%(self.__class__.__name__,str(self))
 
 class ptr(object):
     """
@@ -319,6 +330,8 @@ class ptr(object):
     def __str__(self):
         sfx = "%s " % self.const if self.const else ""
         return "{}{}".format(self.p, sfx)
+    def __repr__(self):
+        return "<%s '%s'>"%(self.__class__.__name__,str(self))
 
 
 class arr(object):
@@ -330,11 +343,15 @@ class arr(object):
     """
     def __init__(self, a):
         self.is_ptr = False
-        self.a = a
+        try:
+            self.a = int(a,0)
+        except ValueError:
+            self.a = a
 
     def __str__(self):
         return "[%s]" % self.a
-
+    def __repr__(self):
+        return "<%s '%s'>"%(self.__class__.__name__,str(self))
 
 class fargs(object):
     """
@@ -344,99 +361,44 @@ class fargs(object):
         f (str): the arguments part of a function prototype
         args (list): the list of arguments
     """
-    def __init__(self, f):
+    def __init__(self, args):
         self.is_ptr = False
-        self.f = f
-
-    @property
-    def args(self):
-        f = nested_par.parseString(self.f)
-        A = []
-        for x in f.asList()[0]:
-            if not isinstance(x, list):
-                A.extend(x.split(","))
-            else:
-                r = A.pop()
-                r += flatten(x)
-                A.append(r)
-        return list(filter(None, A))
+        self.args = []
+        for arg in args:
+            if arg == '...':
+                self.args.append(arg)
+                break
+            self.args.append(c_type_instance(arg))
 
     def __str__(self):
+        s = "(%s)"%(", ".join((str(arg) for arg in self.args)).strip())
         if hasattr(self, "cvr"):
-            return "%s %s" % (self.f, self.cvr)
-        return self.f
+            s += " %s"%self.cvr
+        return s
+    def __repr__(self):
+        return "<%s '%s'>"%(self.__class__.__name__,str(self))
 
-# one tricky function ;)
-
-def pstack(plist, cls=c_type):
-    """returns the 'stack' of pointers-to array-N-of pointer-to
-    function() returning pointer to function() returning ..."""
-    cxx = cls == cxx_type
+def pstack(plist):
     S = []
-    cvr = ""
+    off = 0
+    for i,e in enumerate(plist):
+        match e:
+            case ptr():
+                S.append(e)
+                off = i+1
+            case arr():
+                S.insert(off,e)
+            case fargs() if off==0:
+                S.append(e)
+            case _:
+                break
+    plist = plist[len(S):]
+    while len(plist)>1:
+        e = plist.pop()
+        S.append(e)
     if plist:
-        if not isinstance(plist[0], list):
-            # we are declaring either a pointer or array,
-            # or an array of pointers to previously stacked objs
-            p0 = plist[0]
-            p, *A = pointer.parseString(p0)
-            if p:
-                S.append(ptr(*p))
-            for a in reversed(A):
-                S.append(arr(a))
-            if not (p or A):
-                if cxx:
-                    r, *A = pointerxx.parseString(p0)
-                    if r:
-                        S.append(ptr(r[0], ""))
-                    for a in reversed(A):
-                        S.append(arr(a))
-                    plist.pop(0)
-                else:
-                    S.append(fargs(flatten(plist)))
-                    plist = []
-            else:
-                plist.pop(0)
-        if len(plist) == 1 and len(plist[0]) == 0:
-            S.append(fargs("()"))
-            return S
-    if len(plist) > 1:
-        r = plist.pop()
-        if not isinstance(r, list):
-            try:
-                for a in reversed(arraylist.parseString(r)):
-                    S.append(arr(a))
-            except pp.ParseException:
-                if cxx:
-                    cvr = cvref.parseString(r)[0]
-        else:
-            S.append(fargs(flatten(r)))
-    if plist:
-        if len(plist) == 1 and not cvr:
+        if isinstance(plist[0],list):
+            # this must be a nested parenthesis:
             plist = plist[0]
         S.extend(pstack(plist))
-    if cvr:
-        if len(S) > 0:
-            S[-1].cvr = cvr
-        else:
-            print("cvr %s but S is empty!" % cvr)
     return S
-
-
-def flatten(args,sep='(%s)',pad=" "):
-    s = []
-    for x in args:
-        if not isinstance(x, list):
-            s.append(x)
-        else:
-            s.append(flatten(x,sep,pad))
-    return sep % (pad.join(s))
-
-
-def indent(txt, l=4):
-    L = []
-    for x in txt.split("\n"):
-        if x:
-            x = l + x
-        L.append(x)
-    return "\n".join(L)

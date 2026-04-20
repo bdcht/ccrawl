@@ -77,8 +77,8 @@ def test_c_type_06():
     assert len(t.pstack) == 4
     f = t.pstack[1]
     assert isinstance(f, fargs)
-    assert f.args[1] == " struct X*"
-    assert t.show("funcs") == "char *(**funcs[4])(int, struct X*, void  (*) (int))"
+    assert str(f.args[1]) == "struct X *"
+    assert t.show("funcs") == "char *(**funcs[4])(int, struct X *, void (*)(int))"
 
 
 def test_c_type_07():
@@ -140,7 +140,7 @@ def test_cxx_type_13():
 
 def test_cxx_type_14():
     t = cxx_type("short () &&")
-    assert t.pstack[0].cvr == "&&"
+    assert str(t.pstack[0].cvr) == "&&"
     assert t.is_method
     assert t.show("f") == "short f() &&"
 
@@ -156,4 +156,12 @@ def test_cxx_type_16():
     t = cxx_type("struct A::B::C::D")
     assert "::".join(t.ns) == "A::B::C"
     assert t.show_base() == "D"
+
+def test_cxx_type_17():
+    t = cxx_type("struct Part<R (ARGS...), OPCODE>")
+    assert str(t.tp) == '<R (ARGS...), OPCODE>'
+    assert t.show_base() == 'Part<R (ARGS...), OPCODE>'
+    A = t.tp_args()
+    assert len(A)==2
+    assert str(A[0]) == 'R (ARGS...)'
 

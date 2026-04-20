@@ -3,7 +3,7 @@
 import pdb
 import os
 import re
-from click import echo, secho
+from click import echo, secho, progressbar
 from clang.cindex import CursorKind, TokenKind, TranslationUnit, Index
 import clang.cindex
 import tempfile
@@ -756,7 +756,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
                 if ("expected ';'" in err.spelling) or ("'namespace'" in err.spelling):
                     if "asm block" in err.spelling:
                         continue
-                    if config.cxx:
+                    if config.cxx and not cxx:
                         if conf.DEBUG:
                             secho("reparse as c++ input...",fg="cyan")
                         cxx = True
@@ -958,47 +958,48 @@ def preprocess(files,args=None):
         # to make sure we parseincludes them in the order that was provided...
         F.append((f,v))
     # now try to "link" them based on inclusion:
-    for (filename,v) in F:
-        missing,incs = parseincludes(filename,args)
-        for i in missing:
-            bni = os.path.basename(i)
-            dni = os.path.dirname(i)
-            E = []
-            if bni in V:
-                for x in V[bni]:
-                    I = os.path.dirname(x.data)
-                    if I.endswith(dni):
-                        j = I.rfind(dni)
-                        e = graphs.Edge(v,x,data="-I%s"%I[:j])
-                        e.data = e.data.rstrip('/')
-                        E.append(e)
-                    else:
-                        if conf.DEBUG:
-                            secho("vertex '%s' doesn't end with %s ??"%(I,dni),fg='red')
-            if len(E)>1:
-                M.append("multiple include found for '%s'..."%i)
-            if len(E)>0:
-                e = E[0]
-                if conf.DEBUG:
-                    secho("%s -> %s : '%s'"%(e.v[0].data,
-                                             e.v[1].data,
-                                             e.data), fg='magenta')
-                G.add_edge(e)
-            else:
-                M.append("missing include file for '%s'"%i)
-        for (n,i) in incs:
-            bni = os.path.basename(n)
-            dni = os.path.dirname(n)
-            try:
-                e = graphs.Edge(v,V[os.path.basename(n)][0],data="-I%s"%dni)
-                if conf.DEBUG:
-                    secho("%s -> %s : '%s'"%(e.v[0].data, e.v[1].data, e.data))
-                G.add_edge(e)
-            except Exception:
-                if i.startswith("<"):
-                    M.append("system file '%s' is used"%n)
+    with progressbar(F) as pF:
+        for (filename,v) in pF:
+            missing,incs = parseincludes(filename,args)
+            for i in missing:
+                bni = os.path.basename(i)
+                dni = os.path.dirname(i)
+                E = []
+                if bni in V:
+                    for x in V[bni]:
+                        I = os.path.dirname(x.data)
+                        if I.endswith(dni):
+                            j = I.rfind(dni)
+                            e = graphs.Edge(v,x,data="-I%s"%I[:j])
+                            e.data = e.data.rstrip('/')
+                            E.append(e)
+                        else:
+                            if conf.DEBUG:
+                                secho("vertex '%s' doesn't end with %s ??"%(I,dni),fg='red')
+                if len(E)>1:
+                    M.append("multiple include found for '%s'..."%i)
+                if len(E)>0:
+                    e = E[0]
+                    if conf.DEBUG:
+                        secho("%s -> %s : '%s'"%(e.v[0].data,
+                                                 e.v[1].data,
+                                                 e.data), fg='magenta')
+                    G.add_edge(e)
                 else:
-                    M.append("file '%s' was included but is filtered out"%bni)
+                    M.append("missing include file for '%s'"%i)
+            for (n,i) in incs:
+                bni = os.path.basename(n)
+                dni = os.path.dirname(n)
+                try:
+                    e = graphs.Edge(v,V[os.path.basename(n)][0],data="-I%s"%dni)
+                    if conf.DEBUG:
+                        secho("%s -> %s : '%s'"%(e.v[0].data, e.v[1].data, e.data))
+                    G.add_edge(e)
+                except Exception:
+                    if i.startswith("<"):
+                        M.append("system file '%s' is used"%n)
+                    else:
+                        M.append("file '%s' was included but is filtered out"%bni)
     # echo preprocessing messages:
     if (not conf.QUIET) and len(M)>1:
         secho('\n  '.join(M),fg='yellow')
