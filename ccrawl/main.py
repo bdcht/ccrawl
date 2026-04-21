@@ -293,7 +293,7 @@ def do_collect(ctx, src):
 
 
 def preprocess_files(src,args,cxx=False,allc=False):
-    if not c.Terminal.quiet:
+    if not conf.config.Terminal.quiet:
         click.echo("preprocessing files...")
     p = "[hHcCiI]" if allc else "[hH]"
     if cxx: p += "|(hpp)|(cpp)"
@@ -307,12 +307,12 @@ def preprocess_files(src,args,cxx=False,allc=False):
                 for f in filter(F, files):
                     filename = "%s/%s" % (dirname, f)
                     FILES.add(filename)
-                    if not c.Terminal.quiet:
+                    if not conf.config.Terminal.quiet:
                         click.echo(filename,nl=False)
                         click.echo('\r',nl=False)
         elif os.path.isfile(D) and F(D):
             FILES.add(D)
-            if not c.Terminal.quiet:
+            if not conf.config.Terminal.quiet:
                 click.echo(D,nl=False)
                 click.echo('\r',nl=False)
     res,G = preprocess(FILES,args)

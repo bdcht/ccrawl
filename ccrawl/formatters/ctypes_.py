@@ -64,7 +64,7 @@ def id_ctypes(t):
 
 def formatproto(res, proto):
     f = "CFUNCTYPE"
-    params = [id_ctypes(c_type(x)) for x in proto.args]
+    params = [id_ctypes(x) for x in proto.args]
     if res == "c_void":
         res = "None"
     params.insert(0, res)

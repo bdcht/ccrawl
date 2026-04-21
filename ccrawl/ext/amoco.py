@@ -120,17 +120,6 @@ else:
             fmt.append("{} : {} ;{}".format(t, n, ""))
         return fmt
 
-def get_c_or_cxx_type(x):
-    if not (('&' in x) or ('::' in x)):
-        try:
-            t = c_type(x)
-        except pp.ParseException:
-            pass
-        else:
-            return t
-    t = cxx_type(x)
-    return t
-
 
 A_to_C = {
   'P' : 'void*',

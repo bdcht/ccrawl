@@ -173,6 +173,9 @@ class c_type_instance:
             base += self.pack_expansion
         return "{} {}".format(base, self.show_ptr('')).strip()
 
+    def show_base(self, kw=False, ns=False, tp=True):
+        return str(self.base_type)
+
     def show_ptr(self, name):
         """
         returns the string that represents the pointers stack,
@@ -272,12 +275,7 @@ class cxx_type(c_type):
             lbase = lbase.replace(ns, "", 1)
         if not tp:
             lbase = lbase.replace(str(self.tp), "", 1)
-        s = [lbase]
-        if self.base_type.lunsigned:
-            s.insert(0, "unsigned")
-        if self.base_type.lconst:
-            s.insert(0, "const")
-        return " ".join(s).strip()
+        return lbase.strip()
 
     def show(self, name="", kw=True, ns=True):
         extra = " : %d" % self.lbfw if self.lbfw else ""

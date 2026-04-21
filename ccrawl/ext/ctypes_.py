@@ -44,7 +44,7 @@ def mk_ctypes(t, Types):
 
 
 def formatproto(res, proto, Types):
-    params = filter(None, [mk_ctypes(get_c_or_cxx_type(t), Types) for t in proto.args])
+    params = filter(None, [mk_ctypes(t, Types) for t in proto.args])
     return ctypes.CFUNCTYPE(res, *params)
 
 def get_c_or_cxx_type(x):

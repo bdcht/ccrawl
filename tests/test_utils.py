@@ -87,7 +87,7 @@ def test_c_type_07():
     assert not t.is_ptr
     assert t.lbase == "void"
     assert str(t.pstack[0]) == "[2]"
-    assert t.pstack[1].f == "(int, char)"
+    assert str(t.pstack[1])== "(int, char)"
 
 
 def test_c_type_08():

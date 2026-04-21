@@ -3,7 +3,7 @@ from collections import OrderedDict
 from itertools import pairwise
 from re import escape
 from ccrawl import formatters
-from ccrawl.utils import pp, struct_letters, c_type, cxx_type
+from ccrawl.utils import pp, struct_letters, c_type_instance, c_type, cxx_type
 from ccrawl.db import where,Query
 
 class ccore(object):
@@ -106,10 +106,10 @@ class ccore(object):
                 r += r"(?:<.*>)$"
                 Q = where("cls").one_of(("cTemplate","cClass"))
                 Q &= where("id").matches(r)
-                tpargs = xt.tp_args()
-                for e in (arg for arg in tpargs if arg not in ctx):
-                    if isinstance(e,str) and e[0] not in '("':
-                        self.add_subtype(db, e, ctx)
+                for e in (arg for arg in xt.tp.args if str(arg) not in ctx):
+                    if isinstance(e.value,c_type_instance):
+                        et = e.value.show_base(kw=True,ns=True)
+                        self.add_subtype(db, et, ctx)
             else:
                 r += r"(?:<.*>)?$"
                 Q = where("id").matches(r)
@@ -125,8 +125,8 @@ class ccore(object):
                     break
                 # skip template args count mismatch:
                 etpargs = et.tp_args()
-                if xt.tp and len(tpargs)!=len(etpargs):
-                    if not etpargs or not e['val']['params'][-1]['pack']:
+                if xt.tp and len(xt.tp.args)!=len(etpargs):
+                    if not etpargs or etpargs[-1].endswith('...'):
                         continue
                 if e["cls"]=="cTemplate":
                     c = e["val"]["cClass"]
@@ -271,7 +271,7 @@ class cTypedef(str, ccore):
         if self.subtypes is None:
             self.subtypes = OrderedDict()
             ctype = cxx_type(self) # cxx_type is a child of c_type
-            elt = ctype.lbase
+            elt = ctype.show_base(kw=True,ns=True)
             # add_subtype is always given the more complete elt string
             # incuding keyword, namespace and/or template. It will
             # manage to fill the ctx with variants
@@ -319,7 +319,7 @@ class cStruct(list, ccore):
             self.subtypes = OrderedDict()
             for (t, n, c) in self:
                 ctype = c_type(t)
-                elt = ctype.lbase
+                elt = ctype.show_base()
                 self.add_subtype(db, elt, ctx)
         return self
 
@@ -362,7 +362,7 @@ class cClass(list, ccore):
         # ctx is our internal list of known types, so we start with
         # the raw types and ourself
         ctx = ctx or OrderedDict(struct_letters)
-        n = cxx_type(self.identifier).show_base(ns=True)
+        n = cxx_type(self.identifier).show_base(kw=False,ns=True)
         ctx[n] = self
         if self.subtypes is None:
             self.subtypes = OrderedDict()
@@ -382,7 +382,7 @@ class cClass(list, ccore):
                     elts = [t]
                 for t in elts:
                     xxt = cxx_type(t)
-                    elt = xxt.show_base(ns=True)
+                    elt = xxt.show_base(kw=False,ns=True)
                     self.add_subtype(db, elt, ctx)
         return self
 
@@ -530,7 +530,7 @@ class cUnion(list, ccore):
             self.subtypes = OrderedDict()
             for (t, n, c) in self:
                 ctype = c_type(t)
-                elt = ctype.lbase
+                elt = ctype.show_base()
                 self.add_subtype(db, elt, ctx)
         return self
 
@@ -584,7 +584,7 @@ class cFunc(dict, ccore):
     def argtypes(self):
         t = c_type(self["prototype"])
         if len(t.pstack)>0:
-            return t.pstack[-1].args
+            return [str(arg) for arg in t.pstack[-1].args]
         return []
 
     def unfold(self, db, ctx=None):
@@ -594,9 +594,9 @@ class cFunc(dict, ccore):
             rett = self.restype()
             args = self.argtypes()
             args.insert(0, rett)
-            for t in args:
-                elt = c_type(t).lbase
-                self.add_subtype(db, elt, ctx)
+            for elt in args:
+                et = cxx_type(elt).show_base(kw=True,ns=True)
+                self.add_subtype(db, et, ctx)
         return self
 
     def __eq__(self, other):
