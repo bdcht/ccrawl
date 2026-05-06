@@ -47,11 +47,11 @@ type_instance = pp.Forward()
 template_spec = pp.Forward()
 
 # Base Type & Declarators
-base_name = pp.Combine(pp.Optional("::") + ident + pp.ZeroOrMore("::" + ident))
+name_part = pp.Group(ident("ident") + pp.Optional(template_spec)("template"))
+base_name = pp.Group(pp.Optional("::")("g_ns") + pp.delimited_list(name_part, delim="::"))
 base_type = pp.Group(
     pp.Optional(ellipsis) + pp.ZeroOrMore(specifiers) +
-    base_name("base_name") +
-    pp.Optional(template_spec)("template")
+    base_name("base_name")
 )("base_type")
 base_type.set_parse_action(lambda r: c_base_type(r[0]))
 
@@ -131,9 +131,21 @@ class c_base_type:
                     if w in ("struct", "union", "enum", "class"):
                         self.kw = w
                     lbase.append(w)
-        self.tp = x.template
-        self.lbase = " ".join(lbase)
-        self.ns = x.base_name.split("::")[:-1]
+        self.tp = ''
+        segs = []
+        n_segs = x.base_name
+        pfx = n_segs.g_ns
+        last_ident = ''
+        for seg in n_segs:
+            if isinstance(seg,str): continue
+            s = last_ident = seg.ident
+            if seg.template:
+                self.tp = seg.template
+                s += str(seg.template)
+            segs.append(s)
+        self.ns = segs[:-1]
+        self.lbase = pfx + "::".join(self.ns + ["%s"%last_ident])
+
     def __str__(self):
         s = self.lbase+str(self.tp)
         if self.lunsigned:

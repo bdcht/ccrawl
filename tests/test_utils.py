@@ -165,3 +165,9 @@ def test_cxx_type_17():
     assert len(A)==2
     assert str(A[0]) == 'R (ARGS...)'
 
+def test_cxx_type_18():
+    t = cxx_type("cxx::T1<A>::T2<B>")
+    assert str(t.tp) == "<B>"
+    assert t.lbase == "cxx::T1<A>::T2"
+    assert len(t.ns)==2
+    assert 'T1<A>' == t.ns[1]
