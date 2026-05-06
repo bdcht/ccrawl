@@ -300,7 +300,7 @@ class c_template:
 
 class c_template_arg:
     def __init__(self, x):
-        self.value = c_type_instance(x.arg.ti) if x.arg.ti else x.arg
+        self.value = c_type_instance(x.arg.ti) if x.arg.ti else x.arg[0]
         self.default = x.default
         if hasattr(x.default,'ti'):
             self.default = c_type_instance(x.default.ti)

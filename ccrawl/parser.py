@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import pdb
 import os
 import re
 from click import echo, secho, progressbar
@@ -596,7 +595,11 @@ def get_uniq_typename(t):
     if "::" in t:
         t = "%s %s" % (kind, t.split("::")[-1])
     x = re.compile(r"\((anonymous|unnamed) .*\)")
-    s = x.search(t).group(0)
+    try:
+        s = x.search(t).group(0)
+    except AttributeError:
+        # was an anonymous namespace
+        return t
     h = hashlib.sha256(s.encode("ascii")).hexdigest()[:8]
     if not t.startswith(kind):
         t = "%s %s" % (kind, t)
@@ -745,13 +748,19 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
         options |= TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     defs = OrderedDict()
     index = Index.create()
+    #pu.db
     # call clang parser:
     try:
         tu = index.parse(filename, _args, unsaved_files, options)
         for err in tu.diagnostics:
             if conf.DEBUG:
                 secho(err.format(), fg="yellow")
-            if err.severity == 3:
+            match err.severity:
+              case 2:
+                if conf.VERBOSE:
+                    secho(err.spelling, fg='yellow')
+                    break
+              case 3:
                 # common errors when parsing c++ as c:
                 if ("expected ';'" in err.spelling) or ("'namespace'" in err.spelling):
                     if "asm block" in err.spelling:
@@ -769,7 +778,7 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
                             for t in tu.get_includes():
                                 secho(("  "*t.depth)+t.include.name,fg="yellow")
                         return []
-            elif err.severity == 4:
+              case 4:
                 # this should not happen anymore thanks to -M -MG opts...
                 # we keep it here just in case.
                 if conf.VERBOSE:
@@ -815,9 +824,12 @@ def parse(filename, args=None, unsaved_files=None, options=None, kind=None, tag=
             if kv:
                 ident, cobj = kv
                 if cobj:
-                    for x in cobj.to_db(ident, tag, cur.location.file.name):
-                        xid = hashlib.md5(json.dumps(x).encode("ascii")).hexdigest()
-                        defs[xid] = x
+                    try:
+                        for x in cobj.to_db(ident, tag, cur.location.file.name):
+                            xid = hashlib.md5(json.dumps(x).encode("ascii")).hexdigest()
+                            defs[xid] = x
+                    except Exception:
+                        pdb.set_trace()
     if not conf.QUIET:
         secho(("[%3d]" % len(defs)).rjust(12), fg="green" if not cxx else "cyan")
         for i in diag_get_missing(filename, tu):
@@ -1030,13 +1042,19 @@ def diag_get_incs(filename,tu):
         if t.depth==1:
             x = tu.get_extent(filename, [(t.location.line,1),(t.location.line+1,1)])
             toks = tu.get_tokens(extent=x)
-            next(toks)
-            next(toks)
-            inc = next(toks).spelling
-            if inc=='<':
-                while inc[-1]!='>':
-                    inc += next(toks).spelling
-            incs.append((t.include.name,inc))
+            try:
+                next(toks)
+                next(toks)
+                inc = next(toks).spelling
+                if inc=='<':
+                    while inc[-1]!='>':
+                        inc += next(toks).spelling
+                incs.append((t.include.name,inc))
+            except StopIteration:
+                # if tokens are not found in file, it is probably that
+                # it was not done in source but rather due to a -include option.
+                # In this case it is not considered as a dependency for filename.
+                pass
     return incs
 
 def parseincludes(filename,args=None):

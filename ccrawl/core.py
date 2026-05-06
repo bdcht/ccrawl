@@ -223,8 +223,11 @@ class ccore(object):
             doc["tag"] = tag
         data = [doc]
         if hasattr(self, "local"):
-            ns = cxx_type(identifier)
-            lsrc = "%s::%s"%(src,ns.show(kw=False))
+            try:
+                ns = cxx_type(identifier)
+                lsrc = "%s::%s"%(src,ns.show(kw=False))
+            except Exception:
+                lsrc = "%s::"%src
             for i, x in self.local.items():
                 if x:
                     data.extend(x.to_db(i, tag, lsrc))

@@ -95,6 +95,8 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     if verbose:
         quiet = False
     debug = c.Terminal.debug
+    if debug:
+        import pdb
     c.Terminal.verbose = verbose | debug
     c.Terminal.quiet |= quiet
     c.Terminal.width = shutil.get_terminal_size()[0]
@@ -150,7 +152,15 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     # help='collect data from all files rather than headers only'
 )
 @click.option("-s", "--strict", is_flag=True, help="strict mode")
-@click.option("-n", "--recon", is_flag=True, help="run only the preprocessing stage")
+@click.option("-n", "--recon", is_flag=True,
+              help="run only the preprocessing stage")
+@click.option(
+    "-j",
+    "--compile-commands",
+    "comp_cmds",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False),
+    help="Path to a compile_commands.json file",
+)
 @click.option(
     "-f",
     "--files",
@@ -171,7 +181,8 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     # help='directory/files with definitions to collect',
 )
 @click.pass_context
-def collect(ctx, allc, strict, recon, files, xclang, outgraph, nocxx, cxx, src):
+def collect(ctx, allc, strict, recon, comp_cmds, files,
+            xclang, outgraph, nocxx, cxx, src):
     """
     Collects types (struct,union,class,...) definitions,
     functions prototypes and/or macro definitions from SRC files/directory.
@@ -208,10 +219,17 @@ def collect(ctx, allc, strict, recon, files, xclang, outgraph, nocxx, cxx, src):
         "-ferror-limit=0",
         "-fmodules",
         "-fbuiltin-module-map",
+        #        "-Wno-unknown-warning-option",
     ]
     if xclang is not None:
         args += xclang.split(" ")
-    if not files:
+    if comp_cmds:
+        if not len(src)==1 and os.path.isdir(src[0]):
+            click.echo("src argument should be the dirname of files in compile_commands")
+            os.exit(1)
+        c.Collect.allc = True
+        FILES = use_compile_commands(comp_cmds,src[0])
+    elif not files:
         # preprocess all files to compute their dependency graph
         # allowing to order them and possibly add include directive for each file:
         FILES,G = preprocess_files(src, args, c.Collect.cxx, c.Collect.allc)
@@ -318,6 +336,49 @@ def preprocess_files(src,args,cxx=False,allc=False):
     res,G = preprocess(FILES,args)
     click.echo("done.")
     return res,G
+
+def use_compile_commands(comp_cmds,src):
+    from collections import OrderedDict
+    FILES = OrderedDict()
+    rexh = re.compile(r".+\.([hHcCiI]|(hpp)|(cpp)|(cc))$",flags=re.IGNORECASE)
+    F = lambda e: rexh.search(e['file'])
+    if not conf.config.Terminal.quiet:
+        click.echo("preprocessing %s..."%comp_cmds)
+    with open(comp_cmds,'r') as f:
+        for e in filter(F,json.load(f)):
+            args = []
+            keep=False
+            L = e['command'].replace(e['file'],'').split(" ")
+            while len(L)>0:
+                x = L.pop(0)
+                if keep:
+                    args.append(x)
+                    keep=False
+                if not x.startswith("-"):
+                    if x.endswith("++"):
+                        args.extend(["-x", "c++"])
+                    continue
+                elif x.startswith("-D") or x.startswith("-I"):
+                    args.append(x)
+                elif x in ("-nostdinc","-nobuiltininc", "-fno-builtin"):
+                    args.append(x)
+                elif (x.startswith("-isystem") or 
+                      x.startswith("-include")
+                     ):
+                    args.append(x)
+                    keep = True
+                elif (x.startswith("-std=") or 
+                      x.startswith("-fmacro-prefix-map=")
+                     ):
+                    args.append(x)
+            if e['file'].startswith("/"):
+                FILES[e['file']] = args
+            else:
+                path = e['directory']
+                FILES["%s/%s/%s"%(src,path,e['file'])] = args
+    click.echo("done.")
+    return FILES
+
 
 # convert command:
 # ------------------------------------------------------------------------------

@@ -187,7 +187,7 @@ def cClass_C(obj, db, recursive):
         # is t a nested class ?
         nested = False
         L = r.ns
-        if (e not in recursive) and len(L)>1 and L[-2]==classname:
+        if Q and (e not in recursive) and len(L)>1 and L[-2]==classname:
             nested = True
         # is t a nested enum ?
         nested |= e.startswith("enum ?_")
