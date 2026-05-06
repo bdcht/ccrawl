@@ -129,9 +129,9 @@ class ccore(object):
                     if not etpargs or etpargs[-1].endswith('...'):
                         continue
                 if e["cls"]=="cTemplate":
-                    c = e["val"]["cClass"]
+                    c = e["val"].get("cClass",[])
                     if len(c)==0:
-                        # skip primary template declarations
+                        # skip func- or primary- template declarations
                         continue
                     candidates.append(e)
                 else:
