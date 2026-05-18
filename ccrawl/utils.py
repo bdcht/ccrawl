@@ -114,7 +114,6 @@ type_instance << pp.Group(
 
 class c_base_type:
     def __init__(self, x):
-        lbase = []
         self.lconst = self.lunsigned = self.lvolatile = False
         self.kw = ''
         for w in x:
@@ -130,7 +129,6 @@ class c_base_type:
                 case str():
                     if w in ("struct", "union", "enum", "class"):
                         self.kw = w
-                    lbase.append(w)
         self.tp = ''
         segs = []
         n_segs = x.base_name
@@ -145,6 +143,8 @@ class c_base_type:
             segs.append(s)
         self.ns = segs[:-1]
         self.lbase = pfx + "::".join(self.ns + ["%s"%last_ident])
+        if self.kw:
+            self.lbase = u"{} {}".format(self.kw,self.lbase)
 
     def __str__(self):
         s = self.lbase+str(self.tp)
@@ -214,6 +214,10 @@ class c_type_instance:
     @property
     def is_ptr(self):
         return ptr in [type(p) for p in self.pstack]
+
+    @property
+    def is_anon(self):
+        return "?_" in self.lbase
 
     @property
     def dim(self):

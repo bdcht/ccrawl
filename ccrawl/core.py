@@ -2,7 +2,6 @@ from functools import cache
 from collections import OrderedDict
 from itertools import pairwise
 from re import escape
-from ccrawl import formatters
 from ccrawl.utils import pp, struct_letters, c_type_instance, c_type, cxx_type
 from ccrawl.db import where,Query
 
@@ -42,17 +41,18 @@ class ccore(object):
     formatter = None
     _cache_ = {}
 
-    def show(self, db=None, r=None, form=None):
+    def show(self, db=None, form=None):
         """
         Generic method that possibly defines and
         ultimately calls the internal formatter function.
 
         Attributes:
-            db [opt] (Proxy): database used in recursive mode
+            db [opt] (Proxy): database used for recursive mode
+            form [opt] (str): name of the chosen formatter module
         """
         if (not self.formatter) or form:
             self.set_formatter(form)
-        return self.formatter(db, r)
+        return self.formatter(db)
 
     def unfold(self, db, ctx=None):
         """
@@ -163,6 +163,7 @@ class ccore(object):
                 ctx[elt] = {}
                 self.subtypes[elt] = None
         else:
+            ctx.move_to_end(elt)
             self.subtypes[elt] = ctx[elt]
 
     def graph(self,db,V=None,g=None):
@@ -189,6 +190,7 @@ class ccore(object):
                         If the module is not found, 'raw' is used.
         """
         ff = "{}_{}".format(cls.__name__, form)
+        from ccrawl import formatters
         try:
             cls.formatter = getattr(formatters, ff)
         except AttributeError:

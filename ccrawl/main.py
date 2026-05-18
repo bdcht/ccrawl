@@ -720,8 +720,6 @@ def show(ctx, form, recursive, identifier):
     other types required by the topmost definition.
     """
     db = ctx.obj["db"]
-    if recursive is True:
-        recursive = set()
     Q = where("id") == identifier
     if db.contains(db.tag & Q):
         for l in db.search(db.tag & Q):
