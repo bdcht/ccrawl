@@ -481,7 +481,7 @@ def SetStructured(cur, S, errors=None):
         # c++ 'using' declaration:
         elif f.kind is CursorKind.USING_DECLARATION:
             uses = []
-            name = ""
+            name = f.spelling
             for x in f.get_children():
                 if x.kind == CursorKind.TYPE_REF:
                     uses.append(x.spelling)

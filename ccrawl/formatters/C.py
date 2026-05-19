@@ -182,12 +182,18 @@ def cTemplate_C(obj, db):
 
         o = cClass(obj["cClass"])
         o.identifier = identifier
+        o.subtypes = None
+        o.tag = obj.tag
+        o.src = obj.src
         x = cClass_C(o, db)
     if "cFunc" in obj:
         from ccrawl.core import cFunc
 
         o = cFunc(obj["cFunc"])
         o.identifier = identifier
+        o.subtypes = None
+        o.tag = obj.tag
+        o.src = obj.src
         x = cFunc_C(o, db)
     x = x.split("\n\n")
     out.append(x.pop())

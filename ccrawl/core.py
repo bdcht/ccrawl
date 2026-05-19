@@ -252,6 +252,7 @@ class ccore(object):
         val.tag = data["tag"]
         par = data["src"].find("::")
         val.ns = data["src"][par+2:] if par>0 else ""
+        val.src = data["src"]
         return val
 
 
