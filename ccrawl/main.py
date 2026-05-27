@@ -440,7 +440,7 @@ def convert(ctx, form, cxx, xclang, inp):
     db.close()
     for l in dbo.values():
         x = ccore.from_db(l)
-        click.echo(x.show(db, r=False, form=form))
+        click.echo(x.show(None, form=form))
 
 
 
@@ -685,7 +685,7 @@ def struct(ctx, pdef, pointer, conds):
                     if not pdef:
                         res = name
                     else:
-                        res = x.show(db, False, form="C")+"\n"
+                        res = x.show(None, form="C")+"\n"
                     R.append(res)
     if conf.VERBOSE:
         click.secho("\n".join(fails), fg="red", err=True)
@@ -724,7 +724,7 @@ def show(ctx, form, recursive, identifier):
     if db.contains(db.tag & Q):
         for l in db.search(db.tag & Q):
             x = ccore.from_db(l)
-            click.echo(x.show(db, recursive, form=form))
+            click.echo(x.show(db if recursive else None, form=form))
     else:
         click.secho("identifier '%s' not found" % identifier, fg="red", err=True)
 
