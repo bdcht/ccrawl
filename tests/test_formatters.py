@@ -59,14 +59,15 @@ def test_format_ctypes(configfile, c_header):
         x.show(form="ctypes")
         == """struct__mystruct = type('struct__mystruct',(Structure,),{})
 
-struct__mystruct._fields_ = [("I", myinteger),
-                             ("tab", c_int*12),
-                             ("p", c_ubyte*16),
-                             ("s", POINTER(c_short)),
-                             ("next", POINTER(struct__mystruct)),
-                             ("func", foo),
-                             ("bar", struct__bar*2)]"""
-    )
+struct__mystruct._fields_ = [
+    ("I", myinteger),
+    ("tab", c_int*12),
+    ("p", c_ubyte*16),
+    ("s", POINTER(c_short)),
+    ("next", POINTER(struct__mystruct)),
+    ("func", foo),
+    ("bar", struct__bar*2),
+]""")
 
 
 def test_format_amoco(configfile, c_header):

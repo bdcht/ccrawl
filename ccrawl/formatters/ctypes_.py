@@ -1,4 +1,4 @@
-from ccrawl.utils import struct_letters, c_type, fargs
+from ccrawl.utils import struct_letters, c_type, cxx_type, fargs
 from click import secho
 from tinydb import where
 
@@ -34,6 +34,30 @@ toCTypes = {
     "unsigned __int64": "c_ulonglong",
 }
 
+def unfoldable(f):
+    def wrapper(obj,db):
+        if db is None:
+            return f(obj,db)
+        ctx = OrderedDict(struct_letters)
+        obj.unfold(db,ctx)
+        # when unfolding, ctx items are ordered in a way that ensures if a type
+        # is used several times in further definitions, it will be indexed after
+        # all these definitions.
+        out = []
+        def cond(k,v):
+            if isinstance(v,ccore):
+                t = cxx_type(v.identifier)
+                if k==t.show(kw=False) and not "std" in t.ns:
+                    return True
+            return False
+        for v in (v for (k,v) in reversed(ctx.items()) if cond(k,v)):
+            if "?_" in v.identifier:
+                continue
+            out.append(v.show(None, form="ctypes"))
+        # if t base is an anonymous type, we replace its anon name
+        # by its struct/union definition in t:
+        return "\n\n".join(out)
+    return wrapper
 
 def id_ctypes(t):
     i = t.lbase
@@ -70,22 +94,17 @@ def formatproto(res, proto):
     params.insert(0, res)
     return "{}({})".format(f, ", ".join(params))
 
-
-def cTypedef_ctypes(obj, db, recursive):
-    pre = ""
-    t = c_type(obj)
-    if isinstance(recursive, set) and (t.lbase not in struct_letters):
-        Q = db.tag & (where("id") == t.lbase)
-        if db.contains(Q):
-            x = obj.from_db(db.get(Q))
-            pre = x.show(db, recursive, form="ctypes")
-            pre += "\n\n"
-        else:
-            secho("identifier %s not found" % t.lbase, fg="red", err=True)
-    return u"{}{} = {}".format(pre, obj.identifier, id_ctypes(t))
+@unfoldable
+def cTypedef_ctypes(obj, db):
+    t = cxx_type(obj)
+    if t.is_anon and obj.subtypes:
+        out = obj.subtypes[obj].show(form="ctypes")
+    else:
+        out = t.show(kw=True)
+    return u"{} = {}".format(obj.identifier, id_ctypes(t))
 
 
-def cMacro_ctypes(obj, db, recursive):
+def cMacro_ctypes(obj, db):
     v = obj.strip()
     try:
         v = int(v, base=0)
@@ -94,95 +113,60 @@ def cMacro_ctypes(obj, db, recursive):
     return "{} = {}".format(obj.identifier, v)
 
 
-def cFunc_ctypes(obj, db, recursive):
+def cFunc_ctypes(obj, db):
     f = "CFUNCTYPE"
     pre = ""
     res = obj.restype()
     args = obj.argtypes()
-    if isinstance(recursive, set):
+    if db is not None:
         for t in [res] + args:
-            t = c_type(t)
+            t = cxx_type(t)
             if t.lbase not in struct_letters:
-                Q = db.tag & (where("id") == t.lbase)
+                Q = db.tag & (where("id") == t.show(kw=True))
                 if db.contains(Q):
                     x = obj.from_db(db.get(Q))
-                    pre = x.show(db, recursive, form="ctypes")
+                    pre = x.show(db, form="ctypes")
                     pre += "\n\n"
                 else:
                     secho("identifier %s not found" % t.lbase, fg="red", err=True)
-    params = [id_ctypes(c_type(x)) for x in args]
-    res = id_ctypes(c_type(res))
+    params = [id_ctypes(cxx_type(x)) for x in args]
+    res = id_ctypes(cxx_type(res))
     if res == "c_void":
         res = "None"
     params.insert(0, res)
     return "{} = {}({})".format(obj.identifier, f, ", ".join(params))
 
 
-def cEnum_ctypes(obj, db, recursive):
+def cEnum_ctypes(obj, db):
     n = obj.identifier.replace(" ", "_")
     S = ["{} = c_int".format(n)]
     S.extend(("{} = {}".format(k, v) for (k, v) in obj.items()))
     return "\n".join(S)
 
 
-def cStruct_ctypes(obj, db, recursive):
-    name = id_ctypes(c_type(obj.identifier))
-    cls = "Union" if obj._is_union else "Structure"
-    R = ["{0} = type('{0}',({1},),{{}})\n".format(name, cls)]
-    if isinstance(recursive, set):
-        if obj.identifier in recursive:
-            return R[0]
-        Q = True
-        recursive.update(struct_letters)
-        recursive.add(obj.identifier)
-    else:
-        Q = None
-    anon = []
-    S = []
+@unfoldable
+def cStruct_ctypes(obj, db):
+    name = id_ctypes(cxx_type(obj.identifier))
+    clsn = "Union" if obj._is_union else "Structure"
+    out = ["{0} = type('{0}',({1},),{{}})\n".format(name, clsn)]
     fld = "%s._fields_ = [" % name
-    S.append(fld)
-    pad = " " * len(fld)
-    padded = False
+    out.append(fld)
     for i in obj:
         t, n, c = i
-        r = c_type(t)
+        r = cxx_type(t)
+        e = r.lbase
         if not n and not r.lbase.startswith("union "):
             continue
-        if Q and (r.lbase not in recursive):
-            q = db.tag & (where("id") == r.lbase)
-            if "?_" in r.lbase:
-                anon.append('"%s"' % n)
-                q &= where("src") == obj.identifier
-            if db.contains(q):
-                x = obj.from_db(db.get(q)).show(db, recursive, form="ctypes")
-                x = x.split("\n")
-                for xrl in x:
-                    if (xrl + "\n" in R) and not xrl.startswith(" "):
-                        continue
-                    if xrl:
-                        R.append(xrl + "\n")
-                recursive.add(r.lbase)
-            else:
-                secho("identifier %s not found" % r.lbase, fg="red", err=True)
         t = id_ctypes(r)
         if r.lbfw:
             t += ", %d" % r.lbfw
-        S.append('("{}", {}),\n'.format(n, t) + pad)
-        padded = True
-    if padded:
-        S.append(S.pop().strip()[:-1])
-    S.append("]")
-    if len(anon) > 0:
-        S.insert(0, "%s._anonymous_ = (%s,)\n" % (name, ",".join(anon)))
-    return "".join(R) + "\n" + "".join(S)
+        out.append('    ("{}", {}),'.format(n, t))
+    out.append("]")
+    return "\n".join(out)
 
 
 cUnion_ctypes = cStruct_ctypes
 
 
-def cClass_ctypes(obj, db, recursive):
-    # recursive is forced for c++ classes
-    if not isinstance(recursive, set):
-        recursive = set()
-        recursive.update(struct_letters)
-    return cStruct_ctypes(obj.as_cStruct(db), db, recursive)
+def cClass_ctypes(obj, db):
+    return cStruct_ctypes(obj.as_cStruct(db), db)

@@ -51,9 +51,10 @@ def cTypedef_C(obj, db):
     t = cxx_type(obj)
     if t.is_anon and obj.subtypes:
         out = obj.subtypes[obj].show(form="C").strip(";")
+        return u"typedef {} {};".format(out,obj.identifier)
     else:
-        out = t.show(kw=True)
-    return u"typedef {} {};".format(out,obj.identifier)
+        out = t.show(name=obj.identifier,kw=True)
+        return u"typedef {};".format(out)
 
 
 def cMacro_C(obj, db):
