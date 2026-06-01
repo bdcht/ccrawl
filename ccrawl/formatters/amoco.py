@@ -31,6 +31,30 @@ tostruct = {
     "unsigned long long": "Q",
 }
 
+def unfoldable(f):
+    def wrapper(obj,db):
+        if db is None:
+            return f(obj,db)
+        ctx = OrderedDict(struct_letters)
+        obj.unfold(db,ctx)
+        # when unfolding, ctx items are ordered in a way that ensures if a type
+        # is used several times in further definitions, it will be indexed after
+        # all these definitions.
+        out = []
+        def cond(k,v):
+            if isinstance(v,ccore):
+                t = cxx_type(v.identifier)
+                if k==t.show(kw=False) and not "std" in t.ns:
+                    return True
+            return False
+        for v in (v for (k,v) in reversed(ctx.items()) if cond(k,v)):
+            if "?_" in v.identifier:
+                continue
+            out.append(v.show(None, form="amoco"))
+        # if t base is an anonymous type, we replace its anon name
+        # by its struct/union definition in t:
+        return "\n\n".join(out)
+    return wrapper
 
 def id_amoco(s):
     s = s.replace("$","_").replace(":","_")
@@ -62,23 +86,14 @@ def fieldformat(r):
     return rt, t
 
 
-def cTypedef_amoco(obj, db, recursive):
-    pre = ""
-    t = c_type(obj)
-    if isinstance(recursive, set) and (t.lbase not in tostruct):
-        recursive.add(obj.identifier)
-        Q = db.tag & (where("id") == t.lbase)
-        if db.contains(Q):
-            x = obj.from_db(db.get(Q))
-            pre = x.show(db, recursive, form="amoco")
-            pre += "\n\n"
-        else:
-            secho("identifier {} not found".format(t.lbase), fg="red", err=True)
+@unfoldable
+def cTypedef_amoco(obj, db):
+    t = cxx_type(obj)
     rn, n = fieldformat(t)
-    return u"{}TypeDefine('{}','{}')".format(pre, obj.identifier, rn or n)
+    return u"TypeDefine('{}','{}')".format(obj.identifier, rn or n)
 
 
-def cMacro_amoco(obj, db, recursive):
+def cMacro_amoco(obj, db):
     v = obj.strip()
     try:
         v = int(v, base=0)
@@ -88,71 +103,41 @@ def cMacro_amoco(obj, db, recursive):
     return "{} = '{}'".format(obj.identifier, v)
 
 
-def cFunc_amoco(obj, db, recursive):
+def cFunc_amoco(obj, db):
     pass
 
 
-def cEnum_amoco(obj, db, recursive):
+def cEnum_amoco(obj, db):
     n = obj.identifier.replace(" ", "_")
     s = ["TypeDefine('{}','i')".format(n)]
     s.extend(("{} = {}".format(k, v) for (k, v) in obj.items()))
     return "\n".join(s)
 
 
-def cClass_amoco(obj, db, recursive):
-    return cStruct_amoco(obj.as_cStruct(db), db, recursive)
+def cClass_amoco(obj, db):
+    return cStruct_amoco(obj.as_cStruct(db), db)
 
-def cStruct_amoco(obj, db, recursive):
-    if isinstance(recursive, set):
-        if obj.identifier in recursive:
-            return ""
-        Q = True
-        recursive.update(tostruct)
-        recursive.add(obj.identifier)
-    else:
-        Q = None
+@unfoldable
+def cStruct_amoco(obj, db):
     name = id_amoco(obj.identifier)
-    cls = "UnionDefine" if obj._is_union else "StructDefine"
-    R = []
-    S = ['@{}("""\n'.format(cls)]
+    clsn = "UnionDefine" if obj._is_union else "StructDefine"
+    out = ['@{}("""'.format(clsn)]
     for i in obj:
         t, n, c = i
-        r = c_type(t)
+        r = cxx_type(t)
         if not n and not r.lbase.startswith("union "):
             continue
-        if Q and (r.lbase not in recursive):
-            q = db.tag & (where("id") == r.lbase)
-            if r.lbase.startswith("?_"):
-                q &= where("src") == obj.identifier
-            if db.contains(q):
-                x = obj.from_db(db.get(q))
-                if x._is_typedef:
-                    pass
-                x = x.show(db, recursive, form="amoco")
-                x = x.split("\n")
-                for xrl in x:
-                    if xrl:
-                        R.append(xrl + "\n")
-                recursive.add(r.lbase)
-            else:
-                secho("identifier %s not found" % r.lbase, fg="red", err=True)
         rt, t = fieldformat(r)
         if rt:
             t = rt
         if c and c.count("\n") > 0:
             c = None
-        S.append("{} : {} ;{}\n".format(t, n, c or ""))
-    if len(R) > 0:
-        R.append("\n")
-    S.append('""")\nclass %s(StructFormatter):' % name)
+        out.append("{} : {} ;{}".format(t, n, c or ""))
+    out.append('""")\nclass %s(StructFormatter):' % name)
     # add methods:
-    S.append(
-        """
-    def __init__(self,data="",offset=0):
-        if data: self.unpack(data,offset)
-    """
-    )
-    return "".join(R) + "".join(S)
+    out.append('    def __init__(self,data="",offset=0):')
+    out.append('        if data: self.unpack(data,offset)\n')
+    return "\n".join(out)
 
 
 cUnion_amoco = cStruct_amoco

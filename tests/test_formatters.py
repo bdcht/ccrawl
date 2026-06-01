@@ -87,5 +87,5 @@ def test_format_amoco(configfile, c_header):
     assert x._is_struct
     assert (
         x.show(form="amoco")
-        == '@StructDefine("""\nmyinteger : I ;\ni * 12 : tab ;\ns * 16 : p ;\nP : s ;\nP : next ;\nfoo : func ;\nstruct__bar * 2 : bar ;\n""")\nclass struct__mystruct(StructFormatter):\n    def __init__(self,data="",offset=0):\n        if data: self.unpack(data,offset)\n    '
+        == '@StructDefine("""\nmyinteger : I ;\ni * 12 : tab ;\ns * 16 : p ;\nP : s ;\nP : next ;\nfoo : func ;\nstruct__bar * 2 : bar ;\n""")\nclass struct__mystruct(StructFormatter):\n    def __init__(self,data="",offset=0):\n        if data: self.unpack(data,offset)\n'
     )
