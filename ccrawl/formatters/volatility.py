@@ -1,4 +1,4 @@
-from ccrawl.utils import struct_letters
+from ccrawl.utils import struct_letters, cxx_type
 from ccrawl.ext.ctypes_ import build
 from ctypes import sizeof
 
@@ -14,12 +14,36 @@ __all__ = [
 # volatility VTypes formatters:
 # ------------------------------------------------------------------------------
 
+def unfoldable(f):
+    def wrapper(obj,db):
+        if db is None:
+            return f(obj,db)
+        ctx = OrderedDict(struct_letters)
+        obj.unfold(db,ctx)
+        # when unfolding, ctx items are ordered in a way that ensures if a type
+        # is used several times in further definitions, it will be indexed after
+        # all these definitions.
+        out = []
+        def cond(k,v):
+            if isinstance(v,ccore):
+                t = cxx_type(v.identifier)
+                if k==t.show(kw=False) and not "std" in t.ns:
+                    return True
+            return False
+        for v in (v for (k,v) in reversed(ctx.items()) if cond(k,v)):
+            if "?_" in v.identifier:
+                continue
+            out.append(v.show(None, form="volatility"))
+        # if t base is an anonymous type, we replace its anon name
+        # by its struct/union definition in t:
+        return "\n\n".join(out)
+    return wrapper
 
-def cMacro_volatility(obj, db, recursive):
+def cMacro_volatility(obj, db):
     return u"{} = {}".format(obj.identifier, obj)
 
 
-def cFunc_volatility(obj, db, recursive):
+def cFunc_volatility(obj, db):
     raise NotImplementedError
 
 
@@ -43,53 +67,31 @@ def ctype_to_volatility(t):
     return res
 
 
-def cTypedef_volatility(obj, db, recursive):
-    obj.unfold(db)
-    t = c_type(obj)
-    S = [u"{} = {}".format(obj.identifier, ctype_to_volatility(t))]
-    R = []
-    if isinstance(recursive, set):
-        for t in obj.subtypes.values() or []:
-            if t is None:
-                continue
-            if not t.identifier in recursive:
-                recursive.add(t.identifier)
-                R.append(t.show(db, recursive, form="volatility"))
-        if len(R) > 0:
-            R.append("")
-    return u"\n".join(R + S)
+@unfoldable
+def cTypedef_volatility(obj, db):
+    t = cxx_type(obj)
+    out = [u"{} = {}".format(obj.identifier, ctype_to_volatility(t))]
+    return u"\n".join(out)
 
 
-def cEnum_volatility(obj, db, recursive):
-    obj.unfold(db)
+def cEnum_volatility(obj, db):
     n = obj.identifier.replace(" ", "_")
     return u"{0} = ['Enumeration', dict(choices={1})]".format(n, obj)
 
 
-def cStruct_volatility(obj, db, recursive):
-    obj.unfold(db)
+@unfoldable
+def cStruct_volatility(obj, db):
     n = obj.identifier.replace("?_", "").replace(" ", "_")
     t = build(obj)
-    S = [u"{0} = [ {1}, {{".format(n, sizeof(t))]
+    out = [u"{0} = [ {1}, {{".format(n, sizeof(t))]
     for i, f in enumerate(obj):
         ft, fn, fc = f
         if not fn:
             continue
-        r = c_type(ft)
+        r = cxx_type(ft)
         off = getattr(t, fn).offset
-        S.append(u"  '{0}': [{2}, {1}],".format(fn, ctype_to_volatility(r), off))
-    S.append("}]")
-    R = []
-    if isinstance(recursive, set):
-        for t in obj.subtypes.values() or []:
-            if t is None:
-                continue
-            if not t.identifier in recursive:
-                recursive.add(t.identifier)
-                R.append(t.show(db, recursive, form="volatility"))
-        if len(R) > 0:
-            R.append("")
-    return u"\n".join(R + S)
-
+        out.append(u"  '{0}': [{2}, {1}],".format(fn, ctype_to_volatility(r), off))
+    out.append("}]")
+    return u"\n".join(out)
 
 cUnion_volatility = cStruct_volatility
