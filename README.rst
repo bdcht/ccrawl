@@ -156,6 +156,15 @@ Todo
 Changelog
 =========
 
+- `v1.12`_
+
+  * update support for c++17 and libclang 18.1.1
+  * improve C++ template support in unfold/add_subtype methods
+  * add support for collecting from compile_commands.json
+  * update ext.ghidra interface for 12.1_DEV (pyghidra)
+  * rewrite pyparsing utils (to support c++17)
+  * rewrite formatters to rely on unfolding
+
 - `v1.11`_
 
   * update ext.ghidra interface for 12.0_DEV (pyghidra)
@@ -227,6 +236,7 @@ Changelog
 .. _clang: https://pypi.org/project/clang/
 .. _ctypes: https://docs.python.org/3.7/library/ctypes.html
 .. _amoco: https://github.com/bdcht/amoco
+.. _v1.12: https://github.com/bdcht/ccrawl/releases/tag/v1.12
 .. _v1.11: https://github.com/bdcht/ccrawl/releases/tag/v1.11
 .. _v1.10: https://github.com/bdcht/ccrawl/releases/tag/v1.10
 .. _v1.9: https://github.com/bdcht/ccrawl/releases/tag/v1.9
