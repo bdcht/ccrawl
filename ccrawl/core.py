@@ -95,7 +95,7 @@ class ccore(object):
             for e in xt.ns:
                 self.add_subtype(db, e, ctx)
                 last_ns = ctx[e]
-                while last_ns._is_typedef:
+                while last_ns and last_ns._is_typedef:
                     last_ns = last_ns.subtypes[str(last_ns)]
             # let's search at least for the most basic typename:
             # but allow any keywords and namespace:
