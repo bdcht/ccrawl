@@ -149,7 +149,7 @@ def cli(ctx, verbose, quiet, db, local, configfile, tag):
     "--all",
     "allc",
     is_flag=True,
-    # help='collect data from all files rather than headers only'
+    help='collect data from all files rather than headers only',
 )
 @click.option("-s", "--strict", is_flag=True, help="strict mode")
 @click.option("-n", "--recon", is_flag=True,
@@ -314,7 +314,10 @@ def preprocess_files(src,args,cxx=False,allc=False):
     if not conf.config.Terminal.quiet:
         click.echo("preprocessing files...")
     p = "[hHcCiI]" if allc else "[hH]"
-    if cxx: p += "|(hpp)|(cpp)"
+    if cxx:
+        p += "|(hpp)"
+        if allc:
+            p+="|(cpp)"
     rexh = re.compile(r".+\.("+p+")$",flags=re.IGNORECASE)
     F = lambda f: rexh.search(f)
     # count source files:
@@ -362,12 +365,12 @@ def use_compile_commands(comp_cmds,src):
                     args.append(x)
                 elif x in ("-nostdinc","-nobuiltininc", "-fno-builtin"):
                     args.append(x)
-                elif (x.startswith("-isystem") or 
+                elif (x.startswith("-isystem") or
                       x.startswith("-include")
                      ):
                     args.append(x)
                     keep = True
-                elif (x.startswith("-std=") or 
+                elif (x.startswith("-std=") or
                       x.startswith("-fmacro-prefix-map=")
                      ):
                     args.append(x)
